@@ -326,6 +326,16 @@ export class DatabaseStorage implements IStorage {
     // Get next invoice number
     const invoiceNo = await this.getNextInvoiceNumber(saleData.billType, companyId);
 
+    // SECURITY: Validate all items belong to this company before creating sale
+    for (const item of saleItemsData) {
+      if (item.itemId) {
+        const dbItem = await this.getItem(item.itemId, companyId);
+        if (!dbItem) {
+          throw new Error(`Item ${item.itemId} not found or does not belong to this company`);
+        }
+      }
+    }
+
     // Insert sale
     const [newSale] = await db
       .insert(sales)
@@ -418,13 +428,14 @@ export class DatabaseStorage implements IStorage {
         cost: items.cost,
       })
       .from(stock)
-      .innerJoin(items, eq(stock.itemId, items.id))
+      .innerJoin(items, and(eq(stock.itemId, items.id), eq(items.companyId, companyId)))
       .where(eq(stock.companyId, companyId))
       .orderBy(items.name);
     return result;
   }
 
   async updateStock(itemId: number, quantityChange: number, companyId: number): Promise<void> {
+    // CRITICAL: Must filter by both itemId AND companyId to prevent cross-company stock updates
     await db
       .update(stock)
       .set({

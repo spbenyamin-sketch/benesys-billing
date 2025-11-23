@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { validateCompanyAccess } from "./companyMiddleware";
 import { z } from "zod";
 import {
   insertPartySchema,
@@ -161,9 +162,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== PARTY ROUTES ====================
-  app.get("/api/parties", isAuthenticated, async (req, res) => {
+  app.get("/api/parties", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const parties = await storage.getParties();
+      const parties = await storage.getParties(req.companyId);
       res.json(parties);
     } catch (error) {
       console.error("Error fetching parties:", error);
@@ -171,10 +172,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/parties/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/parties/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const party = await storage.getParty(id);
+      const party = await storage.getParty(id, req.companyId);
       if (!party) {
         return res.status(404).json({ message: "Party not found" });
       }
@@ -185,11 +186,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/parties", isAuthenticated, async (req: any, res) => {
+  app.post("/api/parties", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const validated = insertPartySchema.parse(req.body);
       const userId = req.user.claims.sub;
-      const party = await storage.createParty(validated, userId);
+      const party = await storage.createParty(validated, userId, req.companyId);
       res.json(party);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -200,11 +201,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/parties/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/parties/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validated = insertPartySchema.parse(req.body);
-      const party = await storage.updateParty(id, validated);
+      const party = await storage.updateParty(id, validated, req.companyId);
       res.json(party);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -216,9 +217,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== ITEM ROUTES ====================
-  app.get("/api/items", isAuthenticated, async (req, res) => {
+  app.get("/api/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const items = await storage.getItems();
+      const items = await storage.getItems(req.companyId);
       res.json(items);
     } catch (error) {
       console.error("Error fetching items:", error);
@@ -226,10 +227,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/items/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
-      const item = await storage.getItem(id);
+      const item = await storage.getItem(id, req.companyId);
       if (!item) {
         return res.status(404).json({ message: "Item not found" });
       }
@@ -240,11 +241,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/items", isAuthenticated, async (req: any, res) => {
+  app.post("/api/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const validated = insertItemSchema.parse(req.body);
       const userId = req.user.claims.sub;
-      const item = await storage.createItem(validated, userId);
+      const item = await storage.createItem(validated, userId, req.companyId);
       res.json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -255,11 +256,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/items/:id", isAuthenticated, async (req, res) => {
+  app.put("/api/items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const validated = insertItemSchema.parse(req.body);
-      const item = await storage.updateItem(id, validated);
+      const item = await storage.updateItem(id, validated, req.companyId);
       res.json(item);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -271,9 +272,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== SALES ROUTES ====================
-  app.get("/api/sales", isAuthenticated, async (req, res) => {
+  app.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const sales = await storage.getSales();
+      const sales = await storage.getSales(req.companyId);
       res.json(sales);
     } catch (error) {
       console.error("Error fetching sales:", error);
@@ -281,7 +282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/sales", isAuthenticated, async (req: any, res) => {
+  app.post("/api/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const { items: saleItems, ...saleData } = req.body;
       
@@ -290,7 +291,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const userId = req.user.claims.sub;
-      const sale = await storage.createSale(saleData, saleItems, userId);
+      const sale = await storage.createSale(saleData, saleItems, userId, req.companyId);
       res.json(sale);
     } catch (error) {
       console.error("Error creating sale:", error);
@@ -299,9 +300,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== PURCHASE ROUTES ====================
-  app.get("/api/purchases", isAuthenticated, async (req, res) => {
+  app.get("/api/purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const purchases = await storage.getPurchases();
+      const purchases = await storage.getPurchases(req.companyId);
       res.json(purchases);
     } catch (error) {
       console.error("Error fetching purchases:", error);
@@ -309,11 +310,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/purchases", isAuthenticated, async (req: any, res) => {
+  app.post("/api/purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const validated = insertPurchaseSchema.parse(req.body);
       const userId = req.user.claims.sub;
-      const purchase = await storage.createPurchase(validated, userId);
+      const purchase = await storage.createPurchase(validated, userId, req.companyId);
       res.json(purchase);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -325,9 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== PAYMENT ROUTES ====================
-  app.get("/api/payments", isAuthenticated, async (req, res) => {
+  app.get("/api/payments", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const payments = await storage.getPayments();
+      const payments = await storage.getPayments(req.companyId);
       res.json(payments);
     } catch (error) {
       console.error("Error fetching payments:", error);
@@ -335,11 +336,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/payments", isAuthenticated, async (req: any, res) => {
+  app.post("/api/payments", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const validated = insertPaymentSchema.parse(req.body);
       const userId = req.user.claims.sub;
-      const payment = await storage.createPayment(validated, userId);
+      const payment = await storage.createPayment(validated, userId, req.companyId);
       res.json(payment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -351,9 +352,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== STOCK ROUTES ====================
-  app.get("/api/stock", isAuthenticated, async (req, res) => {
+  app.get("/api/stock", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const stock = await storage.getStock();
+      const stock = await storage.getStock(req.companyId);
       res.json(stock);
     } catch (error) {
       console.error("Error fetching stock:", error);
@@ -362,9 +363,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== REPORT ROUTES ====================
-  app.get("/api/dashboard/metrics", isAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/metrics", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const metrics = await storage.getDashboardMetrics();
+      const metrics = await storage.getDashboardMetrics(req.companyId);
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
@@ -372,9 +373,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/outstanding", isAuthenticated, async (req, res) => {
+  app.get("/api/reports/outstanding", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const outstanding = await storage.getOutstanding();
+      const outstanding = await storage.getOutstanding(req.companyId);
       res.json(outstanding);
     } catch (error) {
       console.error("Error fetching outstanding:", error);
@@ -382,10 +383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/sales", isAuthenticated, async (req, res) => {
+  app.get("/api/reports/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const { startDate, endDate, billType } = req.query;
       const sales = await storage.getSalesReport(
+        req.companyId,
         startDate as string,
         endDate as string,
         billType as string
@@ -397,10 +399,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/items", isAuthenticated, async (req, res) => {
+  app.get("/api/reports/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const { startDate, endDate } = req.query;
-      const items = await storage.getItemsReport(startDate as string, endDate as string);
+      const items = await storage.getItemsReport(req.companyId, startDate as string, endDate as string);
       res.json(items);
     } catch (error) {
       console.error("Error fetching items report:", error);
@@ -408,10 +410,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/reports/ledger/:partyId", isAuthenticated, async (req, res) => {
+  app.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const partyId = parseInt(req.params.partyId);
-      const ledger = await storage.getPartyLedger(partyId);
+      const ledger = await storage.getPartyLedger(partyId, req.companyId);
       
       if (!ledger) {
         return res.status(404).json({ message: "Party ledger not found" });
@@ -425,9 +427,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== BILL TEMPLATE ROUTES ====================
-  app.get('/api/bill-templates', isAuthenticated, async (req, res) => {
+  app.get('/api/bill-templates', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const templates = await storage.getBillTemplates();
+      const templates = await storage.getBillTemplates(req.companyId);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching bill templates:", error);
@@ -435,14 +437,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/bill-templates', isAuthenticated, async (req: any, res) => {
+  app.post('/api/bill-templates', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.claims.sub);
       if (currentUser?.role !== 'admin') {
         return res.status(403).json({ message: "Only super admin can create bill templates" });
       }
       const validated = insertBillTemplateSchema.parse(req.body);
-      const template = await storage.createBillTemplate(validated, req.user.claims.sub);
+      const template = await storage.createBillTemplate(validated, req.user.claims.sub, req.companyId);
       res.json(template);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -453,14 +455,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/bill-templates/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/bill-templates/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.claims.sub);
       if (currentUser?.role !== 'admin') {
         return res.status(403).json({ message: "Only super admin can update bill templates" });
       }
       const validated = insertBillTemplateSchema.parse(req.body);
-      const template = await storage.updateBillTemplate(parseInt(req.params.id), validated);
+      const template = await storage.updateBillTemplate(parseInt(req.params.id), validated, req.companyId);
       res.json(template);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -471,13 +473,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/bill-templates/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/bill-templates/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.claims.sub);
       if (currentUser?.role !== 'admin') {
         return res.status(403).json({ message: "Only super admin can delete bill templates" });
       }
-      await storage.deleteBillTemplate(parseInt(req.params.id));
+      await storage.deleteBillTemplate(parseInt(req.params.id), req.companyId);
       res.json({ message: "Bill template deleted successfully" });
     } catch (error) {
       console.error("Error deleting bill template:", error);
@@ -486,7 +488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ==================== OBJECT STORAGE ROUTES ====================
-  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+  app.post("/api/objects/upload", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const objectStorageService = new ObjectStorageService();
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
