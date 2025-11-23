@@ -80,7 +80,7 @@ export default function BillSettings() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Bill Settings</h1>
         <p className="text-muted-foreground mt-2">
-          Customize invoice printing for thermal printers (2 inch / 3 inch)
+          Customize invoice printing for thermal printers (3 inch / 4 inch)
         </p>
       </div>
 
@@ -117,8 +117,8 @@ export default function BillSettings() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="2inch">2 Inch (58mm)</SelectItem>
                   <SelectItem value="3inch">3 Inch (80mm)</SelectItem>
+                  <SelectItem value="4inch">4 Inch (112mm)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -309,7 +309,7 @@ export default function BillSettings() {
           <div
             className="border rounded-lg p-4 bg-white text-black"
             style={{
-              width: formData.paperSize === "2inch" ? "58mm" : "80mm",
+              width: formData.paperSize === "3inch" ? "80mm" : "112mm",
               fontSize: `${formData.fontSize}px`,
               fontFamily: "monospace",
             }}
