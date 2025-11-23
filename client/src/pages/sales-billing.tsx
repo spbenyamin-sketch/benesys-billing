@@ -406,7 +406,7 @@ export default function SalesBilling() {
                         <TableCell>
                           <Select
                             value={lineItem.itemId?.toString() || ""}
-                            onValueChange={(v) => updateLineItem(lineItem.tempId, "itemId", v)}
+                            onValueChange={(v) => updateLineItem(lineItem.tempId, "itemId", Number(v))}
                           >
                             <SelectTrigger data-testid={`select-item-${lineItem.tempId}`}>
                               <SelectValue placeholder="Select item" />
