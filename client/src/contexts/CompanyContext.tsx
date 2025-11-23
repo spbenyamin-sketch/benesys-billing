@@ -25,6 +25,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   const { data: userCompanies = [], isLoading } = useQuery<UserCompany[]>({
     queryKey: ["/api/user-companies"],
+    staleTime: 0, // Always treat as stale to ensure fresh data
+    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   useEffect(() => {

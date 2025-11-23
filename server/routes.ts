@@ -86,6 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.claims.sub;
       const userCompanies = await storage.getUserCompanies(userId);
+      res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
       res.json(userCompanies);
     } catch (error) {
       console.error("Error fetching user companies:", error);

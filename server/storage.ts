@@ -435,7 +435,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateStock(itemId: number, quantityChange: number, companyId: number): Promise<void> {
-    // CRITICAL: Must filter by both itemId AND companyId to prevent cross-company stock updates
+    // CRITICAL SECURITY: Defensive validation - verify item belongs to company before stock update
+    // This prevents cross-company stock manipulation even if caller validation fails
+    const item = await this.getItem(itemId, companyId);
+    if (!item) {
+      throw new Error(`Stock update rejected: Item ${itemId} not found or does not belong to company ${companyId}`);
+    }
+    
+    // Item validated - safe to update stock
     await db
       .update(stock)
       .set({
