@@ -53,18 +53,28 @@ function updateUserSession(
 async function upsertUser(
   claims: any,
 ) {
+  const userId = claims["sub"];
+  
   // Check if this is the first user - make them admin
   const allUsers = await storage.getAllUsers();
   const isFirstUser = allUsers.length === 0;
   
   await storage.upsertUser({
-    id: claims["sub"],
+    id: userId,
     email: claims["email"],
     firstName: claims["first_name"],
     lastName: claims["last_name"],
     profileImageUrl: claims["profile_image_url"],
     role: isFirstUser ? "admin" : "user", // First user becomes Super Admin
   });
+  
+  // Check if user has any company assignments
+  const userCompanies = await storage.getUserCompanies(userId);
+  
+  // If no companies assigned, assign to default company
+  if (userCompanies.length === 0) {
+    await storage.assignUserToDefaultCompany(userId);
+  }
 }
 
 export async function setupAuth(app: Express) {

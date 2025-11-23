@@ -42,6 +42,7 @@ export interface IStorage {
   updateUserRole(id: string, role: string): Promise<User>;
   deleteUser(id: string): Promise<void>;
   getUserCompanies(userId: string): Promise<any[]>;
+  assignUserToDefaultCompany(userId: string): Promise<void>;
 
   // Company operations
   getCompanies(): Promise<Company[]>;
@@ -167,6 +168,39 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(userCompanies.isDefault));
     
     return results;
+  }
+
+  async assignUserToDefaultCompany(userId: string): Promise<void> {
+    // Find or create default company
+    let defaultCompany = await db
+      .select()
+      .from(companies)
+      .where(eq(companies.id, 1))
+      .limit(1);
+    
+    if (defaultCompany.length === 0) {
+      // Create default company if it doesn't exist
+      const newCompany = await db
+        .insert(companies)
+        .values({
+          id: 1,
+          name: "Default Company",
+          address: "Default Address",
+          city: "Default City",
+          state: "Default State",
+          gstNo: "DEFAULT-GST",
+          createdBy: userId,
+        })
+        .returning();
+      defaultCompany = newCompany;
+    }
+    
+    // Assign user to default company
+    await db.insert(userCompanies).values({
+      userId,
+      companyId: 1,
+      isDefault: true,
+    });
   }
 
   // ==================== COMPANY OPERATIONS ====================
