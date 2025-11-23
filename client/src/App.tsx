@@ -145,6 +145,14 @@ function AppContent() {
         <div className="flex flex-col flex-1 overflow-hidden">
           <header className="flex items-center justify-between border-b px-4 py-3">
             <SidebarTrigger data-testid="button-sidebar-toggle" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium" data-testid="text-company-name">
+                  {currentCompany.name}
+                </span>
+                <CompanySelector />
+              </div>
+            </div>
           </header>
           <main className="flex-1 overflow-y-auto">
             <Router />
