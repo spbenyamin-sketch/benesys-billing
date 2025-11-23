@@ -20,9 +20,11 @@ import Outstanding from "@/pages/reports/outstanding";
 import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
 import Ledger from "@/pages/reports/ledger";
+import UserManagement from "@/pages/user-management";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const isSuperAdmin = user?.role === "admin";
 
   return (
     <Switch>
@@ -42,6 +44,7 @@ function Router() {
           <Route path="/reports/sales" component={SalesReport} />
           <Route path="/reports/items" component={ItemsReport} />
           <Route path="/reports/ledger/:id" component={Ledger} />
+          {isSuperAdmin && <Route path="/users" component={UserManagement} />}
         </>
       )}
       <Route component={NotFound} />

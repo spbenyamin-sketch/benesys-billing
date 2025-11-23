@@ -20,12 +20,16 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 export function AppSidebar() {
   const [location] = useLocation();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "admin";
 
   const salesMenuItems = [
     {
@@ -190,6 +194,32 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isSuperAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/users"}>
+                    <Link href="/users" data-testid="link-user-management">
+                      <Shield className="h-5 w-5" />
+                      <span>User Management</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/bill-settings"}>
+                    <Link href="/bill-settings" data-testid="link-bill-settings">
+                      <FileText className="h-5 w-5" />
+                      <span>Bill Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">

@@ -105,6 +105,23 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserRole(id: string, role: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   // ==================== PARTY OPERATIONS ====================
   async getParties(): Promise<Party[]> {
     return await db.select().from(parties).orderBy(desc(parties.createdAt));
@@ -424,6 +441,49 @@ export class DatabaseStorage implements IStorage {
     return await query
       .groupBy(saleItems.itemId, saleItems.itemCode, saleItems.itemName, saleItems.hsnCode)
       .orderBy(sql`SUM(${saleItems.amount}) DESC`);
+  }
+
+  // ==================== BILL TEMPLATE OPERATIONS ====================
+  async getBillTemplates(): Promise<BillTemplate[]> {
+    return await db.select().from(billTemplates).orderBy(desc(billTemplates.createdAt));
+  }
+
+  async getDefaultBillTemplate(): Promise<BillTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(billTemplates)
+      .where(eq(billTemplates.isDefault, true))
+      .limit(1);
+    return template;
+  }
+
+  async createBillTemplate(template: InsertBillTemplate, userId: string): Promise<BillTemplate> {
+    // If this is set as default, unset other defaults
+    if (template.isDefault) {
+      await db.update(billTemplates).set({ isDefault: false }).where(eq(billTemplates.isDefault, true));
+    }
+    const [newTemplate] = await db
+      .insert(billTemplates)
+      .values({ ...template, createdBy: userId })
+      .returning();
+    return newTemplate;
+  }
+
+  async updateBillTemplate(id: number, template: InsertBillTemplate): Promise<BillTemplate> {
+    // If this is set as default, unset other defaults
+    if (template.isDefault) {
+      await db.update(billTemplates).set({ isDefault: false }).where(eq(billTemplates.isDefault, true));
+    }
+    const [updated] = await db
+      .update(billTemplates)
+      .set({ ...template, updatedAt: new Date() })
+      .where(eq(billTemplates.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBillTemplate(id: number): Promise<void> {
+    await db.delete(billTemplates).where(eq(billTemplates.id, id));
   }
 
   async getPartyLedger(partyId: number): Promise<any> {

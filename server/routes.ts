@@ -9,6 +9,7 @@ import {
   insertSaleSchema,
   insertPurchaseSchema,
   insertPaymentSchema,
+  insertBillTemplateSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -24,6 +25,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // ==================== USER MANAGEMENT ROUTES ====================
+  app.get('/api/users', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can access user management" });
+      }
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.put('/api/users/:id/role', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can manage roles" });
+      }
+      const { role } = req.body;
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      const user = await storage.updateUserRole(req.params.id, role);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  app.delete('/api/users/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can delete users" });
+      }
+      if (req.params.id === req.user.claims.sub) {
+        return res.status(400).json({ message: "Cannot delete your own account" });
+      }
+      await storage.deleteUser(req.params.id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
@@ -288,6 +339,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching party ledger:", error);
       res.status(500).json({ message: "Failed to fetch party ledger" });
+    }
+  });
+
+  // ==================== BILL TEMPLATE ROUTES ====================
+  app.get('/api/bill-templates', isAuthenticated, async (req, res) => {
+    try {
+      const templates = await storage.getBillTemplates();
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching bill templates:", error);
+      res.status(500).json({ message: "Failed to fetch bill templates" });
+    }
+  });
+
+  app.post('/api/bill-templates', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can create bill templates" });
+      }
+      const validated = insertBillTemplateSchema.parse(req.body);
+      const template = await storage.createBillTemplate(validated, req.user.claims.sub);
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating bill template:", error);
+      res.status(500).json({ message: "Failed to create bill template" });
+    }
+  });
+
+  app.put('/api/bill-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can update bill templates" });
+      }
+      const validated = insertBillTemplateSchema.parse(req.body);
+      const template = await storage.updateBillTemplate(parseInt(req.params.id), validated);
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating bill template:", error);
+      res.status(500).json({ message: "Failed to update bill template" });
+    }
+  });
+
+  app.delete('/api/bill-templates/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can delete bill templates" });
+      }
+      await storage.deleteBillTemplate(parseInt(req.params.id));
+      res.json({ message: "Bill template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting bill template:", error);
+      res.status(500).json({ message: "Failed to delete bill template" });
     }
   });
 
