@@ -235,8 +235,18 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start"
-          onClick={() => {
-            window.location.href = "/api/logout";
+          onClick={async () => {
+            try {
+              await fetch("/api/logout", { method: "POST" });
+              // Clear local storage and redirect to login
+              localStorage.clear();
+              window.location.href = "/";
+            } catch (error) {
+              console.error("Logout error:", error);
+              // Still redirect even if logout fails
+              localStorage.clear();
+              window.location.href = "/";
+            }
           }}
           data-testid="button-logout"
         >
