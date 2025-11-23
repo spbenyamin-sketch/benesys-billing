@@ -11,6 +11,7 @@ import {
   insertPaymentSchema,
   insertBillTemplateSchema,
 } from "@shared/schema";
+import { ObjectStorageService } from "./objectStorage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
@@ -400,6 +401,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting bill template:", error);
       res.status(500).json({ message: "Failed to delete bill template" });
+    }
+  });
+
+  // ==================== OBJECT STORAGE ROUTES ====================
+  app.post("/api/objects/upload", isAuthenticated, async (req, res) => {
+    try {
+      const objectStorageService = new ObjectStorageService();
+      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+      res.json({ uploadURL });
+    } catch (error) {
+      console.error("Error generating upload URL:", error);
+      res.status(500).json({ error: "Failed to generate upload URL. Make sure object storage is configured." });
     }
   });
 

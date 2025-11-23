@@ -291,6 +291,7 @@ export type Payment = typeof payments.$inferSelect;
 export const billTemplates = pgTable("bill_templates", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
+  logoUrl: text("logo_url"), // Company logo URL from object storage
   headerText: text("header_text"), // Company branding text at top
   footerText: text("footer_text"), // Footer notes
   showTaxBreakup: boolean("show_tax_breakup").default(true).notNull(),

@@ -22,10 +22,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LogoUploader } from "@/components/LogoUploader";
 
 interface BillTemplate {
   id: number;
   name: string;
+  logoUrl: string | null;
   headerText: string | null;
   footerText: string | null;
   showTaxBreakup: boolean;
@@ -41,6 +43,7 @@ export default function BillSettings() {
   const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState({
     name: "Thermal Printer 3 inch",
+    logoUrl: "",
     headerText: "",
     footerText: "Thank you for your business!\nVisit Again",
     showTaxBreakup: true,
@@ -104,6 +107,13 @@ export default function BillSettings() {
                 data-testid="input-template-name"
               />
             </div>
+
+            <LogoUploader
+              currentLogoUrl={formData.logoUrl}
+              onLogoChange={(logoUrl) =>
+                setFormData({ ...formData, logoUrl })
+              }
+            />
 
             <div className="space-y-2">
               <Label htmlFor="paperSize">Paper Size</Label>
@@ -275,6 +285,7 @@ export default function BillSettings() {
                       onClick={() => {
                         setFormData({
                           name: template.name,
+                          logoUrl: template.logoUrl || "",
                           headerText: template.headerText || "",
                           footerText: template.footerText || "",
                           showTaxBreakup: template.showTaxBreakup,
@@ -314,6 +325,16 @@ export default function BillSettings() {
               fontFamily: "monospace",
             }}
           >
+            {formData.logoUrl && (
+              <div className="text-center mb-2">
+                <img
+                  src={formData.logoUrl}
+                  alt="Company Logo"
+                  className="mx-auto max-h-16 object-contain"
+                  data-testid="img-preview-logo"
+                />
+              </div>
+            )}
             <div className="text-center space-y-1">
               {formData.headerText?.split("\n").map((line, i) => (
                 <div key={i} className="font-semibold">
