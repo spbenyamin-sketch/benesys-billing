@@ -9,9 +9,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { useSetup } from "@/hooks/useSetup";
 import { CompanyProvider, useCompany } from "@/contexts/CompanyContext";
 import { CompanySelector } from "@/components/CompanySelector";
+import { CompanySwitcher } from "@/components/CompanySwitcher";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Setup from "@/pages/setup";
+import { Building2 } from "lucide-react";
 import Dashboard from "@/pages/dashboard";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
@@ -147,11 +149,12 @@ function AppContent() {
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm font-medium" data-testid="text-company-name">
                   {currentCompany.name}
                 </span>
-                <CompanySelector />
               </div>
+              <CompanySwitcher />
             </div>
           </header>
           <main className="flex-1 overflow-y-auto">
