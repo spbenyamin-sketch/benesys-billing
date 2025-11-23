@@ -21,6 +21,7 @@ import {
   Settings,
   LogOut,
   Shield,
+  Building2,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -205,6 +206,14 @@ export function AppSidebar() {
                     <Link href="/users" data-testid="link-user-management">
                       <Shield className="h-5 w-5" />
                       <span>User Management</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/companies"}>
+                    <Link href="/companies" data-testid="link-companies">
+                      <Building2 className="h-5 w-5" />
+                      <span>Companies</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
