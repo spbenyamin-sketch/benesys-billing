@@ -35,14 +35,20 @@ import { db } from "./db";
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (REQUIRED for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  createUser(user: Partial<UpsertUser>): Promise<User>;
   getAllUsers(): Promise<User[]>;
   updateUserRole(id: string, role: string): Promise<User>;
+  updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
   deleteUser(id: string): Promise<void>;
   getUserCompanies(userId: string): Promise<any[]>;
   assignUserToDefaultCompany(userId: string): Promise<void>;
+  assignUserToCompany(userId: string, companyId: number, isDefault?: boolean): Promise<void>;
+  removeUserFromCompany(userId: string, companyId: number): Promise<void>;
+  needsInitialSetup(): Promise<boolean>;
 
   // Company operations
   getCompanies(): Promise<Company[]>;
@@ -153,6 +159,30 @@ export class DatabaseStorage implements IStorage {
     await db.delete(users).where(eq(users.id, id));
   }
 
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const results = await db.select().from(users).where(eq(users.username, username)).limit(1);
+    return results[0];
+  }
+
+  async createUser(user: Partial<UpsertUser>): Promise<User> {
+    const results = await db.insert(users).values(user as any).returning();
+    return results[0];
+  }
+
+  async updateUser(id: string, user: Partial<UpsertUser>): Promise<User> {
+    const results = await db
+      .update(users)
+      .set({ ...user, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return results[0];
+  }
+
+  async needsInitialSetup(): Promise<boolean> {
+    const allUsers = await this.getAllUsers();
+    return allUsers.length === 0;
+  }
+
   async getUserCompanies(userId: string): Promise<any[]> {
     const results = await db
       .select({
@@ -201,6 +231,54 @@ export class DatabaseStorage implements IStorage {
       companyId: 1,
       isDefault: true,
     });
+  }
+
+  async assignUserToCompany(userId: string, companyId: number, isDefault: boolean = false): Promise<void> {
+    // Check if assignment already exists
+    const existing = await db
+      .select()
+      .from(userCompanies)
+      .where(and(eq(userCompanies.userId, userId), eq(userCompanies.companyId, companyId)))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      // Update isDefault if needed
+      if (isDefault) {
+        // Remove default from other companies for this user
+        await db
+          .update(userCompanies)
+          .set({ isDefault: false })
+          .where(eq(userCompanies.userId, userId));
+        
+        // Set this as default
+        await db
+          .update(userCompanies)
+          .set({ isDefault: true })
+          .where(and(eq(userCompanies.userId, userId), eq(userCompanies.companyId, companyId)));
+      }
+      return;
+    }
+    
+    // Remove default from other companies if this should be default
+    if (isDefault) {
+      await db
+        .update(userCompanies)
+        .set({ isDefault: false })
+        .where(eq(userCompanies.userId, userId));
+    }
+    
+    // Create new assignment
+    await db.insert(userCompanies).values({
+      userId,
+      companyId,
+      isDefault,
+    });
+  }
+
+  async removeUserFromCompany(userId: string, companyId: number): Promise<void> {
+    await db
+      .delete(userCompanies)
+      .where(and(eq(userCompanies.userId, userId), eq(userCompanies.companyId, companyId)));
   }
 
   // ==================== COMPANY OPERATIONS ====================

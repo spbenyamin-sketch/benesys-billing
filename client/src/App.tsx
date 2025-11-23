@@ -6,10 +6,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/useAuth";
+import { useSetup } from "@/hooks/useSetup";
 import { CompanyProvider, useCompany } from "@/contexts/CompanyContext";
 import { CompanySelector } from "@/components/CompanySelector";
 import NotFound from "@/pages/not-found";
-import Landing from "@/pages/landing";
+import Login from "@/pages/login";
+import Setup from "@/pages/setup";
 import Dashboard from "@/pages/dashboard";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
@@ -27,38 +29,37 @@ import BillSettings from "@/pages/bill-settings";
 import Companies from "@/pages/companies";
 
 function Router() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const isSuperAdmin = user?.role === "admin";
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/parties" component={Parties} />
-          <Route path="/items" component={Items} />
-          <Route path="/sales/new" component={SalesBilling} />
-          <Route path="/sales" component={Sales} />
-          <Route path="/purchases" component={Purchases} />
-          <Route path="/payments" component={Payments} />
-          <Route path="/stock" component={Stock} />
-          <Route path="/reports/outstanding" component={Outstanding} />
-          <Route path="/reports/sales" component={SalesReport} />
-          <Route path="/reports/items" component={ItemsReport} />
-          <Route path="/reports/ledger/:id" component={Ledger} />
-          {isSuperAdmin && <Route path="/users" component={UserManagement} />}
-          {isSuperAdmin && <Route path="/companies" component={Companies} />}
-          {isSuperAdmin && <Route path="/bill-settings" component={BillSettings} />}
-        </>
-      )}
+      <Route path="/" component={Dashboard} />
+      <Route path="/parties" component={Parties} />
+      <Route path="/items" component={Items} />
+      <Route path="/sales/new" component={SalesBilling} />
+      <Route path="/sales" component={Sales} />
+      <Route path="/purchases" component={Purchases} />
+      <Route path="/payments" component={Payments} />
+      <Route path="/stock" component={Stock} />
+      <Route path="/reports/outstanding" component={Outstanding} />
+      <Route path="/reports/sales" component={SalesReport} />
+      <Route path="/reports/items" component={ItemsReport} />
+      <Route path="/reports/ledger/:id" component={Ledger} />
+      {isSuperAdmin && <Route path="/users" component={UserManagement} />}
+      {isSuperAdmin && <Route path="/companies" component={Companies} />}
+      {isSuperAdmin && <Route path="/bill-settings" component={BillSettings} />}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function AppContent() {
+  const { needsSetup, isLoading: setupLoading } = useSetup();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { currentCompany, isLoading: companyLoading } = useCompany();
 
@@ -67,14 +68,33 @@ function AppContent() {
     "--sidebar-width-icon": "3rem",
   } as React.CSSProperties;
 
-  if (authLoading || !isAuthenticated) {
-    return <Router />;
+  // Show loading state
+  if (setupLoading || authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-lg">Loading...</div>
+        </div>
+      </div>
+    );
   }
 
+  // Show setup page if needed
+  if (needsSetup) {
+    return <Setup />;
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Show company selector if no company selected
   if (companyLoading || !currentCompany) {
     return <CompanySelector />;
   }
 
+  // Show main app with sidebar
   return (
     <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
