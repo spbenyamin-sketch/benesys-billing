@@ -19,11 +19,14 @@ import SalesBilling from "@/pages/sales-billing";
 import Sales from "@/pages/sales";
 import Purchases from "@/pages/purchases";
 import PurchaseEntry from "@/pages/purchase-entry";
+import PurchaseDetail from "@/pages/purchase-detail";
 import Payments from "@/pages/payments";
 import Stock from "@/pages/stock";
+import StockView from "@/pages/stock-view";
 import Outstanding from "@/pages/reports/outstanding";
 import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
+import PurchaseReport from "@/pages/reports/purchase-report";
 import Ledger from "@/pages/reports/ledger";
 import UserManagement from "@/pages/user-management";
 import BillSettings from "@/pages/bill-settings";
@@ -45,11 +48,14 @@ function Router() {
       <Route path="/sales/new" component={SalesBilling} />
       <Route path="/sales" component={Sales} />
       <Route path="/purchases/new" component={PurchaseEntry} />
+      <Route path="/purchases/:id" component={PurchaseDetail} />
       <Route path="/purchases" component={Purchases} />
       <Route path="/payments" component={Payments} />
+      <Route path="/stock/view" component={StockView} />
       <Route path="/stock" component={Stock} />
       <Route path="/reports/outstanding" component={Outstanding} />
       <Route path="/reports/sales" component={SalesReport} />
+      <Route path="/reports/purchases" component={PurchaseReport} />
       <Route path="/reports/items" component={ItemsReport} />
       <Route path="/reports/ledger/:id" component={Ledger} />
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}

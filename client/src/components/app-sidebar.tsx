@@ -88,6 +88,11 @@ export function AppSidebar() {
       icon: FileText,
     },
     {
+      title: "Purchase Report",
+      url: "/reports/purchases",
+      icon: ShoppingCart,
+    },
+    {
       title: "Item Report",
       url: "/reports/items",
       icon: Package,
@@ -95,6 +100,11 @@ export function AppSidebar() {
     {
       title: "Stock",
       url: "/stock",
+      icon: Package,
+    },
+    {
+      title: "Stock View",
+      url: "/stock/view",
       icon: Package,
     },
   ];
