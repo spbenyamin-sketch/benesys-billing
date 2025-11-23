@@ -263,9 +263,27 @@ export const purchases = pgTable("purchases", {
   companyId: integer("company_id").references(() => companies.id).notNull(),
   purchaseNo: integer("purchase_no").notNull(),
   date: date("date").notNull(),
+  invoiceNo: varchar("invoice_no", { length: 50 }),
   partyId: integer("party_id").references(() => parties.id),
   partyName: varchar("party_name", { length: 200 }),
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  city: varchar("city", { length: 100 }),
+  totalQty: decimal("total_qty", { precision: 12, scale: 2 }).default("0").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  val0: decimal("val_0", { precision: 12, scale: 2 }).default("0").notNull(),
+  val5: decimal("val_5", { precision: 12, scale: 2 }).default("0").notNull(),
+  val12: decimal("val_12", { precision: 12, scale: 2 }).default("0").notNull(),
+  val18: decimal("val_18", { precision: 12, scale: 2 }).default("0").notNull(),
+  val28: decimal("val_28", { precision: 12, scale: 2 }).default("0").notNull(),
+  ctax0: decimal("ctax_0", { precision: 12, scale: 2 }).default("0").notNull(),
+  ctax5: decimal("ctax_5", { precision: 12, scale: 2 }).default("0").notNull(),
+  ctax12: decimal("ctax_12", { precision: 12, scale: 2 }).default("0").notNull(),
+  ctax18: decimal("ctax_18", { precision: 12, scale: 2 }).default("0").notNull(),
+  ctax28: decimal("ctax_28", { precision: 12, scale: 2 }).default("0").notNull(),
+  stax0: decimal("stax_0", { precision: 12, scale: 2 }).default("0").notNull(),
+  stax5: decimal("stax_5", { precision: 12, scale: 2 }).default("0").notNull(),
+  stax12: decimal("stax_12", { precision: 12, scale: 2 }).default("0").notNull(),
+  stax18: decimal("stax_18", { precision: 12, scale: 2 }).default("0").notNull(),
+  stax28: decimal("stax_28", { precision: 12, scale: 2 }).default("0").notNull(),
   details: text("details"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -282,6 +300,38 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
+
+export const purchaseItems = pgTable("purchase_items", {
+  id: serial("id").primaryKey(),
+  purchaseId: integer("purchase_id").references(() => purchases.id).notNull(),
+  itemId: integer("item_id").references(() => items.id),
+  serial: integer("serial").notNull(),
+  barcode: varchar("barcode", { length: 100 }),
+  itname: varchar("itname", { length: 300 }).notNull(),
+  brandname: varchar("brandname", { length: 200 }),
+  name: varchar("name", { length: 200 }),
+  qty: decimal("qty", { precision: 12, scale: 2 }).notNull(),
+  cost: decimal("cost", { precision: 12, scale: 2 }).notNull(),
+  tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(),
+  arate: decimal("arate", { precision: 12, scale: 2 }).default("0").notNull(),
+  rrate: decimal("rrate", { precision: 12, scale: 2 }).default("0").notNull(),
+  brate: decimal("brate", { precision: 12, scale: 2 }).default("0").notNull(),
+  profit: decimal("profit", { precision: 12, scale: 2 }).default("0").notNull(),
+  prper: decimal("prper", { precision: 5, scale: 2 }).default("0").notNull(),
+  expdate: date("expdate"),
+  dqty: decimal("dqty", { precision: 12, scale: 2 }).default("0").notNull(),
+  saleqty: decimal("saleqty", { precision: 12, scale: 2 }).default("0").notNull(),
+  stockqty: decimal("stockqty", { precision: 12, scale: 2 }).default("0").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertPurchaseItemSchema = createInsertSchema(purchaseItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPurchaseItem = z.infer<typeof insertPurchaseItemSchema>;
+export type PurchaseItem = typeof purchaseItems.$inferSelect;
 
 // ============================================================================
 // PAYMENT TABLES
@@ -382,10 +432,22 @@ export const saleItemsRelations = relations(saleItems, ({ one }) => ({
   }),
 }));
 
-export const purchasesRelations = relations(purchases, ({ one }) => ({
+export const purchasesRelations = relations(purchases, ({ one, many }) => ({
   party: one(parties, {
     fields: [purchases.partyId],
     references: [parties.id],
+  }),
+  items: many(purchaseItems),
+}));
+
+export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
+  purchase: one(purchases, {
+    fields: [purchaseItems.purchaseId],
+    references: [purchases.id],
+  }),
+  item: one(items, {
+    fields: [purchaseItems.itemId],
+    references: [items.id],
   }),
 }));
 

@@ -5,6 +5,7 @@ import {
   sales,
   saleItems,
   purchases,
+  purchaseItems,
   payments,
   stock,
   billTemplates,
@@ -22,6 +23,8 @@ import {
   type InsertSaleItem,
   type Purchase,
   type InsertPurchase,
+  type PurchaseItem,
+  type InsertPurchaseItem,
   type Payment,
   type InsertPayment,
   type Stock,
@@ -76,8 +79,10 @@ export interface IStorage {
 
   // Purchase operations
   getPurchases(companyId: number): Promise<Purchase[]>;
+  getPurchase(id: number, companyId: number): Promise<any | undefined>;
   getNextPurchaseNumber(companyId: number): Promise<number>;
-  createPurchase(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase>;
+  getNextSerial(companyId: number): Promise<number>;
+  createPurchase(purchase: InsertPurchase, items: InsertPurchaseItem[], userId: string, companyId: number): Promise<Purchase>;
 
   // Payment operations
   getPayments(companyId: number): Promise<Payment[]>;
@@ -490,6 +495,24 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(purchases.date), desc(purchases.id));
   }
 
+  async getPurchase(id: number, companyId: number): Promise<any | undefined> {
+    const [purchase] = await db
+      .select()
+      .from(purchases)
+      .where(and(eq(purchases.id, id), eq(purchases.companyId, companyId)));
+
+    if (!purchase) {
+      return undefined;
+    }
+
+    const items = await db
+      .select()
+      .from(purchaseItems)
+      .where(eq(purchaseItems.purchaseId, id));
+
+    return { ...purchase, items };
+  }
+
   async getNextPurchaseNumber(companyId: number): Promise<number> {
     const [result] = await db
       .select({ maxNo: sql<number>`COALESCE(MAX(${purchases.purchaseNo}), 0)` })
@@ -498,18 +521,97 @@ export class DatabaseStorage implements IStorage {
     return (result?.maxNo || 0) + 1;
   }
 
-  async createPurchase(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase> {
+  async getNextSerial(companyId: number): Promise<number> {
+    const [result] = await db
+      .select({ maxSerial: sql<number>`COALESCE(MAX(${purchaseItems.serial}), 0)` })
+      .from(purchaseItems)
+      .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
+      .where(eq(purchases.companyId, companyId));
+    return (result?.maxSerial || 0) + 1;
+  }
+
+  async createPurchase(purchaseData: InsertPurchase, itemsData: InsertPurchaseItem[], userId: string, companyId: number): Promise<Purchase> {
     const purchaseNo = await this.getNextPurchaseNumber(companyId);
 
+    // Calculate totals and tax breakdowns
+    let totalQty = 0;
+    let totalAmount = 0;
+    const taxBreakdown = { val0: 0, val5: 0, val12: 0, val18: 0, val28: 0, ctax0: 0, ctax5: 0, ctax12: 0, ctax18: 0, ctax28: 0, stax0: 0, stax5: 0, stax12: 0, stax18: 0, stax28: 0 };
+
+    for (const item of itemsData) {
+      totalQty += parseFloat(item.qty.toString());
+      const itemTotal = parseFloat(item.cost.toString()) * parseFloat(item.qty.toString());
+      const taxRate = parseFloat((item.tax || 0).toString());
+      const taxAmount = (itemTotal * taxRate) / 100;
+      totalAmount += itemTotal + taxAmount;
+
+      if (taxRate === 0) {
+        taxBreakdown.val0 += itemTotal;
+        taxBreakdown.ctax0 += taxAmount / 2;
+        taxBreakdown.stax0 += taxAmount / 2;
+      } else if (taxRate === 5) {
+        taxBreakdown.val5 += itemTotal;
+        taxBreakdown.ctax5 += taxAmount / 2;
+        taxBreakdown.stax5 += taxAmount / 2;
+      } else if (taxRate === 12) {
+        taxBreakdown.val12 += itemTotal;
+        taxBreakdown.ctax12 += taxAmount / 2;
+        taxBreakdown.stax12 += taxAmount / 2;
+      } else if (taxRate === 18) {
+        taxBreakdown.val18 += itemTotal;
+        taxBreakdown.ctax18 += taxAmount / 2;
+        taxBreakdown.stax18 += taxAmount / 2;
+      } else if (taxRate === 28) {
+        taxBreakdown.val28 += itemTotal;
+        taxBreakdown.ctax28 += taxAmount / 2;
+        taxBreakdown.stax28 += taxAmount / 2;
+      }
+    }
+
+    // Insert purchase
     const [newPurchase] = await db
       .insert(purchases)
       .values({
-        ...purchase,
+        ...purchaseData,
         purchaseNo,
+        totalQty: totalQty.toString(),
+        amount: totalAmount.toString(),
+        val0: taxBreakdown.val0.toString(),
+        val5: taxBreakdown.val5.toString(),
+        val12: taxBreakdown.val12.toString(),
+        val18: taxBreakdown.val18.toString(),
+        val28: taxBreakdown.val28.toString(),
+        ctax0: taxBreakdown.ctax0.toString(),
+        ctax5: taxBreakdown.ctax5.toString(),
+        ctax12: taxBreakdown.ctax12.toString(),
+        ctax18: taxBreakdown.ctax18.toString(),
+        ctax28: taxBreakdown.ctax28.toString(),
+        stax0: taxBreakdown.stax0.toString(),
+        stax5: taxBreakdown.stax5.toString(),
+        stax12: taxBreakdown.stax12.toString(),
+        stax18: taxBreakdown.stax18.toString(),
+        stax28: taxBreakdown.stax28.toString(),
         createdBy: userId,
         companyId,
       })
       .returning();
+
+    // Insert purchase items and update stock
+    for (const item of itemsData) {
+      const qty = parseFloat(item.qty.toString());
+      const stockQty = qty - parseFloat((item.dqty || 0).toString());
+      
+      await db.insert(purchaseItems).values({
+        ...item,
+        purchaseId: newPurchase.id,
+        stockqty: stockQty.toString(),
+      });
+
+      // Update stock (increase) if item is linked to an item master
+      if (item.itemId) {
+        await this.updateStock(item.itemId, qty, companyId);
+      }
+    }
 
     return newPurchase;
   }

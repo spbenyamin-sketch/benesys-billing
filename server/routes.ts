@@ -416,12 +416,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/purchases/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchase = await storage.getPurchase(parseInt(req.params.id), req.companyId);
+      if (!purchase) {
+        return res.status(404).json({ message: "Purchase not found" });
+      }
+      res.json(purchase);
+    } catch (error) {
+      console.error("Error fetching purchase:", error);
+      res.status(500).json({ message: "Failed to fetch purchase" });
+    }
+  });
+
+  app.get("/api/next-serial", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const nextSerial = await storage.getNextSerial(req.companyId);
+      res.json({ serial: nextSerial });
+    } catch (error) {
+      console.error("Error fetching next serial:", error);
+      res.status(500).json({ message: "Failed to fetch next serial" });
+    }
+  });
+
   app.post("/api/purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const validated = insertPurchaseSchema.parse(req.body);
+      const { purchase, items } = req.body;
+      
+      if (!purchase || !items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "Purchase and items array required" });
+      }
+
+      const validatedPurchase = insertPurchaseSchema.parse(purchase);
       const userId = req.user.id;
-      const purchase = await storage.createPurchase(validated, userId, req.companyId);
-      res.json(purchase);
+      
+      const newPurchase = await storage.createPurchase(validatedPurchase, items, userId, req.companyId);
+      res.json(newPurchase);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
