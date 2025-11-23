@@ -18,6 +18,7 @@ import Items from "@/pages/items";
 import SalesBilling from "@/pages/sales-billing";
 import Sales from "@/pages/sales";
 import Purchases from "@/pages/purchases";
+import PurchaseEntry from "@/pages/purchase-entry";
 import Payments from "@/pages/payments";
 import Stock from "@/pages/stock";
 import Outstanding from "@/pages/reports/outstanding";
@@ -43,6 +44,7 @@ function Router() {
       <Route path="/items" component={Items} />
       <Route path="/sales/new" component={SalesBilling} />
       <Route path="/sales" component={Sales} />
+      <Route path="/purchases/new" component={PurchaseEntry} />
       <Route path="/purchases" component={Purchases} />
       <Route path="/payments" component={Payments} />
       <Route path="/stock" component={Stock} />

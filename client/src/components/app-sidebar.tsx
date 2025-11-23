@@ -60,6 +60,11 @@ export function AppSidebar() {
 
   const transactionsMenuItems = [
     {
+      title: "Purchase Entry",
+      url: "/purchases/new",
+      icon: FileText,
+    },
+    {
       title: "Purchases",
       url: "/purchases",
       icon: ShoppingCart,
