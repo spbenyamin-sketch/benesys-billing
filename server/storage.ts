@@ -7,6 +7,7 @@ import {
   purchases,
   payments,
   stock,
+  billTemplates,
   type User,
   type UpsertUser,
   type Party,
@@ -23,6 +24,8 @@ import {
   type InsertPayment,
   type Stock,
   type InsertStock,
+  type BillTemplate,
+  type InsertBillTemplate,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
@@ -31,6 +34,9 @@ export interface IStorage {
   // User operations (REQUIRED for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUserRole(id: string, role: string): Promise<User>;
+  deleteUser(id: string): Promise<void>;
 
   // Party operations
   getParties(): Promise<Party[]>;
@@ -68,6 +74,13 @@ export interface IStorage {
   getSalesReport(startDate?: string, endDate?: string, billType?: string): Promise<any[]>;
   getItemsReport(startDate?: string, endDate?: string): Promise<any[]>;
   getPartyLedger(partyId: number): Promise<any>;
+
+  // Bill Template operations
+  getBillTemplates(): Promise<BillTemplate[]>;
+  getDefaultBillTemplate(): Promise<BillTemplate | undefined>;
+  createBillTemplate(template: InsertBillTemplate, userId: string): Promise<BillTemplate>;
+  updateBillTemplate(id: number, template: InsertBillTemplate): Promise<BillTemplate>;
+  deleteBillTemplate(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {

@@ -285,6 +285,36 @@ export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 export type Payment = typeof payments.$inferSelect;
 
 // ============================================================================
+// BILL TEMPLATE/SETTINGS TABLE
+// ============================================================================
+
+export const billTemplates = pgTable("bill_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 100 }).notNull(),
+  headerText: text("header_text"), // Company branding text at top
+  footerText: text("footer_text"), // Footer notes
+  showTaxBreakup: boolean("show_tax_breakup").default(true).notNull(),
+  showHsnCode: boolean("show_hsn_code").default(true).notNull(),
+  showItemCode: boolean("show_item_code").default(true).notNull(),
+  paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(), // A4, A5, etc
+  fontSize: integer("font_size").default(10).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
+export const insertBillTemplateSchema = createInsertSchema(billTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+});
+
+export type InsertBillTemplate = z.infer<typeof insertBillTemplateSchema>;
+export type BillTemplate = typeof billTemplates.$inferSelect;
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
