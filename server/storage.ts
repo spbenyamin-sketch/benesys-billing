@@ -51,48 +51,48 @@ export interface IStorage {
   deleteCompany(id: number): Promise<void>;
 
   // Party operations
-  getParties(): Promise<Party[]>;
-  getParty(id: number): Promise<Party | undefined>;
-  createParty(party: InsertParty, userId: string): Promise<Party>;
-  updateParty(id: number, party: InsertParty): Promise<Party>;
+  getParties(companyId: number): Promise<Party[]>;
+  getParty(id: number, companyId: number): Promise<Party | undefined>;
+  createParty(party: InsertParty, userId: string, companyId: number): Promise<Party>;
+  updateParty(id: number, party: InsertParty, companyId: number): Promise<Party>;
 
   // Item operations
-  getItems(): Promise<Item[]>;
-  getItem(id: number): Promise<Item | undefined>;
-  createItem(item: InsertItem, userId: string): Promise<Item>;
-  updateItem(id: number, item: InsertItem): Promise<Item>;
+  getItems(companyId: number): Promise<Item[]>;
+  getItem(id: number, companyId: number): Promise<Item | undefined>;
+  createItem(item: InsertItem, userId: string, companyId: number): Promise<Item>;
+  updateItem(id: number, item: InsertItem, companyId: number): Promise<Item>;
 
   // Sales operations
-  getSales(): Promise<Sale[]>;
-  getNextInvoiceNumber(billType: string): Promise<number>;
-  createSale(sale: InsertSale, items: InsertSaleItem[], userId: string): Promise<Sale>;
+  getSales(companyId: number): Promise<Sale[]>;
+  getNextInvoiceNumber(billType: string, companyId: number): Promise<number>;
+  createSale(sale: InsertSale, items: InsertSaleItem[], userId: string, companyId: number): Promise<Sale>;
 
   // Purchase operations
-  getPurchases(): Promise<Purchase[]>;
-  getNextPurchaseNumber(): Promise<number>;
-  createPurchase(purchase: InsertPurchase, userId: string): Promise<Purchase>;
+  getPurchases(companyId: number): Promise<Purchase[]>;
+  getNextPurchaseNumber(companyId: number): Promise<number>;
+  createPurchase(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase>;
 
   // Payment operations
-  getPayments(): Promise<Payment[]>;
-  createPayment(payment: InsertPayment, userId: string): Promise<Payment>;
+  getPayments(companyId: number): Promise<Payment[]>;
+  createPayment(payment: InsertPayment, userId: string, companyId: number): Promise<Payment>;
 
   // Stock operations
-  getStock(): Promise<any[]>;
-  updateStock(itemId: number, quantityChange: number): Promise<void>;
+  getStock(companyId: number): Promise<any[]>;
+  updateStock(itemId: number, quantityChange: number, companyId: number): Promise<void>;
 
   // Report operations
-  getDashboardMetrics(): Promise<any>;
-  getOutstanding(): Promise<any[]>;
-  getSalesReport(startDate?: string, endDate?: string, billType?: string): Promise<any[]>;
-  getItemsReport(startDate?: string, endDate?: string): Promise<any[]>;
-  getPartyLedger(partyId: number): Promise<any>;
+  getDashboardMetrics(companyId: number): Promise<any>;
+  getOutstanding(companyId: number): Promise<any[]>;
+  getSalesReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any[]>;
+  getItemsReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]>;
+  getPartyLedger(partyId: number, companyId: number): Promise<any>;
 
   // Bill Template operations
-  getBillTemplates(): Promise<BillTemplate[]>;
-  getDefaultBillTemplate(): Promise<BillTemplate | undefined>;
-  createBillTemplate(template: InsertBillTemplate, userId: string): Promise<BillTemplate>;
-  updateBillTemplate(id: number, template: InsertBillTemplate): Promise<BillTemplate>;
-  deleteBillTemplate(id: number): Promise<void>;
+  getBillTemplates(companyId: number): Promise<BillTemplate[]>;
+  getDefaultBillTemplate(companyId: number): Promise<BillTemplate | undefined>;
+  createBillTemplate(template: InsertBillTemplate, userId: string, companyId: number): Promise<BillTemplate>;
+  updateBillTemplate(id: number, template: InsertBillTemplate, companyId: number): Promise<BillTemplate>;
+  deleteBillTemplate(id: number, companyId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -209,43 +209,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ==================== PARTY OPERATIONS ====================
-  async getParties(): Promise<Party[]> {
-    return await db.select().from(parties).orderBy(desc(parties.createdAt));
+  async getParties(companyId: number): Promise<Party[]> {
+    return await db
+      .select()
+      .from(parties)
+      .where(eq(parties.companyId, companyId))
+      .orderBy(desc(parties.createdAt));
   }
 
-  async getParty(id: number): Promise<Party | undefined> {
-    const [party] = await db.select().from(parties).where(eq(parties.id, id));
+  async getParty(id: number, companyId: number): Promise<Party | undefined> {
+    const [party] = await db
+      .select()
+      .from(parties)
+      .where(and(eq(parties.id, id), eq(parties.companyId, companyId)));
     return party;
   }
 
-  async createParty(party: InsertParty, userId: string): Promise<Party> {
+  async createParty(party: InsertParty, userId: string, companyId: number): Promise<Party> {
     const [newParty] = await db
       .insert(parties)
-      .values({ ...party, createdBy: userId })
+      .values({ ...party, createdBy: userId, companyId })
       .returning();
     return newParty;
   }
 
-  async updateParty(id: number, party: InsertParty): Promise<Party> {
+  async updateParty(id: number, party: InsertParty, companyId: number): Promise<Party> {
     const [updated] = await db
       .update(parties)
       .set({ ...party, updatedAt: new Date() })
-      .where(eq(parties.id, id))
+      .where(and(eq(parties.id, id), eq(parties.companyId, companyId)))
       .returning();
     return updated;
   }
 
   // ==================== ITEM OPERATIONS ====================
-  async getItems(): Promise<Item[]> {
-    return await db.select().from(items).orderBy(desc(items.createdAt));
+  async getItems(companyId: number): Promise<Item[]> {
+    return await db
+      .select()
+      .from(items)
+      .where(eq(items.companyId, companyId))
+      .orderBy(desc(items.createdAt));
   }
 
-  async getItem(id: number): Promise<Item | undefined> {
-    const [item] = await db.select().from(items).where(eq(items.id, id));
+  async getItem(id: number, companyId: number): Promise<Item | undefined> {
+    const [item] = await db
+      .select()
+      .from(items)
+      .where(and(eq(items.id, id), eq(items.companyId, companyId)));
     return item;
   }
 
-  async createItem(item: InsertItem, userId: string): Promise<Item> {
+  async createItem(item: InsertItem, userId: string, companyId: number): Promise<Item> {
     // Auto-calculate CGST and SGST from tax
     const tax = parseFloat(item.tax?.toString() || "0");
     const cgst = tax / 2;
@@ -258,6 +272,7 @@ export class DatabaseStorage implements IStorage {
         cgst: cgst.toString(),
         sgst: sgst.toString(),
         createdBy: userId,
+        companyId,
       })
       .returning();
 
@@ -265,12 +280,13 @@ export class DatabaseStorage implements IStorage {
     await db.insert(stock).values({
       itemId: newItem.id,
       quantity: "0",
+      companyId,
     });
 
     return newItem;
   }
 
-  async updateItem(id: number, item: InsertItem): Promise<Item> {
+  async updateItem(id: number, item: InsertItem, companyId: number): Promise<Item> {
     // Auto-calculate CGST and SGST from tax
     const tax = parseFloat(item.tax?.toString() || "0");
     const cgst = tax / 2;
@@ -284,27 +300,31 @@ export class DatabaseStorage implements IStorage {
         sgst: sgst.toString(),
         updatedAt: new Date(),
       })
-      .where(eq(items.id, id))
+      .where(and(eq(items.id, id), eq(items.companyId, companyId)))
       .returning();
     return updated;
   }
 
   // ==================== SALES OPERATIONS ====================
-  async getSales(): Promise<Sale[]> {
-    return await db.select().from(sales).orderBy(desc(sales.date), desc(sales.id));
+  async getSales(companyId: number): Promise<Sale[]> {
+    return await db
+      .select()
+      .from(sales)
+      .where(eq(sales.companyId, companyId))
+      .orderBy(desc(sales.date), desc(sales.id));
   }
 
-  async getNextInvoiceNumber(billType: string): Promise<number> {
+  async getNextInvoiceNumber(billType: string, companyId: number): Promise<number> {
     const [result] = await db
       .select({ maxNo: sql<number>`COALESCE(MAX(${sales.invoiceNo}), 0)` })
       .from(sales)
-      .where(eq(sales.billType, billType));
+      .where(and(eq(sales.billType, billType), eq(sales.companyId, companyId)));
     return (result?.maxNo || 0) + 1;
   }
 
-  async createSale(saleData: InsertSale, saleItemsData: InsertSaleItem[], userId: string): Promise<Sale> {
+  async createSale(saleData: InsertSale, saleItemsData: InsertSaleItem[], userId: string, companyId: number): Promise<Sale> {
     // Get next invoice number
-    const invoiceNo = await this.getNextInvoiceNumber(saleData.billType);
+    const invoiceNo = await this.getNextInvoiceNumber(saleData.billType, companyId);
 
     // Insert sale
     const [newSale] = await db
@@ -314,6 +334,7 @@ export class DatabaseStorage implements IStorage {
         invoiceNo,
         time: new Date().toTimeString().substring(0, 8),
         createdBy: userId,
+        companyId,
       })
       .returning();
 
@@ -326,7 +347,7 @@ export class DatabaseStorage implements IStorage {
 
       // Update stock (decrease)
       if (item.itemId) {
-        await this.updateStock(item.itemId, -parseFloat(item.quantity.toString()));
+        await this.updateStock(item.itemId, -parseFloat(item.quantity.toString()), companyId);
       }
     }
 
@@ -334,19 +355,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ==================== PURCHASE OPERATIONS ====================
-  async getPurchases(): Promise<Purchase[]> {
-    return await db.select().from(purchases).orderBy(desc(purchases.date), desc(purchases.id));
+  async getPurchases(companyId: number): Promise<Purchase[]> {
+    return await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.companyId, companyId))
+      .orderBy(desc(purchases.date), desc(purchases.id));
   }
 
-  async getNextPurchaseNumber(): Promise<number> {
+  async getNextPurchaseNumber(companyId: number): Promise<number> {
     const [result] = await db
       .select({ maxNo: sql<number>`COALESCE(MAX(${purchases.purchaseNo}), 0)` })
-      .from(purchases);
+      .from(purchases)
+      .where(eq(purchases.companyId, companyId));
     return (result?.maxNo || 0) + 1;
   }
 
-  async createPurchase(purchase: InsertPurchase, userId: string): Promise<Purchase> {
-    const purchaseNo = await this.getNextPurchaseNumber();
+  async createPurchase(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase> {
+    const purchaseNo = await this.getNextPurchaseNumber(companyId);
 
     const [newPurchase] = await db
       .insert(purchases)
@@ -354,6 +380,7 @@ export class DatabaseStorage implements IStorage {
         ...purchase,
         purchaseNo,
         createdBy: userId,
+        companyId,
       })
       .returning();
 
@@ -361,20 +388,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ==================== PAYMENT OPERATIONS ====================
-  async getPayments(): Promise<Payment[]> {
-    return await db.select().from(payments).orderBy(desc(payments.date), desc(payments.id));
+  async getPayments(companyId: number): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.companyId, companyId))
+      .orderBy(desc(payments.date), desc(payments.id));
   }
 
-  async createPayment(payment: InsertPayment, userId: string): Promise<Payment> {
+  async createPayment(payment: InsertPayment, userId: string, companyId: number): Promise<Payment> {
     const [newPayment] = await db
       .insert(payments)
-      .values({ ...payment, createdBy: userId })
+      .values({ ...payment, createdBy: userId, companyId })
       .returning();
     return newPayment;
   }
 
   // ==================== STOCK OPERATIONS ====================
-  async getStock(): Promise<any[]> {
+  async getStock(companyId: number): Promise<any[]> {
     const result = await db
       .select({
         id: stock.id,
@@ -388,29 +419,30 @@ export class DatabaseStorage implements IStorage {
       })
       .from(stock)
       .innerJoin(items, eq(stock.itemId, items.id))
+      .where(eq(stock.companyId, companyId))
       .orderBy(items.name);
     return result;
   }
 
-  async updateStock(itemId: number, quantityChange: number): Promise<void> {
+  async updateStock(itemId: number, quantityChange: number, companyId: number): Promise<void> {
     await db
       .update(stock)
       .set({
         quantity: sql`${stock.quantity} + ${quantityChange}`,
         lastUpdated: new Date(),
       })
-      .where(eq(stock.itemId, itemId));
+      .where(and(eq(stock.itemId, itemId), eq(stock.companyId, companyId)));
   }
 
   // ==================== REPORT OPERATIONS ====================
-  async getDashboardMetrics(): Promise<any> {
+  async getDashboardMetrics(companyId: number): Promise<any> {
     const today = new Date().toISOString().split('T')[0];
 
     // Today's sales
     const [todaySales] = await db
       .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
       .from(sales)
-      .where(eq(sales.date, today));
+      .where(and(eq(sales.date, today), eq(sales.companyId, companyId)));
 
     // Recent sales
     const recentSales = await db
@@ -423,23 +455,25 @@ export class DatabaseStorage implements IStorage {
         grandTotal: sales.grandTotal,
       })
       .from(sales)
+      .where(eq(sales.companyId, companyId))
       .orderBy(desc(sales.date), desc(sales.id))
       .limit(5);
 
     // Get outstanding
-    const outstanding = await this.getOutstanding();
+    const outstanding = await this.getOutstanding(companyId);
     const totalOutstanding = outstanding.reduce((sum, p) => sum + p.balance, 0);
 
     // Low stock count
     const [lowStockResult] = await db
       .select({ count: sql<number>`COUNT(*)` })
       .from(stock)
-      .where(sql`${stock.quantity} < 10`);
+      .where(and(sql`${stock.quantity} < 10`, eq(stock.companyId, companyId)));
 
     // Total customers
     const [customersResult] = await db
       .select({ count: sql<number>`COUNT(*)` })
-      .from(parties);
+      .from(parties)
+      .where(eq(parties.companyId, companyId));
 
     return {
       todaysSales: todaySales?.total || 0,
@@ -450,7 +484,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getOutstanding(): Promise<any[]> {
+  async getOutstanding(companyId: number): Promise<any[]> {
     const result = await db
       .select({
         partyId: parties.id,
@@ -465,9 +499,10 @@ export class DatabaseStorage implements IStorage {
         totalPaymentsDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
       })
       .from(parties)
-      .leftJoin(sales, eq(parties.id, sales.partyId))
-      .leftJoin(purchases, eq(parties.id, purchases.partyId))
-      .leftJoin(payments, eq(parties.id, payments.partyId))
+      .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId)))
+      .leftJoin(purchases, and(eq(parties.id, purchases.partyId), eq(purchases.companyId, companyId)))
+      .leftJoin(payments, and(eq(parties.id, payments.partyId), eq(payments.companyId, companyId)))
+      .where(eq(parties.companyId, companyId))
       .groupBy(parties.id, parties.code, parties.name, parties.city, parties.openingDebit, parties.openingCredit);
 
     return result.map((row) => {
@@ -485,23 +520,25 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getSalesReport(startDate?: string, endDate?: string, billType?: string): Promise<any[]> {
-    let query = db.select().from(sales);
-
-    const conditions = [];
+  async getSalesReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any[]> {
+    const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (billType && billType !== 'all') conditions.push(eq(sales.billType, billType));
 
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
-
-    return await query.orderBy(desc(sales.date), desc(sales.id));
+    return await db
+      .select()
+      .from(sales)
+      .where(and(...conditions))
+      .orderBy(desc(sales.date), desc(sales.id));
   }
 
-  async getItemsReport(startDate?: string, endDate?: string): Promise<any[]> {
-    let query = db
+  async getItemsReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]> {
+    const conditions = [eq(sales.companyId, companyId)];
+    if (startDate) conditions.push(gte(sales.date, startDate));
+    if (endDate) conditions.push(lte(sales.date, endDate));
+
+    return await db
       .select({
         itemId: saleItems.itemId,
         itemCode: saleItems.itemCode,
@@ -514,66 +551,69 @@ export class DatabaseStorage implements IStorage {
         invoiceCount: sql<number>`COUNT(DISTINCT ${saleItems.saleId})`,
       })
       .from(saleItems)
-      .innerJoin(sales, eq(saleItems.saleId, sales.id));
-
-    const conditions = [];
-    if (startDate) conditions.push(gte(sales.date, startDate));
-    if (endDate) conditions.push(lte(sales.date, endDate));
-
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions)) as any;
-    }
-
-    return await query
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .where(and(...conditions))
       .groupBy(saleItems.itemId, saleItems.itemCode, saleItems.itemName, saleItems.hsnCode)
       .orderBy(sql`SUM(${saleItems.amount}) DESC`);
   }
 
   // ==================== BILL TEMPLATE OPERATIONS ====================
-  async getBillTemplates(): Promise<BillTemplate[]> {
-    return await db.select().from(billTemplates).orderBy(desc(billTemplates.createdAt));
+  async getBillTemplates(companyId: number): Promise<BillTemplate[]> {
+    return await db
+      .select()
+      .from(billTemplates)
+      .where(eq(billTemplates.companyId, companyId))
+      .orderBy(desc(billTemplates.createdAt));
   }
 
-  async getDefaultBillTemplate(): Promise<BillTemplate | undefined> {
+  async getDefaultBillTemplate(companyId: number): Promise<BillTemplate | undefined> {
     const [template] = await db
       .select()
       .from(billTemplates)
-      .where(eq(billTemplates.isDefault, true))
+      .where(and(eq(billTemplates.isDefault, true), eq(billTemplates.companyId, companyId)))
       .limit(1);
     return template;
   }
 
-  async createBillTemplate(template: InsertBillTemplate, userId: string): Promise<BillTemplate> {
-    // If this is set as default, unset other defaults
+  async createBillTemplate(template: InsertBillTemplate, userId: string, companyId: number): Promise<BillTemplate> {
+    // If this is set as default, unset other defaults for this company
     if (template.isDefault) {
-      await db.update(billTemplates).set({ isDefault: false }).where(eq(billTemplates.isDefault, true));
+      await db
+        .update(billTemplates)
+        .set({ isDefault: false })
+        .where(and(eq(billTemplates.isDefault, true), eq(billTemplates.companyId, companyId)));
     }
     const [newTemplate] = await db
       .insert(billTemplates)
-      .values({ ...template, createdBy: userId })
+      .values({ ...template, createdBy: userId, companyId })
       .returning();
     return newTemplate;
   }
 
-  async updateBillTemplate(id: number, template: InsertBillTemplate): Promise<BillTemplate> {
-    // If this is set as default, unset other defaults
+  async updateBillTemplate(id: number, template: InsertBillTemplate, companyId: number): Promise<BillTemplate> {
+    // If this is set as default, unset other defaults for this company
     if (template.isDefault) {
-      await db.update(billTemplates).set({ isDefault: false }).where(eq(billTemplates.isDefault, true));
+      await db
+        .update(billTemplates)
+        .set({ isDefault: false })
+        .where(and(eq(billTemplates.isDefault, true), eq(billTemplates.companyId, companyId)));
     }
     const [updated] = await db
       .update(billTemplates)
       .set({ ...template, updatedAt: new Date() })
-      .where(eq(billTemplates.id, id))
+      .where(and(eq(billTemplates.id, id), eq(billTemplates.companyId, companyId)))
       .returning();
     return updated;
   }
 
-  async deleteBillTemplate(id: number): Promise<void> {
-    await db.delete(billTemplates).where(eq(billTemplates.id, id));
+  async deleteBillTemplate(id: number, companyId: number): Promise<void> {
+    await db
+      .delete(billTemplates)
+      .where(and(eq(billTemplates.id, id), eq(billTemplates.companyId, companyId)));
   }
 
-  async getPartyLedger(partyId: number): Promise<any> {
-    const party = await this.getParty(partyId);
+  async getPartyLedger(partyId: number, companyId: number): Promise<any> {
+    const party = await this.getParty(partyId, companyId);
     if (!party) return null;
 
     const openingBalance = parseFloat(party.openingDebit) - parseFloat(party.openingCredit);
@@ -590,7 +630,7 @@ export class DatabaseStorage implements IStorage {
         credit: sales.grandTotal,
       })
       .from(sales)
-      .where(eq(sales.partyId, partyId));
+      .where(and(eq(sales.partyId, partyId), eq(sales.companyId, companyId)));
 
     const purchasesData = await db
       .select({
@@ -603,7 +643,7 @@ export class DatabaseStorage implements IStorage {
         credit: sql<string>`CONCAT('-', ${purchases.amount})`,
       })
       .from(purchases)
-      .where(eq(purchases.partyId, partyId));
+      .where(and(eq(purchases.partyId, partyId), eq(purchases.companyId, companyId)));
 
     const paymentsData = await db
       .select({
@@ -616,7 +656,7 @@ export class DatabaseStorage implements IStorage {
         credit: payments.credit,
       })
       .from(payments)
-      .where(eq(payments.partyId, partyId));
+      .where(and(eq(payments.partyId, partyId), eq(payments.companyId, companyId)));
 
     // Combine and sort
     const allTransactions = [
