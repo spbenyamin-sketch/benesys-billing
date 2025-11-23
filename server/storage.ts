@@ -180,7 +180,12 @@ export class DatabaseStorage implements IStorage {
 
   async needsInitialSetup(): Promise<boolean> {
     const allUsers = await this.getAllUsers();
-    return allUsers.length === 0;
+    // If no users exist, need setup
+    if (allUsers.length === 0) return true;
+    
+    // If users exist but none have passwords (old Replit Auth users), need setup
+    const hasUserWithPassword = allUsers.some(user => user.passwordHash);
+    return !hasUserWithPassword;
   }
 
   async getUserCompanies(userId: string): Promise<any[]> {
