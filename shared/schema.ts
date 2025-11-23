@@ -50,27 +50,41 @@ export type User = typeof users.$inferSelect;
 // COMPANY/BUSINESS TABLES
 // ============================================================================
 
-export const company = pgTable("company", {
+export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 200 }).notNull(),
   address: text("address"),
   city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 100 }),
   gstNo: varchar("gst_no", { length: 50 }),
   phone: varchar("phone", { length: 50 }),
   email: varchar("email", { length: 100 }),
   logoUrl: text("logo_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
 });
 
-export const insertCompanySchema = createInsertSchema(company).omit({
+export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  createdBy: true,
 });
 
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
-export type Company = typeof company.$inferSelect;
+export type Company = typeof companies.$inferSelect;
+
+// User-Company relationship (many-to-many)
+export const userCompanies = pgTable("user_companies", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type UserCompany = typeof userCompanies.$inferSelect;
 
 // ============================================================================
 // PARTY/CUSTOMER TABLES
@@ -78,7 +92,8 @@ export type Company = typeof company.$inferSelect;
 
 export const parties = pgTable("parties", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
   name: varchar("name", { length: 200 }).notNull(),
   address: text("address"),
   city: varchar("city", { length: 100 }),
@@ -97,6 +112,7 @@ export const parties = pgTable("parties", {
 
 export const insertPartySchema = createInsertSchema(parties).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -111,7 +127,8 @@ export type Party = typeof parties.$inferSelect;
 
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
-  code: varchar("code", { length: 50 }).notNull().unique(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
   name: varchar("name", { length: 300 }).notNull(),
   hsnCode: varchar("hsn_code", { length: 50 }),
   category: varchar("category", { length: 100 }),
@@ -129,6 +146,7 @@ export const items = pgTable("items", {
 
 export const insertItemSchema = createInsertSchema(items).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -143,6 +161,7 @@ export type Item = typeof items.$inferSelect;
 
 export const stock = pgTable("stock", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   itemId: integer("item_id").references(() => items.id).notNull(),
   quantity: decimal("quantity", { precision: 12, scale: 3 }).default("0").notNull(),
   lastUpdated: timestamp("last_updated").defaultNow().notNull(),
@@ -150,6 +169,7 @@ export const stock = pgTable("stock", {
 
 export const insertStockSchema = createInsertSchema(stock).omit({
   id: true,
+  companyId: true,
   lastUpdated: true,
 });
 
@@ -162,6 +182,7 @@ export type Stock = typeof stock.$inferSelect;
 
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   invoiceNo: integer("invoice_no").notNull(),
   billType: varchar("bill_type", { length: 10 }).notNull(), // GST or EST
   date: date("date").notNull(),
@@ -191,6 +212,7 @@ export const sales = pgTable("sales", {
 
 export const insertSaleSchema = createInsertSchema(sales).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -236,6 +258,7 @@ export type SaleItem = typeof saleItems.$inferSelect;
 
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   purchaseNo: integer("purchase_no").notNull(),
   date: date("date").notNull(),
   partyId: integer("party_id").references(() => parties.id),
@@ -249,6 +272,7 @@ export const purchases = pgTable("purchases", {
 
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -263,6 +287,7 @@ export type Purchase = typeof purchases.$inferSelect;
 
 export const payments = pgTable("payments", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   date: date("date").notNull(),
   partyId: integer("party_id").references(() => parties.id),
   partyName: varchar("party_name", { length: 200 }),
@@ -276,6 +301,7 @@ export const payments = pgTable("payments", {
 
 export const insertPaymentSchema = createInsertSchema(payments).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -290,6 +316,7 @@ export type Payment = typeof payments.$inferSelect;
 
 export const billTemplates = pgTable("bill_templates", {
   id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
   logoUrl: text("logo_url"), // Company logo URL from object storage
   headerText: text("header_text"), // Company branding text at top
@@ -307,6 +334,7 @@ export const billTemplates = pgTable("bill_templates", {
 
 export const insertBillTemplateSchema = createInsertSchema(billTemplates).omit({
   id: true,
+  companyId: true,
   createdAt: true,
   updatedAt: true,
   createdBy: true,
