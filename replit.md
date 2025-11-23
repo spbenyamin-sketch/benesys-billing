@@ -17,6 +17,31 @@ A comprehensive store management and billing system built for retail businesses,
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (November 23, 2025)
+
+**Multi-Company Implementation - COMPLETED ✅**
+
+Successfully converted the billing system to support multiple companies in a single application with enterprise-grade data isolation:
+
+- **Database Schema** - Added companyId to all transactional tables, user_companies junction table for many-to-many relationships
+- **Frontend** - CompanyContext with forced refetch on mount/focus, X-Company-Id headers on all requests, company selector UI
+- **Backend Security** - validateCompanyAccess middleware validates user access via user_companies table before allowing any operations
+- **Storage Layer** - All methods accept and filter by companyId, defensive joins filter both sides
+- **Critical Security Fixes**:
+  - Stock joins filter both stock AND items tables by companyId to prevent cross-company visibility
+  - Double-layer item validation: createSale validates items belong to company before stock update, updateStock validates internally
+  - No direct API routes to stock updates (only accessible through validated sales flow)
+  - Query caching fixed (staleTime: 0, refetchOnMount, refetchOnWindowFocus, no-cache headers)
+  - Bill template defaults properly scoped to current company
+
+**Security Model:**
+- **Frontend Layer:** X-Company-Id header from localStorage added to all API requests
+- **Middleware Layer:** validateCompanyAccess checks user_companies table for authorization
+- **Storage Layer:** All queries filter by companyId with defensive joins on both sides
+- **Stock Updates:** Double validation (caller + internal) prevents cross-company manipulation
+
+**Documentation:** See `MULTI_COMPANY_IMPLEMENTATION.md` for complete technical documentation, security model, testing recommendations, and migration notes.
+
 ## System Architecture
 
 ### Technology Stack
