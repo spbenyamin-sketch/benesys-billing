@@ -19,12 +19,23 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (November 23, 2025)
 
+**Purchase Management & Stock Tracking - COMPLETED ✅**
+
+Added comprehensive purchase management system with complete stock tracking integration:
+
+- **Purchase List Page** - View all purchases with date, invoice number, party, city, quantities, and amounts
+- **Purchase Detail View** - Detailed view of individual purchases showing all items, tax calculations, and party information
+- **Purchase Reports** - Date range filtering, tax breakdown summary by rate, CSV export functionality
+- **Stock View Page** - Advanced stock lookup with barcode search, item search, expiry tracking (alerts for expired/expiring items), detailed purchase item information
+- **Enhanced Sales Billing** - Added real-time stock availability column showing current quantities and low stock alerts to prevent overselling
+- **Company Switcher** - Added dropdown menu in header to easily switch between companies (shows company name and switch button)
+
 **Multi-Company Implementation - COMPLETED ✅**
 
 Successfully converted the billing system to support multiple companies in a single application with enterprise-grade data isolation:
 
 - **Database Schema** - Added companyId to all transactional tables, user_companies junction table for many-to-many relationships
-- **Frontend** - CompanyContext with forced refetch on mount/focus, X-Company-Id headers on all requests, company selector UI
+- **Frontend** - CompanyContext with forced refetch on mount/focus, X-Company-Id headers on all requests, company selector UI, company switcher dropdown
 - **Backend Security** - validateCompanyAccess middleware validates user access via user_companies table before allowing any operations
 - **Storage Layer** - All methods accept and filter by companyId, defensive joins filter both sides
 - **Critical Security Fixes**:
@@ -35,10 +46,11 @@ Successfully converted the billing system to support multiple companies in a sin
   - Bill template defaults properly scoped to current company
 
 **Security Model:**
-- **Frontend Layer:** X-Company-Id header from localStorage added to all API requests
+- **Frontend Layer:** X-Company-Id header from localStorage added to all API requests, company switcher in header
 - **Middleware Layer:** validateCompanyAccess checks user_companies table for authorization
 - **Storage Layer:** All queries filter by companyId with defensive joins on both sides
 - **Stock Updates:** Double validation (caller + internal) prevents cross-company manipulation
+- **Complete Data Isolation:** When switching companies, all data (parties, items, sales, purchases, stock, reports) automatically filters to show only that company's information
 
 **Documentation:** See `MULTI_COMPANY_IMPLEMENTATION.md` for complete technical documentation, security model, testing recommendations, and migration notes.
 
