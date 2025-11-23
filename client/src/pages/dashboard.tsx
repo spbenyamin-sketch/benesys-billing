@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, Users, Package, AlertCircle } from "lucide-react";
+import { DollarSign, Users, Package, AlertCircle, FileText } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -77,7 +77,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-todays-sales">
-              ₹{metrics?.todaysSales.toFixed(2) || "0.00"}
+              ₹{(parseFloat(metrics?.todaysSales?.toString() || "0")).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               From all sales today
@@ -92,7 +92,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-outstanding">
-              ₹{metrics?.totalOutstanding.toFixed(2) || "0.00"}
+              ₹{(parseFloat(metrics?.totalOutstanding?.toString() || "0")).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Total receivables
