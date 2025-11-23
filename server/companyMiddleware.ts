@@ -5,9 +5,7 @@ import { and, eq } from "drizzle-orm";
 
 export interface AuthenticatedRequest extends Request {
   user?: {
-    claims: {
-      sub: string;
-    };
+    id: string;
   };
   companyId?: number;
 }
@@ -29,7 +27,7 @@ export async function validateCompanyAccess(
     return res.status(400).json({ message: "Invalid company ID" });
   }
   
-  const userId = req.user?.claims.sub;
+  const userId = req.user?.id;
   
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });

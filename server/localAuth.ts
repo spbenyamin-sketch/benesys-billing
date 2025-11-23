@@ -7,6 +7,20 @@ import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
 export function getSession() {
+  // Validate SESSION_SECRET
+  const sessionSecret = process.env.SESSION_SECRET;
+  
+  if (!sessionSecret) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("FATAL: SESSION_SECRET environment variable is required in production");
+      process.exit(1);
+    }
+    // Development fallback with warning
+    console.warn("⚠️  WARNING: SESSION_SECRET not set. Using insecure fallback for development only.");
+    console.warn("⚠️  Set SESSION_SECRET environment variable for production deployment.");
+  }
+  
+  const secret = sessionSecret || "dev-insecure-secret-change-in-production";
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
@@ -16,7 +30,7 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret,
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
