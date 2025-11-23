@@ -60,13 +60,15 @@ function Router() {
 
 function AppContent() {
   const { needsSetup, isLoading: setupLoading } = useSetup();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, user, isLoading: authLoading } = useAuth();
   const { currentCompany, isLoading: companyLoading } = useCompany();
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   } as React.CSSProperties;
+
+  const isSuperAdmin = user?.role === "admin";
 
   // Show loading state
   if (setupLoading || authLoading) {
@@ -89,8 +91,41 @@ function AppContent() {
     return <Login />;
   }
 
-  // Show company selector if no company selected
-  if (companyLoading || !currentCompany) {
+  // Show company selector if no company selected (unless super admin accessing admin-only pages)
+  if (companyLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="text-lg">Loading companies...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // If no company selected and not loading, check if we should show selector or admin interface
+  if (!currentCompany) {
+    // Super admins can access admin pages without a company selected
+    if (isSuperAdmin) {
+      return (
+        <SidebarProvider style={sidebarStyle}>
+          <div className="flex h-screen w-full">
+            <AppSidebar />
+            <div className="flex flex-col flex-1 overflow-hidden">
+              <header className="flex items-center justify-between border-b px-4 py-3">
+                <SidebarTrigger data-testid="button-sidebar-toggle" />
+                <div className="text-sm text-muted-foreground">
+                  No company selected - Create a company to get started
+                </div>
+              </header>
+              <main className="flex-1 overflow-y-auto">
+                <Router />
+              </main>
+            </div>
+          </div>
+        </SidebarProvider>
+      );
+    }
+    // Regular users must select a company
     return <CompanySelector />;
   }
 

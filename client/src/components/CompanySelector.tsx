@@ -1,10 +1,16 @@
 import { useCompany } from "@/contexts/CompanyContext";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2 } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
+import { useLocation } from "wouter";
 
 export function CompanySelector() {
   const { userCompanies, currentCompany, setCurrentCompany, isLoading } = useCompany();
+  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  
+  const isSuperAdmin = user?.role === "admin";
 
   if (isLoading) {
     return (
@@ -36,10 +42,28 @@ export function CompanySelector() {
         </CardHeader>
         <CardContent>
           {userCompanies.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-8">
               <Building2 className="h-16 w-16 mx-auto mb-4 opacity-20" />
-              <p className="text-lg mb-2">No companies available</p>
-              <p className="text-sm">Please contact your administrator to get access to a company.</p>
+              <p className="text-lg mb-2 font-semibold">No companies available</p>
+              {isSuperAdmin ? (
+                <>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    Get started by creating your first company
+                  </p>
+                  <Button 
+                    onClick={() => setLocation("/companies")} 
+                    size="lg"
+                    data-testid="button-create-first-company"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Your First Company
+                  </Button>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Please contact your administrator to get access to a company.
+                </p>
+              )}
             </div>
           ) : (
             <div className="grid gap-3">
