@@ -332,7 +332,6 @@ export default function SalesBilling() {
                     <SelectValue placeholder="Select customer or leave for cash sale" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Cash Sale</SelectItem>
                     {parties?.map((party) => (
                       <SelectItem key={party.id} value={party.id.toString()}>
                         {party.name} ({party.code})
