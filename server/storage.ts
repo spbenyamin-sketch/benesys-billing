@@ -8,6 +8,8 @@ import {
   payments,
   stock,
   billTemplates,
+  companies,
+  userCompanies,
   type User,
   type UpsertUser,
   type Party,
@@ -26,6 +28,8 @@ import {
   type InsertStock,
   type BillTemplate,
   type InsertBillTemplate,
+  type Company,
+  type InsertCompany,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
@@ -37,6 +41,14 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserRole(id: string, role: string): Promise<User>;
   deleteUser(id: string): Promise<void>;
+  getUserCompanies(userId: string): Promise<any[]>;
+
+  // Company operations
+  getCompanies(): Promise<Company[]>;
+  getCompany(id: number): Promise<Company | undefined>;
+  createCompany(company: InsertCompany, userId: string): Promise<Company>;
+  updateCompany(id: number, company: InsertCompany): Promise<Company>;
+  deleteCompany(id: number): Promise<void>;
 
   // Party operations
   getParties(): Promise<Party[]>;
@@ -138,6 +150,62 @@ export class DatabaseStorage implements IStorage {
 
   async deleteUser(id: string): Promise<void> {
     await db.delete(users).where(eq(users.id, id));
+  }
+
+  async getUserCompanies(userId: string): Promise<any[]> {
+    const results = await db
+      .select({
+        id: userCompanies.id,
+        userId: userCompanies.userId,
+        companyId: userCompanies.companyId,
+        isDefault: userCompanies.isDefault,
+        company: companies,
+      })
+      .from(userCompanies)
+      .innerJoin(companies, eq(userCompanies.companyId, companies.id))
+      .where(eq(userCompanies.userId, userId))
+      .orderBy(desc(userCompanies.isDefault));
+    
+    return results;
+  }
+
+  // ==================== COMPANY OPERATIONS ====================
+  async getCompanies(): Promise<Company[]> {
+    return await db.select().from(companies).orderBy(desc(companies.createdAt));
+  }
+
+  async getCompany(id: number): Promise<Company | undefined> {
+    const [company] = await db.select().from(companies).where(eq(companies.id, id));
+    return company;
+  }
+
+  async createCompany(company: InsertCompany, userId: string): Promise<Company> {
+    const [newCompany] = await db
+      .insert(companies)
+      .values({ ...company, createdBy: userId })
+      .returning();
+    
+    await db.insert(userCompanies).values({
+      userId,
+      companyId: newCompany.id,
+      isDefault: false,
+    });
+    
+    return newCompany;
+  }
+
+  async updateCompany(id: number, company: InsertCompany): Promise<Company> {
+    const [updated] = await db
+      .update(companies)
+      .set({ ...company, updatedAt: new Date() })
+      .where(eq(companies.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteCompany(id: number): Promise<void> {
+    await db.delete(userCompanies).where(eq(userCompanies.companyId, id));
+    await db.delete(companies).where(eq(companies.id, id));
   }
 
   // ==================== PARTY OPERATIONS ====================

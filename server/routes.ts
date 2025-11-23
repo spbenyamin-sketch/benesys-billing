@@ -10,6 +10,7 @@ import {
   insertPurchaseSchema,
   insertPaymentSchema,
   insertBillTemplateSchema,
+  insertCompanySchema,
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -76,6 +77,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  // ==================== USER COMPANY ROUTES ====================
+  app.get('/api/user-companies', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const userCompanies = await storage.getUserCompanies(userId);
+      res.json(userCompanies);
+    } catch (error) {
+      console.error("Error fetching user companies:", error);
+      res.status(500).json({ message: "Failed to fetch user companies" });
+    }
+  });
+
+  // ==================== COMPANY ROUTES ====================
+  app.get('/api/companies', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can view all companies" });
+      }
+      const companies = await storage.getCompanies();
+      res.json(companies);
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+      res.status(500).json({ message: "Failed to fetch companies" });
+    }
+  });
+
+  app.post('/api/companies', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can create companies" });
+      }
+      const validated = insertCompanySchema.parse(req.body);
+      const userId = req.user.claims.sub;
+      const company = await storage.createCompany(validated, userId);
+      res.json(company);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating company:", error);
+      res.status(500).json({ message: "Failed to create company" });
+    }
+  });
+
+  app.put('/api/companies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can update companies" });
+      }
+      const id = parseInt(req.params.id);
+      const validated = insertCompanySchema.parse(req.body);
+      const company = await storage.updateCompany(id, validated);
+      res.json(company);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating company:", error);
+      res.status(500).json({ message: "Failed to update company" });
+    }
+  });
+
+  app.delete('/api/companies/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.claims.sub);
+      if (currentUser?.role !== 'admin') {
+        return res.status(403).json({ message: "Only super admin can delete companies" });
+      }
+      const id = parseInt(req.params.id);
+      await storage.deleteCompany(id);
+      res.json({ message: "Company deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting company:", error);
+      res.status(500).json({ message: "Failed to delete company" });
     }
   });
 
