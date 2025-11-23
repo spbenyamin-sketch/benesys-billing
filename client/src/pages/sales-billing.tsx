@@ -87,6 +87,17 @@ export default function SalesBilling() {
     queryKey: ["/api/items"],
   });
 
+  const { data: stock } = useQuery<any[]>({
+    queryKey: ["/api/stock"],
+  });
+
+  // Helper function to get stock quantity for an item
+  const getStockQuantity = (itemId: number | null) => {
+    if (!itemId || !stock) return null;
+    const stockItem = stock.find((s) => s.itemId === itemId);
+    return stockItem ? parseFloat(stockItem.quantity) : 0;
+  };
+
   const selectedParty = parties?.find((p) => p.id === selectedPartyId);
 
   // Auto-detect GST type based on party state
@@ -381,6 +392,7 @@ export default function SalesBilling() {
                     <TableRow>
                       <TableHead className="w-[200px]">Item</TableHead>
                       <TableHead className="w-[100px]">HSN</TableHead>
+                      <TableHead className="w-[80px]">Stock</TableHead>
                       <TableHead className="w-[100px]">Qty</TableHead>
                       <TableHead className="w-[100px]">Rate</TableHead>
                       {billType === "GST" && <TableHead className="w-[80px]">Tax%</TableHead>}
@@ -415,6 +427,22 @@ export default function SalesBilling() {
                             className="font-mono"
                             data-testid={`input-hsn-${lineItem.tempId}`}
                           />
+                        </TableCell>
+                        <TableCell>
+                          {lineItem.itemId ? (
+                            <div className="flex items-center gap-1">
+                              <span className="font-mono text-sm" data-testid={`text-stock-${lineItem.tempId}`}>
+                                {getStockQuantity(lineItem.itemId)?.toFixed(2) || "0.00"}
+                              </span>
+                              {getStockQuantity(lineItem.itemId) !== null && getStockQuantity(lineItem.itemId)! < 10 && (
+                                <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200">
+                                  Low
+                                </Badge>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">—</span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Input
