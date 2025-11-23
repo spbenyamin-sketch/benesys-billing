@@ -21,6 +21,7 @@ import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
 import Ledger from "@/pages/reports/ledger";
 import UserManagement from "@/pages/user-management";
+import BillSettings from "@/pages/bill-settings";
 
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -45,6 +46,7 @@ function Router() {
           <Route path="/reports/items" component={ItemsReport} />
           <Route path="/reports/ledger/:id" component={Ledger} />
           {isSuperAdmin && <Route path="/users" component={UserManagement} />}
+          {isSuperAdmin && <Route path="/bill-settings" component={BillSettings} />}
         </>
       )}
       <Route component={NotFound} />
