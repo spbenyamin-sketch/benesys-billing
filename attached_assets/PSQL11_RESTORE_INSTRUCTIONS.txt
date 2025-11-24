@@ -1,0 +1,136 @@
+================================================================================
+  PostgreSQL 11 Database Restore Instructions
+  Store Management & Billing System
+================================================================================
+
+FILE: billing_system_database_psql11.tar.gz (13 KB)
+
+COMPATIBLE WITH: PostgreSQL 11, 12, 13, 14, 15, 16+
+
+================================================================================
+CONTENTS:
+================================================================================
+
+1. database_dump_psql11_compatible.sql - Complete database dump
+   - All 13 tables (companies, users, parties, items, sales, purchases, etc.)
+   - All indexes and constraints
+   - All current data
+   - PostgreSQL 11 compatible syntax
+
+2. DBF_SCHEMA_STRUCTURE.md - Visual FoxPro 9 DBF structure reference
+
+3. shared/schema.ts - TypeScript schema definitions
+
+================================================================================
+HOW TO RESTORE DATABASE:
+================================================================================
+
+STEP 1: Extract the Archive
+----------------------------
+tar -xzf billing_system_database_psql11.tar.gz
+
+STEP 2: Create a New Database (if needed)
+------------------------------------------
+createdb your_database_name
+
+Or using psql:
+psql -U postgres -c "CREATE DATABASE your_database_name;"
+
+STEP 3: Restore the Database
+-----------------------------
+psql -U your_username -d your_database_name -f database_dump_psql11_compatible.sql
+
+Or with connection string:
+psql "postgresql://user:password@host:port/database" -f database_dump_psql11_compatible.sql
+
+STEP 4: Verify the Restore
+---------------------------
+psql -U your_username -d your_database_name
+
+Then run:
+\dt        -- List all tables (should show 13 tables)
+\d+ users  -- Show users table structure
+SELECT COUNT(*) FROM companies;  -- Check data
+
+================================================================================
+TABLES INCLUDED:
+================================================================================
+
+1.  sessions          - Session storage
+2.  users             - User authentication
+3.  companies         - Company/business master
+4.  user_companies    - User-company assignments
+5.  parties           - Customer/vendor master
+6.  items             - Product catalog
+7.  stock             - Inventory levels
+8.  sales             - Sales transaction headers
+9.  sale_items        - Sales line items
+10. purchases         - Purchase transaction headers
+11. purchase_items    - Purchase line items
+12. payments          - Payment receipts
+13. bill_templates    - Invoice template settings
+
+================================================================================
+ENVIRONMENT VARIABLES NEEDED:
+================================================================================
+
+After restore, configure these in your application:
+
+DATABASE_URL=postgresql://user:password@host:port/database_name
+SESSION_SECRET=your-secret-key-here
+NODE_ENV=production
+
+================================================================================
+POSTGRESQL 11 COMPATIBILITY:
+================================================================================
+
+This dump has been specially prepared for PostgreSQL 11 compatibility:
+
+✓ Removed PostgreSQL 12+ specific commands
+✓ Compatible with all PostgreSQL versions 11+
+✓ Uses standard SQL syntax
+✓ No generated columns (PG12+ feature)
+✓ No default_table_access_method settings
+
+================================================================================
+TROUBLESHOOTING:
+================================================================================
+
+Error: "role does not exist"
+Solution: Use --no-owner flag (already included in dump)
+
+Error: "permission denied"
+Solution: Run as superuser or database owner
+  psql -U postgres -d database_name -f database_dump_psql11_compatible.sql
+
+Error: "database already exists"
+Solution: Either drop the existing database or use a different name
+  dropdb old_database_name
+  createdb new_database_name
+
+Error: "encoding mismatch"
+Solution: Create database with UTF8 encoding
+  createdb -E UTF8 -T template0 your_database_name
+
+================================================================================
+BACKUP RECOMMENDATIONS:
+================================================================================
+
+For regular backups, use:
+pg_dump -Fc -f backup_$(date +%Y%m%d).dump your_database_name
+
+For PostgreSQL 11 compatible backups:
+pg_dump --no-owner --no-acl --quote-all-identifiers \
+  -f backup_$(date +%Y%m%d).sql your_database_name
+
+Then remove PG12+ syntax if needed.
+
+================================================================================
+SUPPORT:
+================================================================================
+
+For issues or questions, refer to:
+- DBF_SCHEMA_STRUCTURE.md for table structure
+- PostgreSQL 11 documentation: https://www.postgresql.org/docs/11/
+
+================================================================================
