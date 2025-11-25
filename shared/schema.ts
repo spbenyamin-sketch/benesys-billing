@@ -107,6 +107,7 @@ export const parties = pgTable("parties", {
   agentCode: integer("agent_code"),
   openingDebit: decimal("opening_debit", { precision: 12, scale: 2 }).default("0").notNull(),
   openingCredit: decimal("opening_credit", { precision: 12, scale: 2 }).default("0").notNull(),
+  isShared: boolean("is_shared").default(false).notNull(), // If true, visible to all companies
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
@@ -141,6 +142,7 @@ export const items = pgTable("items", {
   cgst: decimal("cgst", { precision: 5, scale: 3 }).default("0").notNull(), // CGST rate (half of tax)
   sgst: decimal("sgst", { precision: 5, scale: 3 }).default("0").notNull(), // SGST rate (half of tax)
   active: boolean("active").default(true).notNull(),
+  isShared: boolean("is_shared").default(false).notNull(), // If true, visible to all companies
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
