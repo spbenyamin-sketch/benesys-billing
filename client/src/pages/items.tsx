@@ -35,6 +35,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 const itemFormSchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -46,6 +47,7 @@ const itemFormSchema = z.object({
   cost: z.string().default("0"),
   tax: z.string().default("0"),
   active: z.boolean().default(true),
+  isShared: z.boolean().default(false),
 });
 
 type ItemFormValues = z.infer<typeof itemFormSchema>;
@@ -63,6 +65,8 @@ interface Item {
   cgst: string;
   sgst: string;
   active: boolean;
+  isShared: boolean;
+  companyId: number;
 }
 
 export default function Items() {
@@ -87,6 +91,7 @@ export default function Items() {
       cost: "0",
       tax: "0",
       active: true,
+      isShared: false,
     },
   });
 
@@ -155,6 +160,7 @@ export default function Items() {
       cost: item.cost,
       tax: item.tax,
       active: item.active,
+      isShared: item.isShared || false,
     });
     setIsDialogOpen(true);
   };
@@ -309,6 +315,28 @@ export default function Items() {
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="isShared"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Share Across Companies</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Enable to make this item available in all companies
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-item-shared"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
@@ -378,7 +406,16 @@ export default function Items() {
                 {filteredItems.map((item) => (
                   <TableRow key={item.id}>
                     <TableCell className="font-medium font-mono">{item.code}</TableCell>
-                    <TableCell>{item.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {item.name}
+                        {item.isShared && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            Shared
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground font-mono">{item.hsnCode || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{item.category || "—"}</TableCell>
                     <TableCell className="font-mono">{item.packType}</TableCell>
