@@ -35,7 +35,7 @@ import {
   type InsertCompany,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, desc, gte, lte, sql, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -332,18 +332,20 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== PARTY OPERATIONS ====================
   async getParties(companyId: number): Promise<Party[]> {
+    // Include company-specific parties AND shared parties from any company
     return await db
       .select()
       .from(parties)
-      .where(eq(parties.companyId, companyId))
+      .where(or(eq(parties.companyId, companyId), eq(parties.isShared, true)))
       .orderBy(desc(parties.createdAt));
   }
 
   async getParty(id: number, companyId: number): Promise<Party | undefined> {
+    // Allow access to company-specific parties or shared parties
     const [party] = await db
       .select()
       .from(parties)
-      .where(and(eq(parties.id, id), eq(parties.companyId, companyId)));
+      .where(and(eq(parties.id, id), or(eq(parties.companyId, companyId), eq(parties.isShared, true))));
     return party;
   }
 
@@ -366,18 +368,20 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== ITEM OPERATIONS ====================
   async getItems(companyId: number): Promise<Item[]> {
+    // Include company-specific items AND shared items from any company
     return await db
       .select()
       .from(items)
-      .where(eq(items.companyId, companyId))
+      .where(or(eq(items.companyId, companyId), eq(items.isShared, true)))
       .orderBy(desc(items.createdAt));
   }
 
   async getItem(id: number, companyId: number): Promise<Item | undefined> {
+    // Allow access to company-specific items or shared items
     const [item] = await db
       .select()
       .from(items)
-      .where(and(eq(items.id, id), eq(items.companyId, companyId)));
+      .where(and(eq(items.id, id), or(eq(items.companyId, companyId), eq(items.isShared, true))));
     return item;
   }
 
@@ -635,6 +639,7 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== STOCK OPERATIONS ====================
   async getStock(companyId: number): Promise<any[]> {
+    // Include stock for company-specific items AND shared items
     const result = await db
       .select({
         id: stock.id,
@@ -645,10 +650,16 @@ export class DatabaseStorage implements IStorage {
         packType: items.packType,
         quantity: stock.quantity,
         cost: items.cost,
+        isShared: items.isShared,
       })
       .from(stock)
-      .innerJoin(items, and(eq(stock.itemId, items.id), eq(items.companyId, companyId)))
-      .where(eq(stock.companyId, companyId))
+      .innerJoin(items, eq(stock.itemId, items.id))
+      .where(
+        and(
+          eq(stock.companyId, companyId),
+          or(eq(items.companyId, companyId), eq(items.isShared, true))
+        )
+      )
       .orderBy(items.name);
     return result;
   }
