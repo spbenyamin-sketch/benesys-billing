@@ -33,6 +33,7 @@ import Ledger from "@/pages/reports/ledger";
 import UserManagement from "@/pages/user-management";
 import BillSettings from "@/pages/bill-settings";
 import Companies from "@/pages/companies";
+import SelectCompany from "@/pages/select-company";
 
 function Router() {
   const { isAuthenticated, user } = useAuth();
@@ -71,7 +72,7 @@ function Router() {
 function AppContent() {
   const { needsSetup, isLoading: setupLoading } = useSetup();
   const { isAuthenticated, user, isLoading: authLoading } = useAuth();
-  const { currentCompany, isLoading: companyLoading } = useCompany();
+  const { currentCompany, isLoading: companyLoading, needsCompanySelection } = useCompany();
 
   const sidebarStyle = {
     "--sidebar-width": "16rem",
@@ -99,6 +100,11 @@ function AppContent() {
   // Show login page if not authenticated
   if (!isAuthenticated) {
     return <Login />;
+  }
+
+  // Show company selection page if user has multiple companies and hasn't selected one yet
+  if (needsCompanySelection) {
+    return <SelectCompany />;
   }
 
   // Show company selector if no company selected (unless super admin accessing admin-only pages)

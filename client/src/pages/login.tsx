@@ -57,6 +57,10 @@ export default function Login() {
         throw new Error(error.message || "Login failed");
       }
 
+      // Clear session storage on fresh login so company selection page shows
+      sessionStorage.removeItem("hasSelectedCompany");
+      localStorage.removeItem("currentCompanyId");
+
       // Reload to trigger auth check
       window.location.href = "/";
     } catch (error: any) {

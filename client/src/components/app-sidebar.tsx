@@ -26,10 +26,12 @@ import {
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useCompany } from "@/contexts/CompanyContext";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { resetCompanySelection } = useCompany();
   const isSuperAdmin = user?.role === "admin";
 
   const salesMenuItems = [
@@ -252,14 +254,14 @@ export function AppSidebar() {
           className="w-full justify-start"
           onClick={async () => {
             try {
+              // Reset company selection state first
+              resetCompanySelection();
               await fetch("/api/logout", { method: "POST" });
-              // Clear local storage and redirect to login
-              localStorage.clear();
               window.location.href = "/";
             } catch (error) {
               console.error("Logout error:", error);
               // Still redirect even if logout fails
-              localStorage.clear();
+              resetCompanySelection();
               window.location.href = "/";
             }
           }}
