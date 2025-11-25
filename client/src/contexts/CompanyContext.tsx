@@ -168,6 +168,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     const userCompany = userCompanies.find((uc) => uc.companyId === companyId);
     if (userCompany) {
       setCurrentCompany(userCompany.company);
+      // Invalidate ALL queries to force fresh data fetch for new company
+      // This ensures all data displayed is specific to the newly selected company
+      queryClient.invalidateQueries();
     }
   };
 
