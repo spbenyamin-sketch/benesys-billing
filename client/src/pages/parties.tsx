@@ -28,6 +28,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 
 const partyFormSchema = z.object({
   code: z.string().min(1, "Code is required"),
@@ -42,6 +44,7 @@ const partyFormSchema = z.object({
   agentCode: z.coerce.number().optional(),
   openingDebit: z.string().default("0"),
   openingCredit: z.string().default("0"),
+  isShared: z.boolean().default(false),
 });
 
 type PartyFormValues = z.infer<typeof partyFormSchema>;
@@ -60,6 +63,8 @@ interface Party {
   agentCode: number | null;
   openingDebit: string;
   openingCredit: string;
+  isShared: boolean;
+  companyId: number;
 }
 
 export default function Parties() {
@@ -87,6 +92,7 @@ export default function Parties() {
       agentCode: 0,
       openingDebit: "0",
       openingCredit: "0",
+      isShared: false,
     },
   });
 
@@ -158,6 +164,7 @@ export default function Parties() {
       agentCode: party.agentCode || 0,
       openingDebit: party.openingDebit,
       openingCredit: party.openingCredit,
+      isShared: party.isShared || false,
     });
     setIsDialogOpen(true);
   };
@@ -329,6 +336,28 @@ export default function Parties() {
                   />
                 </div>
 
+                <FormField
+                  control={form.control}
+                  name="isShared"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">Share Across Companies</FormLabel>
+                        <p className="text-sm text-muted-foreground">
+                          Enable to make this customer available in all companies
+                        </p>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          data-testid="switch-party-shared"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
                 <div className="flex justify-end gap-3 pt-4">
                   <Button
                     type="button"
@@ -397,7 +426,16 @@ export default function Parties() {
                 {filteredParties.map((party) => (
                   <TableRow key={party.id}>
                     <TableCell className="font-medium font-mono">{party.code}</TableCell>
-                    <TableCell>{party.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {party.name}
+                        {party.isShared && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                            Shared
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{party.city || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{party.phone || "—"}</TableCell>
                     <TableCell className="text-muted-foreground font-mono">{party.gstNo || "—"}</TableCell>
