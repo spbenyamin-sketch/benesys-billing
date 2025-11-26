@@ -17,7 +17,38 @@ A comprehensive store management and billing system built for retail businesses,
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (November 23, 2025)
+## Recent Changes (November 26, 2025)
+
+**Master Pages Enhancements - COMPLETED ✅**
+
+Updated all master pages with auto-generated codes and improved field structures:
+
+- **Agent Master** (New Page) - Full CRUD for sales agents
+  - Auto-generated numeric codes per company
+  - Fields: name (required), phone, email, address, city, commission percent, active status
+  - Share across companies toggle
+  - Linked to Party Master for agent assignment
+
+- **Item Master Updates**
+  - Auto-generated code (display-only when editing, not user-editable)
+  - Expanded pack types: PCS, KG, GM, LTR, ML, MTR, CM, BOX, PKT, SET, DZ, PAIR, BTL, CAN, ROLL, UNIT
+  - Added floor/location field
+  - Mandatory fields: name, hsnCode, tax rate
+
+- **Party Master Updates**
+  - Auto-generated code (display-only when editing, not user-editable)
+  - Mandatory fields: name, city, pincode
+  - Added short name field for quick reference
+  - Agent selection dropdown (linked to Agent Master)
+  - Collapsible shipping address section: shipName, shipAddress, shipCity, shipPincode, shipState
+  - Share across companies toggle
+
+**Navigation Updates:**
+- Added "Agents" link to sidebar under Masters section
+
+---
+
+## Previous Changes (November 23, 2025)
 
 **Purchase Management & Stock Tracking - COMPLETED ✅**
 

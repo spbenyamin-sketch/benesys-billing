@@ -11,6 +11,7 @@ import {
   billTemplates,
   companies,
   userCompanies,
+  agents,
   type User,
   type UpsertUser,
   type Party,
@@ -33,6 +34,8 @@ import {
   type InsertBillTemplate,
   type Company,
   type InsertCompany,
+  type Agent,
+  type InsertAgent,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, sql, or } from "drizzle-orm";
@@ -105,6 +108,13 @@ export interface IStorage {
   createBillTemplate(template: InsertBillTemplate, userId: string, companyId: number): Promise<BillTemplate>;
   updateBillTemplate(id: number, template: InsertBillTemplate, companyId: number): Promise<BillTemplate>;
   deleteBillTemplate(id: number, companyId: number): Promise<void>;
+  
+  // Agent operations
+  getAgents(companyId: number): Promise<Agent[]>;
+  getAgent(id: number, companyId: number): Promise<Agent | undefined>;
+  getNextAgentCode(companyId: number): Promise<number>;
+  createAgent(agent: InsertAgent, userId: string, companyId: number): Promise<Agent>;
+  updateAgent(id: number, agent: InsertAgent, companyId: number): Promise<Agent>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -349,10 +359,19 @@ export class DatabaseStorage implements IStorage {
     return party;
   }
 
+  async getNextPartyCode(companyId: number): Promise<string> {
+    const [result] = await db
+      .select({ maxCode: sql<number>`COALESCE(MAX(CAST(${parties.code} AS INTEGER)), 0)` })
+      .from(parties)
+      .where(eq(parties.companyId, companyId));
+    return String((result?.maxCode || 0) + 1);
+  }
+
   async createParty(party: InsertParty, userId: string, companyId: number): Promise<Party> {
+    const code = await this.getNextPartyCode(companyId);
     const [newParty] = await db
       .insert(parties)
-      .values({ ...party, createdBy: userId, companyId })
+      .values({ ...party, code, createdBy: userId, companyId })
       .returning();
     return newParty;
   }
@@ -385,7 +404,18 @@ export class DatabaseStorage implements IStorage {
     return item;
   }
 
+  async getNextItemCode(companyId: number): Promise<string> {
+    const [result] = await db
+      .select({ maxCode: sql<number>`COALESCE(MAX(CAST(${items.code} AS INTEGER)), 0)` })
+      .from(items)
+      .where(eq(items.companyId, companyId));
+    return String((result?.maxCode || 0) + 1);
+  }
+
   async createItem(item: InsertItem, userId: string, companyId: number): Promise<Item> {
+    // Auto-generate code
+    const code = await this.getNextItemCode(companyId);
+    
     // Auto-calculate CGST and SGST from tax
     const tax = parseFloat(item.tax?.toString() || "0");
     const cgst = tax / 2;
@@ -395,6 +425,7 @@ export class DatabaseStorage implements IStorage {
       .insert(items)
       .values({
         ...item,
+        code,
         cgst: cgst.toString(),
         sgst: sgst.toString(),
         createdBy: userId,
@@ -931,6 +962,50 @@ export class DatabaseStorage implements IStorage {
       entries,
       closingBalance: runningBalance,
     };
+  }
+
+  // ==================== AGENT OPERATIONS ====================
+  async getAgents(companyId: number): Promise<Agent[]> {
+    // Include company-specific agents AND shared agents from any company
+    return await db
+      .select()
+      .from(agents)
+      .where(or(eq(agents.companyId, companyId), eq(agents.isShared, true)))
+      .orderBy(agents.code);
+  }
+
+  async getAgent(id: number, companyId: number): Promise<Agent | undefined> {
+    const [agent] = await db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, id), or(eq(agents.companyId, companyId), eq(agents.isShared, true))));
+    return agent;
+  }
+
+  async getNextAgentCode(companyId: number): Promise<number> {
+    const [result] = await db
+      .select({ maxCode: sql<number>`COALESCE(MAX(${agents.code}), 0)` })
+      .from(agents)
+      .where(eq(agents.companyId, companyId));
+    return (result?.maxCode || 0) + 1;
+  }
+
+  async createAgent(agent: InsertAgent, userId: string, companyId: number): Promise<Agent> {
+    const code = await this.getNextAgentCode(companyId);
+    const [newAgent] = await db
+      .insert(agents)
+      .values({ ...agent, code, createdBy: userId, companyId })
+      .returning();
+    return newAgent;
+  }
+
+  async updateAgent(id: number, agent: InsertAgent, companyId: number): Promise<Agent> {
+    const [updated] = await db
+      .update(agents)
+      .set({ ...agent, updatedAt: new Date() })
+      .where(and(eq(agents.id, id), eq(agents.companyId, companyId)))
+      .returning();
+    return updated;
   }
 }
 

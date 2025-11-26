@@ -95,16 +95,26 @@ export type UserCompany = typeof userCompanies.$inferSelect;
 export const parties = pgTable("parties", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
-  code: varchar("code", { length: 50 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(), // Auto-generated numeric code per company
+  shortName: varchar("short_name", { length: 50 }), // Short name for quick reference
   name: varchar("name", { length: 200 }).notNull(),
   address: text("address"),
-  city: varchar("city", { length: 100 }),
+  city: varchar("city", { length: 100 }).notNull(), // Mandatory
+  pincode: varchar("pincode", { length: 10 }).notNull(), // Mandatory
   state: varchar("state", { length: 100 }),
   stateCode: varchar("state_code", { length: 10 }),
   gstNo: varchar("gst_no", { length: 50 }),
   phone: varchar("phone", { length: 50 }),
-  agent: varchar("agent", { length: 100 }),
-  agentCode: integer("agent_code"),
+  // Shipping address fields (optional)
+  hasShippingAddress: boolean("has_shipping_address").default(false).notNull(),
+  shipName: varchar("ship_name", { length: 200 }),
+  shipAddress: text("ship_address"),
+  shipCity: varchar("ship_city", { length: 100 }),
+  shipPincode: varchar("ship_pincode", { length: 10 }),
+  shipState: varchar("ship_state", { length: 100 }),
+  shipStateCode: varchar("ship_state_code", { length: 10 }),
+  // Agent reference
+  agentId: integer("agent_id").references(() => agents.id),
   openingDebit: decimal("opening_debit", { precision: 12, scale: 2 }).default("0").notNull(),
   openingCredit: decimal("opening_credit", { precision: 12, scale: 2 }).default("0").notNull(),
   isShared: boolean("is_shared").default(false).notNull(), // If true, visible to all companies
@@ -116,6 +126,7 @@ export const parties = pgTable("parties", {
 export const insertPartySchema = createInsertSchema(parties).omit({
   id: true,
   companyId: true,
+  code: true, // Auto-generated
   createdAt: true,
   updatedAt: true,
   createdBy: true,
@@ -125,20 +136,54 @@ export type InsertParty = z.infer<typeof insertPartySchema>;
 export type Party = typeof parties.$inferSelect;
 
 // ============================================================================
+// AGENT MASTER TABLE
+// ============================================================================
+
+export const agents = pgTable("agents", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  code: integer("code").notNull(), // Auto-increment code per company
+  name: varchar("name", { length: 200 }).notNull(),
+  phone: varchar("phone", { length: 50 }),
+  email: varchar("email", { length: 100 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  commission: decimal("commission", { precision: 5, scale: 2 }).default("0").notNull(), // Commission percentage
+  active: boolean("active").default(true).notNull(),
+  isShared: boolean("is_shared").default(false).notNull(), // If true, visible to all companies
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
+export const insertAgentSchema = createInsertSchema(agents).omit({
+  id: true,
+  companyId: true,
+  code: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+});
+
+export type InsertAgent = z.infer<typeof insertAgentSchema>;
+export type Agent = typeof agents.$inferSelect;
+
+// ============================================================================
 // ITEM/PRODUCT MASTER TABLES
 // ============================================================================
 
 export const items = pgTable("items", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
-  code: varchar("code", { length: 50 }).notNull(),
+  code: varchar("code", { length: 50 }).notNull(), // Auto-generated numeric code per company
   name: varchar("name", { length: 300 }).notNull(),
-  hsnCode: varchar("hsn_code", { length: 50 }),
+  hsnCode: varchar("hsn_code", { length: 50 }).notNull(), // Mandatory
   category: varchar("category", { length: 100 }),
-  packType: varchar("pack_type", { length: 20 }).default("PC").notNull(), // PC or KG
+  floor: varchar("floor", { length: 50 }), // Optional floor/location
+  packType: varchar("pack_type", { length: 20 }).default("PCS").notNull(), // PCS, KG, LTR, MTR, BOX, PKT, SET, DZ, GM, ML
   type: varchar("type", { length: 10 }).default("P").notNull(), // P=piece, M=measured
   cost: decimal("cost", { precision: 12, scale: 2 }).default("0").notNull(),
-  tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(), // Total tax percentage
+  tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(), // Total tax percentage (mandatory)
   cgst: decimal("cgst", { precision: 5, scale: 3 }).default("0").notNull(), // CGST rate (half of tax)
   sgst: decimal("sgst", { precision: 5, scale: 3 }).default("0").notNull(), // SGST rate (half of tax)
   active: boolean("active").default(true).notNull(),
@@ -151,6 +196,7 @@ export const items = pgTable("items", {
 export const insertItemSchema = createInsertSchema(items).omit({
   id: true,
   companyId: true,
+  code: true, // Auto-generated
   createdAt: true,
   updatedAt: true,
   createdBy: true,

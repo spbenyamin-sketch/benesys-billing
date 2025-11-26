@@ -17,6 +17,7 @@ import { Building2 } from "lucide-react";
 import Dashboard from "@/pages/dashboard";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
+import Agents from "@/pages/agents";
 import SalesBilling from "@/pages/sales-billing";
 import Sales from "@/pages/sales";
 import Purchases from "@/pages/purchases";
@@ -48,6 +49,7 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/parties" component={Parties} />
       <Route path="/items" component={Items} />
+      <Route path="/agents" component={Agents} />
       <Route path="/sales/new" component={SalesBilling} />
       <Route path="/sales" component={Sales} />
       <Route path="/purchases/new" component={PurchaseEntry} />

@@ -1,0 +1,18 @@
+Project work Flow
+You also have my app I want some corrections flow 
+It will be a billing + stock inventory + stock reports +purchase +payment b2b customer outstanding + management + multi company operation app 
+The project will be node.js + postgres sql db used, I want this project will be use online and offline so you will understand to give all flexibility when I download my project zip, when I download a zip all database formats will be include, or you will write a program when I open the project in offline automatically create the database and tables schemas like all…
+Item master
+Item master have continues number for item code, item code not editable, mandatory fields name, hsncode, tax,want all pack type of like example : qty,unit,kilograms  includue universal packing types , optional field category, floor , share records across the companys 
+
+Party master
+Party master continus number for party code, party code not editable,party table have shortname field also ,fields partname,city,pincode was mandatory , share records across the companys , also want  shiping address fields with checklist if wanted if shipping address need fields partname,city,pincode was mandatory, party master also have agent name agent code, if need to enter agent, will create a agent master , I will use that like agent wise report, party & agent wise report needed 
+
+New sale 
+New sale menu will be separate menu for b2b sales and b2c sales, estimate sales , b2b sales all will be credit bill I will feed payment entry for that, its retail sales b2c sales want cash & card sale option,estimate sales only cash method,  also want inclusive tax or exclusive tax option for b2b, b2c sales, when I chose inclusive tax my rate automatically convert it option wanted,  I want to add barcode scanning option because I will generate stock inventory barcode, in that box I search the item master to select the item option, when I scan the barcode it will be taken from stock inventory db,  both option I wanted like only search the item and select and feed rate other one is I scan the barcode then all details will be get from inventory database, also I want a discount enter Colum, In b2c sales method when I chose cash option the given return menu will be show the given return details will be printed on the invoice, in b2b sales when I chose the customer the customer outstanding balance will be shown, the outstanding amount will be print on invoice it will be a selecting option print outstanding on bill or not in bill printing template,  when I finish the bill invoice will be printed automaticity, want edit option for my old invoice change all data’s  with valid checking  operations 
+Credit note option is separate menu wanted for b2b sales
+Stock reports outstanding reports sales report flow will be given 
+I hope you will give the best integration  
+
+
+

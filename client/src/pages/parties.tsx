@@ -4,7 +4,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +20,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Search, Edit, Users } from "lucide-react";
+import { Plus, Search, Edit, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,21 +36,28 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 const partyFormSchema = z.object({
-  code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
+  shortName: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  pincode: z.string().min(1, "Pincode is required"),
   address: z.string().optional(),
-  city: z.string().optional(),
   state: z.string().optional(),
   stateCode: z.string().optional(),
   gstNo: z.string().optional(),
   phone: z.string().optional(),
-  agent: z.string().optional(),
-  agentCode: z.coerce.number().optional(),
+  agentId: z.string().optional(),
   openingDebit: z.string().default("0"),
   openingCredit: z.string().default("0"),
   isShared: z.boolean().default(false),
+  hasShippingAddress: z.boolean().default(false),
+  shipName: z.string().optional(),
+  shipAddress: z.string().optional(),
+  shipCity: z.string().optional(),
+  shipPincode: z.string().optional(),
+  shipState: z.string().optional(),
 });
 
 type PartyFormValues = z.infer<typeof partyFormSchema>;
@@ -53,52 +66,81 @@ interface Party {
   id: number;
   code: string;
   name: string;
+  shortName: string | null;
   address: string | null;
   city: string | null;
+  pincode: string | null;
   state: string | null;
   stateCode: string | null;
   gstNo: string | null;
   phone: string | null;
-  agent: string | null;
-  agentCode: number | null;
+  agentId: number | null;
   openingDebit: string;
   openingCredit: string;
   isShared: boolean;
   companyId: number;
+  hasShippingAddress: boolean;
+  shipName: string | null;
+  shipAddress: string | null;
+  shipCity: string | null;
+  shipPincode: string | null;
+  shipState: string | null;
+}
+
+interface Agent {
+  id: number;
+  code: string;
+  name: string;
+  active: boolean;
 }
 
 export default function Parties() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
+  const [shippingOpen, setShippingOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: parties, isLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
   });
 
+  const { data: agents } = useQuery<Agent[]>({
+    queryKey: ["/api/agents"],
+  });
+
   const form = useForm<PartyFormValues>({
     resolver: zodResolver(partyFormSchema),
     defaultValues: {
-      code: "",
       name: "",
-      address: "",
+      shortName: "",
       city: "",
+      pincode: "",
+      address: "",
       state: "",
       stateCode: "",
       gstNo: "",
       phone: "",
-      agent: "",
-      agentCode: 0,
+      agentId: "",
       openingDebit: "0",
       openingCredit: "0",
       isShared: false,
+      hasShippingAddress: false,
+      shipName: "",
+      shipAddress: "",
+      shipCity: "",
+      shipPincode: "",
+      shipState: "",
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: PartyFormValues) => {
-      return apiRequest("POST", "/api/parties", data);
+      const payload = {
+        ...data,
+        agentId: data.agentId && data.agentId !== "none" ? parseInt(data.agentId) : null,
+      };
+      return apiRequest("POST", "/api/parties", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parties"] });
@@ -120,7 +162,11 @@ export default function Parties() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: PartyFormValues }) => {
-      return apiRequest("PUT", `/api/parties/${id}`, data);
+      const payload = {
+        ...data,
+        agentId: data.agentId && data.agentId !== "none" ? parseInt(data.agentId) : null,
+      };
+      return apiRequest("PUT", `/api/parties/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parties"] });
@@ -152,25 +198,33 @@ export default function Parties() {
   const handleEdit = (party: Party) => {
     setEditingParty(party);
     form.reset({
-      code: party.code,
       name: party.name,
-      address: party.address || "",
+      shortName: party.shortName || "",
       city: party.city || "",
+      pincode: party.pincode || "",
+      address: party.address || "",
       state: party.state || "",
       stateCode: party.stateCode || "",
       gstNo: party.gstNo || "",
       phone: party.phone || "",
-      agent: party.agent || "",
-      agentCode: party.agentCode || 0,
+      agentId: party.agentId?.toString() || "",
       openingDebit: party.openingDebit,
       openingCredit: party.openingCredit,
       isShared: party.isShared || false,
+      hasShippingAddress: party.hasShippingAddress || false,
+      shipName: party.shipName || "",
+      shipAddress: party.shipAddress || "",
+      shipCity: party.shipCity || "",
+      shipPincode: party.shipPincode || "",
+      shipState: party.shipState || "",
     });
+    setShippingOpen(!!(party.shipAddress || party.shipCity));
     setIsDialogOpen(true);
   };
 
   const handleNewParty = () => {
     setEditingParty(null);
+    setShippingOpen(false);
     form.reset();
     setIsDialogOpen(true);
   };
@@ -180,6 +234,8 @@ export default function Parties() {
     party.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     party.city?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeAgents = agents?.filter(agent => agent.active) || [];
 
   return (
     <div className="p-6 space-y-6">
@@ -206,20 +262,13 @@ export default function Parties() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+                {editingParty && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Customer Code: <span className="font-mono font-semibold text-foreground">{editingParty.code}</span></p>
+                  </div>
+                )}
+                
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Code *</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid="input-party-code" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                   <FormField
                     control={form.control}
                     name="name"
@@ -228,6 +277,19 @@ export default function Parties() {
                         <FormLabel>Name *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-name" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="shortName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Short Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="Short alias" data-testid="input-party-shortname" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -249,13 +311,13 @@ export default function Parties() {
                   )}
                 />
 
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4 sm:grid-cols-3">
                   <FormField
                     control={form.control}
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>City *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-city" />
                         </FormControl>
@@ -271,6 +333,19 @@ export default function Parties() {
                         <FormLabel>State</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-state" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="pincode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Pincode *</FormLabel>
+                        <FormControl>
+                          <Input {...field} data-testid="input-party-pincode" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -307,6 +382,35 @@ export default function Parties() {
                   />
                 </div>
 
+                <FormField
+                  control={form.control}
+                  name="agentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Agent</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
+                        value={field.value || "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-party-agent">
+                            <SelectValue placeholder="Select agent (optional)" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">None</SelectItem>
+                          {activeAgents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id.toString()}>
+                              {agent.code} - {agent.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -335,6 +439,84 @@ export default function Parties() {
                     )}
                   />
                 </div>
+
+                <Collapsible open={shippingOpen} onOpenChange={setShippingOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" type="button" className="w-full justify-between">
+                      <span>Shipping Address (Optional)</span>
+                      {shippingOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-4 pt-4">
+                    <FormField
+                      control={form.control}
+                      name="shipName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Shipping Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Recipient name" data-testid="input-party-shipping-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="shipAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Shipping Address</FormLabel>
+                          <FormControl>
+                            <Input {...field} data-testid="input-party-shipping-address" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid gap-4 sm:grid-cols-3">
+                      <FormField
+                        control={form.control}
+                        name="shipCity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shipping City</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-party-shipping-city" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="shipState"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shipping State</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-party-shipping-state" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="shipPincode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Shipping Pincode</FormLabel>
+                            <FormControl>
+                              <Input {...field} data-testid="input-party-shipping-pincode" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
 
                 <FormField
                   control={form.control}
@@ -415,6 +597,7 @@ export default function Parties() {
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>City</TableHead>
+                  <TableHead>Pincode</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>GST No</TableHead>
                   <TableHead className="text-right">Op. Debit</TableHead>
@@ -424,31 +607,39 @@ export default function Parties() {
               </TableHeader>
               <TableBody>
                 {filteredParties.map((party) => (
-                  <TableRow key={party.id}>
-                    <TableCell className="font-medium font-mono">{party.code}</TableCell>
+                  <TableRow key={party.id} data-testid={`row-party-${party.id}`}>
+                    <TableCell className="font-mono">{party.code}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {party.name}
+                        <span className="font-medium">{party.name}</span>
                         {party.isShared && (
-                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            Shared
-                          </Badge>
+                          <Badge variant="outline" className="text-xs">Shared</Badge>
                         )}
                       </div>
+                      {party.shortName && (
+                        <span className="text-xs text-muted-foreground">({party.shortName})</span>
+                      )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{party.city || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{party.phone || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground font-mono">{party.gstNo || "—"}</TableCell>
+                    <TableCell>{party.city || "-"}</TableCell>
+                    <TableCell>{party.pincode || "-"}</TableCell>
+                    <TableCell>{party.phone || "-"}</TableCell>
+                    <TableCell>{party.gstNo || "-"}</TableCell>
                     <TableCell className="text-right font-mono">
-                      ₹{parseFloat(party.openingDebit).toFixed(2)}
+                      {parseFloat(party.openingDebit).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      ₹{parseFloat(party.openingCredit).toFixed(2)}
+                      {parseFloat(party.openingCredit).toLocaleString("en-IN", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => handleEdit(party)}
                         data-testid={`button-edit-party-${party.id}`}
                       >
@@ -460,16 +651,12 @@ export default function Parties() {
               </TableBody>
             </Table>
           ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-sm text-muted-foreground mb-1">
-                {searchQuery ? "No customers found" : "No customers yet"}
+            <div className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-lg font-medium text-muted-foreground">No customers found</p>
+              <p className="text-sm text-muted-foreground">
+                Get started by adding your first customer
               </p>
-              {!searchQuery && (
-                <p className="text-xs text-muted-foreground mb-4">
-                  Add your first customer to get started
-                </p>
-              )}
             </div>
           )}
         </CardContent>

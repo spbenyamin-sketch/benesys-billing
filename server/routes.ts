@@ -13,6 +13,7 @@ import {
   insertPaymentSchema,
   insertBillTemplateSchema,
   insertCompanySchema,
+  insertAgentSchema,
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -319,6 +320,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       console.error("Error updating party:", error);
       res.status(500).json({ message: "Failed to update party" });
+    }
+  });
+
+  // ==================== AGENT ROUTES ====================
+  app.get("/api/agents", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const agents = await storage.getAgents(req.companyId);
+      res.json(agents);
+    } catch (error) {
+      console.error("Error fetching agents:", error);
+      res.status(500).json({ message: "Failed to fetch agents" });
+    }
+  });
+
+  app.get("/api/agents/next-code", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const nextCode = await storage.getNextAgentCode(req.companyId);
+      res.json({ nextCode });
+    } catch (error) {
+      console.error("Error fetching next agent code:", error);
+      res.status(500).json({ message: "Failed to fetch next agent code" });
+    }
+  });
+
+  app.get("/api/agents/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const agent = await storage.getAgent(id, req.companyId);
+      if (!agent) {
+        return res.status(404).json({ message: "Agent not found" });
+      }
+      res.json(agent);
+    } catch (error) {
+      console.error("Error fetching agent:", error);
+      res.status(500).json({ message: "Failed to fetch agent" });
+    }
+  });
+
+  app.post("/api/agents", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const validated = insertAgentSchema.parse(req.body);
+      const userId = req.user.id;
+      const agent = await storage.createAgent(validated, userId, req.companyId);
+      res.json(agent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating agent:", error);
+      res.status(500).json({ message: "Failed to create agent" });
+    }
+  });
+
+  app.put("/api/agents/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertAgentSchema.parse(req.body);
+      const agent = await storage.updateAgent(id, validated, req.companyId);
+      res.json(agent);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating agent:", error);
+      res.status(500).json({ message: "Failed to update agent" });
     }
   });
 

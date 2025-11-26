@@ -22,6 +22,7 @@ import {
   LogOut,
   Shield,
   Building2,
+  UserCircle,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,11 @@ export function AppSidebar() {
       title: "Items",
       url: "/items",
       icon: Package,
+    },
+    {
+      title: "Agents",
+      url: "/agents",
+      icon: UserCircle,
     },
   ];
 

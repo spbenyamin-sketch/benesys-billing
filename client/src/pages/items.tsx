@@ -37,15 +37,35 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
+// Universal pack types
+const PACK_TYPES = [
+  { value: "PCS", label: "Pieces (PCS)" },
+  { value: "KG", label: "Kilograms (KG)" },
+  { value: "GM", label: "Grams (GM)" },
+  { value: "LTR", label: "Litres (LTR)" },
+  { value: "ML", label: "Millilitres (ML)" },
+  { value: "MTR", label: "Metres (MTR)" },
+  { value: "CM", label: "Centimetres (CM)" },
+  { value: "BOX", label: "Box (BOX)" },
+  { value: "PKT", label: "Packet (PKT)" },
+  { value: "SET", label: "Set (SET)" },
+  { value: "DZ", label: "Dozen (DZ)" },
+  { value: "PAIR", label: "Pair (PAIR)" },
+  { value: "BTL", label: "Bottle (BTL)" },
+  { value: "CAN", label: "Can (CAN)" },
+  { value: "ROLL", label: "Roll (ROLL)" },
+  { value: "UNIT", label: "Unit (UNIT)" },
+];
+
 const itemFormSchema = z.object({
-  code: z.string().min(1, "Code is required"),
   name: z.string().min(1, "Name is required"),
-  hsnCode: z.string().optional(),
+  hsnCode: z.string().min(1, "HSN Code is required"),
+  tax: z.string().min(1, "Tax rate is required"),
   category: z.string().optional(),
-  packType: z.enum(["PC", "KG"]).default("PC"),
+  floor: z.string().optional(),
+  packType: z.string().default("PCS"),
   type: z.enum(["P", "M"]).default("P"),
   cost: z.string().default("0"),
-  tax: z.string().default("0"),
   active: z.boolean().default(true),
   isShared: z.boolean().default(false),
 });
@@ -58,6 +78,7 @@ interface Item {
   name: string;
   hsnCode: string | null;
   category: string | null;
+  floor: string | null;
   packType: string;
   type: string;
   cost: string;
@@ -82,14 +103,14 @@ export default function Items() {
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemFormSchema),
     defaultValues: {
-      code: "",
       name: "",
       hsnCode: "",
+      tax: "0",
       category: "",
-      packType: "PC",
+      floor: "",
+      packType: "PCS",
       type: "P",
       cost: "0",
-      tax: "0",
       active: true,
       isShared: false,
     },
@@ -151,14 +172,14 @@ export default function Items() {
   const handleEdit = (item: Item) => {
     setEditingItem(item);
     form.reset({
-      code: item.code,
       name: item.name,
       hsnCode: item.hsnCode || "",
+      tax: item.tax || "0",
       category: item.category || "",
-      packType: item.packType as "PC" | "KG",
+      floor: item.floor || "",
+      packType: item.packType || "PCS",
       type: item.type as "P" | "M",
-      cost: item.cost,
-      tax: item.tax,
+      cost: item.cost || "0",
       active: item.active,
       isShared: item.isShared || false,
     });
@@ -202,34 +223,25 @@ export default function Items() {
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Code *</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid="input-item-code" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name *</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid="input-item-name" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                {editingItem && (
+                  <div className="bg-muted/50 p-3 rounded-lg">
+                    <p className="text-sm text-muted-foreground">Item Code: <span className="font-mono font-semibold text-foreground">{editingItem.code}</span></p>
+                  </div>
+                )}
+                
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name *</FormLabel>
+                      <FormControl>
+                        <Input {...field} data-testid="input-item-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField
@@ -237,7 +249,7 @@ export default function Items() {
                     name="hsnCode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>HSN Code</FormLabel>
+                        <FormLabel>HSN Code *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-item-hsn" />
                         </FormControl>
@@ -247,12 +259,45 @@ export default function Items() {
                   />
                   <FormField
                     control={form.control}
+                    name="tax"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tax (%) *</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="0.01" {...field} data-testid="input-item-tax" />
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-muted-foreground">
+                          CGST = {(parseFloat(form.watch("tax") || "0") / 2).toFixed(2)}%, 
+                          SGST = {(parseFloat(form.watch("tax") || "0") / 2).toFixed(2)}%
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
                     name="category"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Category</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-item-category" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="floor"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Floor/Location</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="e.g., Floor 1, Rack A" data-testid="input-item-floor" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -267,15 +312,18 @@ export default function Items() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Pack Type</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-pack-type">
                               <SelectValue />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="PC">Piece (PC)</SelectItem>
-                            <SelectItem value="KG">Weight (KG)</SelectItem>
+                            {PACK_TYPES.map((packType) => (
+                              <SelectItem key={packType.value} value={packType.value}>
+                                {packType.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -296,24 +344,6 @@ export default function Items() {
                     )}
                   />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="tax"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tax (%)</FormLabel>
-                      <FormControl>
-                        <Input type="number" step="0.01" {...field} data-testid="input-item-tax" />
-                      </FormControl>
-                      <FormMessage />
-                      <p className="text-xs text-muted-foreground">
-                        GST will be automatically split: CGST = {(parseFloat(form.watch("tax") || "0") / 2).toFixed(2)}%, 
-                        SGST = {(parseFloat(form.watch("tax") || "0") / 2).toFixed(2)}%
-                      </p>
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
