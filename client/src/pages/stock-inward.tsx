@@ -195,7 +195,7 @@ export default function StockInward() {
 
   const addItemMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/purchase-items", "POST", data);
+      return (await apiRequest("POST", "/api/purchase-items", data)).json();
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Item added successfully" });
@@ -228,7 +228,7 @@ export default function StockInward() {
 
   const updateItemMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: any }) => {
-      return await apiRequest(`/api/purchase-items/${id}`, "PUT", data);
+      return (await apiRequest("PUT", `/api/purchase-items/${id}`, data)).json();
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Item updated successfully" });
@@ -247,7 +247,7 @@ export default function StockInward() {
 
   const deleteItemMutation = useMutation({
     mutationFn: async (id: number) => {
-      return await apiRequest(`/api/purchase-items/${id}`, "DELETE");
+      return apiRequest("DELETE", `/api/purchase-items/${id}`);
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Item deleted successfully" });
@@ -276,7 +276,7 @@ export default function StockInward() {
         });
       }
       
-      return await apiRequest(`/api/purchase-items/${purchaseItemId}/generate-barcodes`, "POST", { items });
+      return (await apiRequest("POST", `/api/purchase-items/${purchaseItemId}/generate-barcodes`, { items })).json();
     },
     onSuccess: (_, variables) => {
       toast({ title: "Success", description: `Generated ${variables.qty} unique barcodes` });
@@ -294,7 +294,7 @@ export default function StockInward() {
 
   const completePurchaseMutation = useMutation({
     mutationFn: async (purchaseId: number) => {
-      return await apiRequest(`/api/purchases/${purchaseId}/complete`, "POST");
+      return (await apiRequest("POST", `/api/purchases/${purchaseId}/complete`)).json();
     },
     onSuccess: () => {
       toast({ title: "Success", description: "Purchase completed and stock updated" });

@@ -91,11 +91,12 @@ export default function PurchaseEntry() {
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
       const party = (parties as any)?.find((p: any) => p.id === data.partyId);
-      return await apiRequest("/api/purchase-entries", "POST", {
+      const res = await apiRequest("POST", "/api/purchase-entries", {
         ...data,
         partyName: party?.name || data.partyName || "",
         city: party?.city || data.city || "",
       });
+      return res.json();
     },
     onSuccess: (result: any) => {
       toast({ 
