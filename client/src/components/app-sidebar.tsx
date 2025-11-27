@@ -92,11 +92,6 @@ export function AppSidebar() {
       icon: FileText,
     },
     {
-      title: "Purchases",
-      url: "/purchases",
-      icon: ShoppingCart,
-    },
-    {
       title: "Payments",
       url: "/payments",
       icon: Wallet,
