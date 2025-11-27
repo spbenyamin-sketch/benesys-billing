@@ -97,11 +97,17 @@ export default function StockInward() {
     queryKey: ["/api/pending-purchases"],
   });
 
+  const getCompanyHeader = (): Record<string, string> => {
+    const companyId = localStorage.getItem("currentCompanyId");
+    return companyId ? { "X-Company-Id": companyId } : {};
+  };
+
   const { data: selectedPurchase, isLoading: purchaseLoading } = useQuery<Purchase>({
     queryKey: ["/api/purchases", selectedPurchaseId],
     queryFn: async () => {
       const res = await fetch(`/api/purchases/${selectedPurchaseId}`, {
         credentials: "include",
+        headers: getCompanyHeader(),
       });
       if (!res.ok) throw new Error("Failed to fetch purchase");
       return res.json();
@@ -114,6 +120,7 @@ export default function StockInward() {
     queryFn: async () => {
       const res = await fetch(`/api/purchases/${selectedPurchaseId}/items`, {
         credentials: "include",
+        headers: getCompanyHeader(),
       });
       if (!res.ok) throw new Error("Failed to fetch purchase items");
       return res.json();
