@@ -17,6 +17,11 @@ import {
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 
+// Helper function to check if user has admin privileges
+function isAdminRole(role: string | undefined | null): boolean {
+  return role === 'admin' || role === 'superadmin';
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
@@ -37,7 +42,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can access user management" });
       }
       const users = await storage.getAllUsers();
@@ -51,7 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/users/:id/role', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can manage roles" });
       }
       const { role } = req.body;
@@ -69,7 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/users/create', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can create users" });
       }
 
@@ -127,7 +132,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/users/:id', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can delete users" });
       }
       if (req.params.id === req.user.id) {
@@ -158,7 +163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users/:id/companies', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can view user companies" });
       }
       const userCompanies = await storage.getUserCompanies(req.params.id);
@@ -173,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/users/:id/companies', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can assign companies" });
       }
       const { companyId, isDefault } = req.body;
@@ -189,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/users/:id/companies/:companyId', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can remove companies" });
       }
       await storage.removeUserFromCompany(req.params.id, parseInt(req.params.companyId));
@@ -204,7 +209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can view all companies" });
       }
       const companies = await storage.getCompanies();
@@ -218,7 +223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can create companies" });
       }
       const validated = insertCompanySchema.parse(req.body);
@@ -237,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/companies/:id', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can update companies" });
       }
       const id = parseInt(req.params.id);
@@ -256,7 +261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/companies/:id', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (!isAdminRole(currentUser?.role)) {
         return res.status(403).json({ message: "Only super admin can delete companies" });
       }
       const id = parseInt(req.params.id);
