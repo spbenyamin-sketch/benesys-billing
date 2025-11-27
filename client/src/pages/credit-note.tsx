@@ -22,16 +22,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, Barcode, Search, CreditCard, Banknote } from "lucide-react";
+import { Plus, Trash2, Save, Barcode, Search, Printer, AlertCircle, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";
-import { useLocation } from "wouter";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Party {
   id: number;
   code: string;
   name: string;
+  shortname: string | null;
+  address: string | null;
   city: string | null;
+  state: string | null;
+  stateCode: string | null;
+  gstNo: string | null;
 }
 
 interface Item {
@@ -46,7 +52,7 @@ interface Item {
   packType: string;
 }
 
-interface SaleLineItem {
+interface CreditNoteLineItem {
   tempId: string;
   itemId: number | null;
   purchaseItemId: number | null;
@@ -70,21 +76,22 @@ interface SaleLineItem {
   stockQty: number | null;
 }
 
-export default function SalesB2C() {
-  const [, setLocation] = useLocation();
+export default function CreditNote() {
   const { toast } = useToast();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
-  const [paymentMode, setPaymentMode] = useState<"CASH" | "CARD">("CASH");
   const [gstType, setGstType] = useState<0 | 1>(0);
-  const [inclusiveTax, setInclusiveTax] = useState(true);
-  const [lineItems, setLineItems] = useState<SaleLineItem[]>([]);
+  const [inclusiveTax, setInclusiveTax] = useState(false);
+  const [lineItems, setLineItems] = useState<CreditNoteLineItem[]>([]);
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [barcodeInput, setBarcodeInput] = useState("");
-  const [searchMode, setSearchMode] = useState<"item" | "barcode">("barcode");
-  const [mobile, setMobile] = useState("");
-  const [amountGiven, setAmountGiven] = useState(0);
+  const [searchMode, setSearchMode] = useState<"item" | "barcode">("item");
+  const [paymentMode, setPaymentMode] = useState<"CASH" | "CARD">("CASH");
+  const [amountGiven, setAmountGiven] = useState<number>(0);
+  const [partyOutstanding, setPartyOutstanding] = useState<number>(0);
+  const [originalInvoiceNo, setOriginalInvoiceNo] = useState<string>("");
+  const [reason, setReason] = useState<string>("");
 
   const { data: parties } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
@@ -100,6 +107,16 @@ export default function SalesB2C() {
 
   const selectedParty = parties?.find((p) => p.id === selectedPartyId);
 
+  useEffect(() => {
+    if (selectedPartyId) {
+      apiRequest("GET", `/api/parties/${selectedPartyId}/outstanding`)
+        .then((data: any) => setPartyOutstanding(data.outstanding || 0))
+        .catch(() => setPartyOutstanding(0));
+    } else {
+      setPartyOutstanding(0);
+    }
+  }, [selectedPartyId]);
+
   const getStockQuantity = (itemId: number | null) => {
     if (!itemId || !stock) return null;
     const stockItem = stock.find((s) => s.itemId === itemId);
@@ -112,7 +129,7 @@ export default function SalesB2C() {
     try {
       const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       
-      const newItem: SaleLineItem = {
+      const newItem: CreditNoteLineItem = {
         tempId: Date.now().toString(),
         itemId: data.itemId,
         purchaseItemId: data.purchaseItemId,
@@ -121,7 +138,7 @@ export default function SalesB2C() {
         itemName: data.itemName || "",
         hsnCode: data.hsnCode || "",
         quantity: 1,
-        rate: parseFloat(data.mrp) || parseFloat(data.rrate) || 0,
+        rate: inclusiveTax ? parseFloat(data.brate) : parseFloat(data.brate) / (1 + parseFloat(data.tax || "0") / 100),
         mrp: parseFloat(data.mrp) || 0,
         discount: 0,
         discountPercent: 0,
@@ -143,95 +160,107 @@ export default function SalesB2C() {
       
       toast({
         title: "Item Added",
-        description: `${data.itemName} added`,
+        description: `${data.itemName} added from barcode scan`,
       });
     } catch (error) {
       toast({
         title: "Barcode Not Found",
-        description: "No item found with this barcode",
+        description: "No item found with this barcode in inventory",
         variant: "destructive",
       });
     }
   };
 
-  const recalculateItem = (item: SaleLineItem) => {
+  const recalculateItem = (item: CreditNoteLineItem) => {
     const qty = parseFloat(item.quantity.toString()) || 0;
     const rate = parseFloat(item.rate.toString()) || 0;
-    const taxRate = parseFloat(item.taxRate.toString()) || 0;
     const discountPercent = parseFloat(item.discountPercent.toString()) || 0;
-
-    let baseAmount = qty * rate;
-    const discountAmount = baseAmount * (discountPercent / 100);
-    baseAmount = baseAmount - discountAmount;
-    item.discount = discountAmount;
-
-    let saleValue: number;
-    let taxValue: number;
+    const taxRate = item.taxRate || 0;
 
     if (inclusiveTax) {
-      saleValue = baseAmount / (1 + taxRate / 100);
-      taxValue = baseAmount - saleValue;
+      const baseRate = rate / (1 + taxRate / 100);
+      const grossAmount = qty * rate;
+      const discount = grossAmount * (discountPercent / 100);
+      const netAmount = grossAmount - discount;
+      const saleValue = netAmount / (1 + taxRate / 100);
+      const taxValue = netAmount - saleValue;
+      
+      item.amount = grossAmount;
+      item.discount = discount;
+      item.saleValue = saleValue;
+      item.taxValue = taxValue;
+      
+      if (gstType === 0) {
+        item.cgst = taxValue / 2;
+        item.sgst = taxValue / 2;
+      } else {
+        item.cgst = 0;
+        item.sgst = 0;
+      }
     } else {
-      saleValue = baseAmount;
-      taxValue = saleValue * (taxRate / 100);
-    }
+      const grossAmount = qty * rate;
+      const discount = grossAmount * (discountPercent / 100);
+      const saleValue = grossAmount - discount;
+      const taxValue = saleValue * (taxRate / 100);
+      const netAmount = saleValue + taxValue;
 
-    item.amount = baseAmount;
-    item.saleValue = saleValue;
-    item.taxValue = taxValue;
+      item.amount = netAmount;
+      item.discount = discount;
+      item.saleValue = saleValue;
+      item.taxValue = taxValue;
 
-    if (gstType === 0) {
-      item.cgst = taxValue / 2;
-      item.sgst = taxValue / 2;
-    } else {
-      item.cgst = taxValue;
-      item.sgst = 0;
+      if (gstType === 0) {
+        item.cgst = taxValue / 2;
+        item.sgst = taxValue / 2;
+      } else {
+        item.cgst = 0;
+        item.sgst = 0;
+      }
     }
   };
 
   const addLineItem = () => {
-    setLineItems([
-      ...lineItems,
-      {
-        tempId: Date.now().toString(),
-        itemId: null,
-        purchaseItemId: null,
-        barcode: "",
-        itemCode: "",
-        itemName: "",
-        hsnCode: "",
-        quantity: 1,
-        rate: 0,
-        mrp: 0,
-        discount: 0,
-        discountPercent: 0,
-        amount: 0,
-        taxRate: 0,
-        cgstRate: 0,
-        sgstRate: 0,
-        saleValue: 0,
-        taxValue: 0,
-        cgst: 0,
-        sgst: 0,
-        stockQty: null,
-      },
-    ]);
+    const newItem: CreditNoteLineItem = {
+      tempId: Date.now().toString(),
+      itemId: null,
+      purchaseItemId: null,
+      barcode: "",
+      itemCode: "",
+      itemName: "",
+      hsnCode: "",
+      quantity: 1,
+      rate: 0,
+      mrp: 0,
+      discount: 0,
+      discountPercent: 0,
+      amount: 0,
+      taxRate: 0,
+      cgstRate: 0,
+      sgstRate: 0,
+      saleValue: 0,
+      taxValue: 0,
+      cgst: 0,
+      sgst: 0,
+      stockQty: null,
+    };
+    setLineItems([...lineItems, newItem]);
   };
 
   const removeLineItem = (tempId: string) => {
     setLineItems(lineItems.filter((item) => item.tempId !== tempId));
   };
 
-  const updateLineItem = (tempId: string, field: string, value: any) => {
+  const updateLineItem = (tempId: string, field: keyof CreditNoteLineItem, value: any) => {
     setLineItems(
       lineItems.map((item) => {
         if (item.tempId !== tempId) return item;
 
-        const updated = { ...item, [field]: value };
+        const updated = { ...item };
 
-        if (field === "itemId" && value && items) {
-          const selectedItem = items.find((i) => i.id === parseInt(value));
+        if (field === "itemId") {
+          const selectedItem = items?.find((i) => i.id === parseInt(value));
           if (selectedItem) {
+            updated.itemId = selectedItem.id;
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
@@ -239,8 +268,12 @@ export default function SalesB2C() {
             updated.taxRate = parseFloat(selectedItem.tax);
             updated.cgstRate = parseFloat(selectedItem.cgst);
             updated.sgstRate = parseFloat(selectedItem.sgst);
-            updated.stockQty = getStockQuantity(parseInt(value));
+            updated.stockQty = getStockQuantity(selectedItem.id);
           }
+        } else if (field === "quantity" || field === "rate" || field === "discountPercent") {
+          (updated as any)[field] = parseFloat(value) || 0;
+        } else {
+          (updated as any)[field] = value;
         }
 
         recalculateItem(updated);
@@ -252,73 +285,67 @@ export default function SalesB2C() {
   useEffect(() => {
     setLineItems(
       lineItems.map((item) => {
-        recalculateItem(item);
-        return { ...item };
+        const updated = { ...item };
+        recalculateItem(updated);
+        return updated;
       })
     );
   }, [inclusiveTax, gstType]);
 
-  const calculateTotals = () => {
-    const totalQty = lineItems.reduce((sum, item) => sum + (parseFloat(item.quantity.toString()) || 0), 0);
-    const saleValue = lineItems.reduce((sum, item) => sum + item.saleValue, 0);
-    const discountTotal = lineItems.reduce((sum, item) => sum + item.discount, 0);
-    const taxValue = lineItems.reduce((sum, item) => sum + item.taxValue, 0);
-    const cgstTotal = lineItems.reduce((sum, item) => sum + item.cgst, 0);
-    const sgstTotal = lineItems.reduce((sum, item) => sum + item.sgst, 0);
-    const subTotal = saleValue + taxValue;
-    const roundOff = Math.round(subTotal) - subTotal;
-    const grandTotal = Math.round(subTotal);
-    const amountReturn = amountGiven > 0 ? amountGiven - grandTotal : 0;
+  const totals = lineItems.reduce(
+    (acc, item) => ({
+      quantity: acc.quantity + (parseFloat(item.quantity.toString()) || 0),
+      saleValue: acc.saleValue + item.saleValue,
+      discountTotal: acc.discountTotal + item.discount,
+      taxValue: acc.taxValue + item.taxValue,
+      cgstTotal: acc.cgstTotal + item.cgst,
+      sgstTotal: acc.sgstTotal + item.sgst,
+      grandTotal: acc.grandTotal + item.amount,
+    }),
+    { quantity: 0, saleValue: 0, discountTotal: 0, taxValue: 0, cgstTotal: 0, sgstTotal: 0, grandTotal: 0 }
+  );
 
-    return {
-      totalQty,
-      saleValue,
-      discountTotal,
-      taxValue,
-      cgstTotal,
-      sgstTotal,
-      subTotal,
-      roundOff,
-      grandTotal,
-      amountReturn,
-    };
-  };
-
-  const totals = calculateTotals();
+  const roundOff = Math.round(totals.grandTotal) - totals.grandTotal;
+  const finalTotal = Math.round(totals.grandTotal);
+  const amountReturn = amountGiven - finalTotal;
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      if (!selectedPartyId) {
+        throw new Error("Please select a party/customer for credit note");
+      }
       if (lineItems.length === 0) {
         throw new Error("Please add at least one item");
       }
 
-      const saleData = {
-        billType: "GST",
-        saleType: "B2C",
+      const creditNoteData = {
+        billType: "CN",
+        saleType: "B2B",
         paymentMode,
         inclusiveTax,
         date: invoiceDate,
         partyId: selectedPartyId,
         partyName: selectedParty?.name || "",
         partyCity: selectedParty?.city || "",
-        partyAddress: "",
-        partyGstNo: "",
+        partyAddress: selectedParty?.address || "",
+        partyGstNo: selectedParty?.gstNo || "",
         gstType,
         saleValue: totals.saleValue,
         discountTotal: totals.discountTotal,
         taxValue: totals.taxValue,
         cgstTotal: totals.cgstTotal,
         sgstTotal: totals.sgstTotal,
-        roundOff: totals.roundOff,
-        grandTotal: totals.grandTotal,
-        totalQty: totals.totalQty,
-        amountGiven: paymentMode === "CASH" ? amountGiven : totals.grandTotal,
-        amountReturn: paymentMode === "CASH" ? totals.amountReturn : 0,
-        byCash: paymentMode === "CASH" ? totals.grandTotal : 0,
-        byCard: paymentMode === "CARD" ? totals.grandTotal : 0,
+        roundOff,
+        grandTotal: finalTotal,
+        totalQty: totals.quantity,
+        amountGiven,
+        amountReturn: amountReturn > 0 ? amountReturn : 0,
+        byCash: paymentMode === "CASH" ? finalTotal : 0,
+        byCard: paymentMode === "CARD" ? finalTotal : 0,
         printOutstanding: false,
-        partyOutstanding: 0,
-        mobile,
+        partyOutstanding,
+        originalInvoiceNo,
+        reason,
         items: lineItems.map((item) => ({
           itemId: item.itemId,
           purchaseItemId: item.purchaseItemId,
@@ -332,26 +359,22 @@ export default function SalesB2C() {
           discount: item.discount,
           discountPercent: item.discountPercent,
           amount: item.amount,
-          saleValue: item.saleValue,
-          taxValue: item.taxValue,
           tax: item.taxRate,
           cgst: item.cgst,
           sgst: item.sgst,
-          cgstRate: item.cgstRate,
-          sgstRate: item.sgstRate,
         })),
       };
 
-      return apiRequest("POST", "/api/sales", saleData);
+      return apiRequest("POST", "/api/sales", creditNoteData);
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       queryClient.invalidateQueries({ queryKey: ["/api/stock"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/parties", selectedPartyId, "outstanding"] });
       
       toast({
         title: "Success",
-        description: "Retail sale saved successfully",
+        description: "Credit Note saved successfully",
       });
 
       window.open(`/invoice/${data.id}`, '_blank');
@@ -359,7 +382,8 @@ export default function SalesB2C() {
       setLineItems([]);
       setSelectedPartyId(null);
       setAmountGiven(0);
-      setMobile("");
+      setOriginalInvoiceNo("");
+      setReason("");
       barcodeInputRef.current?.focus();
     },
     onError: (error: Error) => {
@@ -375,16 +399,16 @@ export default function SalesB2C() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">B2C Retail Sales</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Credit Note (B2B)</h1>
           <p className="text-muted-foreground mt-2">
-            Quick retail billing with cash/card payment
+            Issue credit notes for returns and adjustments
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || lineItems.length === 0}
-            data-testid="button-save-b2c-sale"
+            disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId}
+            data-testid="button-save-credit-note"
           >
             <Save className="mr-2 h-4 w-4" />
             {saveMutation.isPending ? "Saving..." : "Save & Print"}
@@ -396,7 +420,10 @@ export default function SalesB2C() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-4">
-              <CardTitle>Quick Bill</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Credit Note Details
+              </CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
                   <Label htmlFor="inclusive-tax" className="text-sm">Tax Inclusive</Label>
@@ -411,7 +438,7 @@ export default function SalesB2C() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label htmlFor="invoiceDate">Date</Label>
                 <Input
@@ -422,17 +449,16 @@ export default function SalesB2C() {
                   data-testid="input-invoice-date"
                 />
               </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="party">Customer (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="party">Party/Customer *</Label>
                 <Select
-                  value={selectedPartyId?.toString() || "walk-in"}
-                  onValueChange={(v) => setSelectedPartyId(v === "walk-in" ? null : parseInt(v))}
+                  value={selectedPartyId?.toString() || ""}
+                  onValueChange={(v) => setSelectedPartyId(parseInt(v))}
                 >
                   <SelectTrigger id="party" data-testid="select-party">
-                    <SelectValue placeholder="Walk-in customer" />
+                    <SelectValue placeholder="Select Party" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="walk-in">Walk-in customer</SelectItem>
                     {parties?.map((party) => (
                       <SelectItem key={party.id} value={party.id.toString()}>
                         {party.name} - {party.city}
@@ -441,7 +467,42 @@ export default function SalesB2C() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="originalInvoice">Original Invoice No.</Label>
+                <Input
+                  id="originalInvoice"
+                  placeholder="Original Bill No."
+                  value={originalInvoiceNo}
+                  onChange={(e) => setOriginalInvoiceNo(e.target.value)}
+                  data-testid="input-original-invoice"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="reason">Reason</Label>
+                <Input
+                  id="reason"
+                  placeholder="Return reason"
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  data-testid="input-reason"
+                />
+              </div>
             </div>
+
+            {selectedParty && (
+              <div className="p-3 border rounded-md bg-muted/50">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="text-sm">
+                    <span className="font-medium">{selectedParty.name}</span>
+                    {selectedParty.city && <span className="text-muted-foreground"> - {selectedParty.city}</span>}
+                    {selectedParty.gstNo && <span className="text-muted-foreground ml-2">(GST: {selectedParty.gstNo})</span>}
+                  </div>
+                  <Badge variant={partyOutstanding > 0 ? "destructive" : "secondary"}>
+                    Outstanding: ₹{partyOutstanding.toFixed(2)}
+                  </Badge>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 p-3 border rounded-md bg-muted/50">
               <div className="flex gap-2">
@@ -488,7 +549,7 @@ export default function SalesB2C() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Items ({lineItems.length})</Label>
+                <Label>Return Items ({lineItems.length})</Label>
                 {searchMode === "item" && (
                   <Button size="sm" onClick={addLineItem} data-testid="button-add-line-item">
                     <Plus className="mr-1 h-3 w-3" />
@@ -502,6 +563,7 @@ export default function SalesB2C() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-[200px]">Item</TableHead>
+                      <TableHead className="w-[70px]">Stock</TableHead>
                       <TableHead className="w-[70px]">Qty</TableHead>
                       <TableHead className="w-[90px]">Rate</TableHead>
                       <TableHead className="w-[70px]">Disc%</TableHead>
@@ -512,8 +574,8 @@ export default function SalesB2C() {
                   <TableBody>
                     {lineItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          Scan barcode to add items
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          Add items to create credit note
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -536,7 +598,7 @@ export default function SalesB2C() {
                                 <SelectContent>
                                   {items?.map((i) => (
                                     <SelectItem key={i.id} value={i.id.toString()}>
-                                      {i.name}
+                                      {i.name} ({i.code})
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -544,12 +606,18 @@ export default function SalesB2C() {
                             )}
                           </TableCell>
                           <TableCell>
+                            {item.stockQty !== null && (
+                              <Badge variant={item.stockQty < item.quantity ? "destructive" : "secondary"}>
+                                {item.stockQty}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
                             <Input
                               type="number"
-                              min="0"
-                              step="1"
+                              min="1"
                               value={item.quantity}
-                              onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
+                              onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
                             />
@@ -557,10 +625,9 @@ export default function SalesB2C() {
                           <TableCell>
                             <Input
                               type="number"
-                              min="0"
                               step="0.01"
                               value={item.rate}
-                              onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                              onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
                               className="w-20"
                               data-testid={`input-rate-${item.tempId}`}
                             />
@@ -568,17 +635,17 @@ export default function SalesB2C() {
                           <TableCell>
                             <Input
                               type="number"
+                              step="0.01"
                               min="0"
                               max="100"
-                              step="0.01"
                               value={item.discountPercent}
-                              onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                              onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
                               className="w-16"
-                              data-testid={`input-discount-${item.tempId}`}
+                              data-testid={`input-disc-${item.tempId}`}
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ₹{(item.saleValue + item.taxValue).toFixed(2)}
+                            ₹{item.amount.toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -606,93 +673,103 @@ export default function SalesB2C() {
               <CardTitle>Payment</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Button
-                  className="flex-1"
-                  variant={paymentMode === "CASH" ? "default" : "outline"}
-                  onClick={() => setPaymentMode("CASH")}
-                  data-testid="button-payment-cash"
-                >
-                  <Banknote className="mr-2 h-4 w-4" />
-                  Cash
-                </Button>
-                <Button
-                  className="flex-1"
-                  variant={paymentMode === "CARD" ? "default" : "outline"}
-                  onClick={() => setPaymentMode("CARD")}
-                  data-testid="button-payment-card"
-                >
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Card
-                </Button>
-              </div>
-
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span>Items:</span>
-                  <span>{lineItems.length}</span>
+              <RadioGroup
+                value={paymentMode}
+                onValueChange={(v) => setPaymentMode(v as "CASH" | "CARD")}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="CASH" id="cash" data-testid="radio-cash" />
+                  <Label htmlFor="cash">Cash</Label>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Total Qty:</span>
-                  <span>{totals.totalQty.toFixed(0)}</span>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="CARD" id="card" data-testid="radio-card" />
+                  <Label htmlFor="card">Card</Label>
                 </div>
-                {totals.discountTotal > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
-                    <span>Discount:</span>
-                    <span>-₹{totals.discountTotal.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm">
-                  <span>Tax:</span>
-                  <span>₹{totals.taxValue.toFixed(2)}</span>
-                </div>
-                <div className="border-t pt-3">
-                  <div className="flex justify-between text-xl font-bold">
-                    <span>Total:</span>
-                    <span>₹{totals.grandTotal}</span>
-                  </div>
-                </div>
-              </div>
+              </RadioGroup>
 
               {paymentMode === "CASH" && (
-                <div className="space-y-3 border-t pt-4">
+                <div className="space-y-3">
                   <div className="space-y-2">
-                    <Label htmlFor="amount-given">Amount Received</Label>
+                    <Label htmlFor="amountGiven">Amount to Return</Label>
                     <Input
-                      id="amount-given"
+                      id="amountGiven"
                       type="number"
-                      min="0"
-                      step="1"
                       value={amountGiven || ""}
                       onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
-                      placeholder="Enter amount received"
-                      className="text-lg"
+                      placeholder="0.00"
                       data-testid="input-amount-given"
                     />
                   </div>
-                  {amountGiven >= totals.grandTotal && totals.grandTotal > 0 && (
-                    <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                      <div className="flex justify-between items-center">
-                        <span className="text-green-700 dark:text-green-300 font-medium">Return:</span>
-                        <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          ₹{totals.amountReturn.toFixed(0)}
-                        </span>
-                      </div>
-                    </div>
+                  {amountGiven > 0 && amountGiven !== finalTotal && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>
+                        {amountGiven > finalTotal 
+                          ? `Excess: ₹${(amountGiven - finalTotal).toFixed(2)}`
+                          : `Pending: ₹${(finalTotal - amountGiven).toFixed(2)}`
+                        }
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
-                <Label htmlFor="mobile">Mobile (Optional)</Label>
-                <Input
-                  id="mobile"
-                  type="tel"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  placeholder="Customer mobile"
-                  data-testid="input-mobile"
-                />
+          <Card>
+            <CardHeader>
+              <CardTitle>Credit Note Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Items</span>
+                  <span>{lineItems.length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Qty</span>
+                  <span>{totals.quantity.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Return Value</span>
+                  <span>₹{totals.saleValue.toFixed(2)}</span>
+                </div>
+                {totals.discountTotal > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount</span>
+                    <span>-₹{totals.discountTotal.toFixed(2)}</span>
+                  </div>
+                )}
+                {gstType === 0 ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">CGST</span>
+                      <span>₹{totals.cgstTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">SGST</span>
+                      <span>₹{totals.sgstTotal.toFixed(2)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">IGST</span>
+                    <span>₹{totals.taxValue.toFixed(2)}</span>
+                  </div>
+                )}
+                {roundOff !== 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Round Off</span>
+                    <span>{roundOff > 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Credit Total</span>
+                    <span>₹{finalTotal.toFixed(2)}</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

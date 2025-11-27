@@ -26,6 +26,7 @@ import {
   Briefcase,
   Store,
   FileEdit,
+  CreditCard,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,11 @@ export function AppSidebar() {
       title: "Estimate",
       url: "/sales/estimate",
       icon: FileEdit,
+    },
+    {
+      title: "Credit Note",
+      url: "/sales/credit-note",
+      icon: CreditCard,
     },
     {
       title: "Sales List",
