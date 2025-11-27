@@ -365,6 +365,9 @@ export const purchases = pgTable("purchases", {
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({
   id: true,
   companyId: true,
+  purchaseNo: true, // Auto-generated
+  status: true, // Set by system
+  stockInwardCompleted: true, // Set by system
   createdAt: true,
   updatedAt: true,
   createdBy: true,

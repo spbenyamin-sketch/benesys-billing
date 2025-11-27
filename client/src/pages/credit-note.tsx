@@ -615,7 +615,8 @@ export default function CreditNote() {
                           <TableCell>
                             <Input
                               type="number"
-                              min="1"
+                              min="0.01"
+                              step="0.01"
                               value={item.quantity}
                               onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
                               className="w-16"
@@ -626,6 +627,7 @@ export default function CreditNote() {
                             <Input
                               type="number"
                               step="0.01"
+                              min="0"
                               value={item.rate}
                               onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
                               className="w-20"

@@ -11,7 +11,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Search, FileText } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Search, FileText, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +39,21 @@ interface Sale {
 export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
+  const [billTypeFilter, setBillTypeFilter] = useState<string>("all");
 
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["/api/sales"],
   });
+
+  // Map bill types for filtering
+  const getBillTypeCategory = (billType: string): string => {
+    const type = billType.toUpperCase();
+    if (type === "B2B" || type === "GST") return "B2B";
+    if (type === "B2C" || type === "CASH") return "B2C";
+    if (type === "EST" || type === "ESTIMATE") return "ESTIMATE";
+    if (type === "CN" || type === "CREDIT" || type === "CREDIT NOTE") return "CREDIT_NOTE";
+    return type;
+  };
 
   const filteredSales = sales?.filter((sale) => {
     const matchesSearch = 
@@ -45,7 +63,10 @@ export default function Sales() {
     
     const matchesDate = !dateFilter || sale.date === dateFilter;
     
-    return matchesSearch && matchesDate;
+    const matchesBillType = billTypeFilter === "all" || 
+      getBillTypeCategory(sale.billType) === billTypeFilter;
+    
+    return matchesSearch && matchesDate && matchesBillType;
   });
 
   const totalAmount = filteredSales?.reduce((sum, sale) => sum + parseFloat(sale.grandTotal), 0) || 0;
@@ -72,6 +93,19 @@ export default function Sales() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Invoice List</CardTitle>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <Select value={billTypeFilter} onValueChange={setBillTypeFilter}>
+                <SelectTrigger className="w-full sm:w-40" data-testid="select-bill-type-filter">
+                  <Filter className="mr-2 h-4 w-4" />
+                  <SelectValue placeholder="All Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="B2B">B2B (Credit)</SelectItem>
+                  <SelectItem value="B2C">B2C (Cash)</SelectItem>
+                  <SelectItem value="ESTIMATE">Estimate</SelectItem>
+                  <SelectItem value="CREDIT_NOTE">Credit Note</SelectItem>
+                </SelectContent>
+              </Select>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
