@@ -38,7 +38,7 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { resetCompanySelection } = useCompany();
-  const isSuperAdmin = user?.role === "admin";
+  const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   const salesMenuItems = [
     {
