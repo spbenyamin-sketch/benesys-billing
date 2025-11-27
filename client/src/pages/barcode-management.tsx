@@ -949,5 +949,3 @@ function PrintLabelsDialog({ open, onOpenChange, selectedItems }: PrintLabelsDia
     </Dialog>
   );
 }
-
-export { parseSizeInput, SIZE_CODES };
