@@ -30,6 +30,7 @@ import PurchaseDetail from "@/pages/purchase-detail";
 import Payments from "@/pages/payments";
 import Stock from "@/pages/stock";
 import StockView from "@/pages/stock-view";
+import StockInward from "@/pages/stock-inward";
 import Outstanding from "@/pages/reports/outstanding";
 import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
@@ -63,6 +64,8 @@ function Router() {
       <Route path="/sales" component={Sales} />
       <Route path="/invoice/:id" component={Invoice} />
       <Route path="/purchases/new" component={PurchaseEntry} />
+      <Route path="/purchase-entry" component={PurchaseEntry} />
+      <Route path="/stock-inward" component={StockInward} />
       <Route path="/purchases/:id" component={PurchaseDetail} />
       <Route path="/purchases" component={Purchases} />
       <Route path="/payments" component={Payments} />

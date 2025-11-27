@@ -27,6 +27,7 @@ import {
   Store,
   FileEdit,
   CreditCard,
+  PackagePlus,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -88,8 +89,13 @@ export function AppSidebar() {
   const transactionsMenuItems = [
     {
       title: "Purchase Entry",
-      url: "/purchases/new",
+      url: "/purchase-entry",
       icon: FileText,
+    },
+    {
+      title: "Stock Inward",
+      url: "/stock-inward",
+      icon: PackagePlus,
     },
     {
       title: "Payments",
