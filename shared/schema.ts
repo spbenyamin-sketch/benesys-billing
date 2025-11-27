@@ -608,6 +608,54 @@ export type InsertBillTemplate = z.infer<typeof insertBillTemplateSchema>;
 export type BillTemplate = typeof billTemplates.$inferSelect;
 
 // ============================================================================
+// BARCODE LABEL TEMPLATES
+// ============================================================================
+
+export const barcodeLabelTemplates = pgTable("barcode_label_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  name: varchar("name", { length: 100 }).notNull(),
+  // Label dimensions in mm
+  labelWidth: decimal("label_width", { precision: 6, scale: 2 }).default("50").notNull(),
+  labelHeight: decimal("label_height", { precision: 6, scale: 2 }).default("25").notNull(),
+  // Layout configuration stored as JSON
+  config: text("config").notNull(), // JSON: { elements: [{ type, x, y, width, height, fontSize, field }] }
+  // Print settings
+  paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(),
+  labelsPerRow: integer("labels_per_row").default(4).notNull(),
+  labelsPerColumn: integer("labels_per_column").default(10).notNull(),
+  marginTop: decimal("margin_top", { precision: 6, scale: 2 }).default("10").notNull(),
+  marginLeft: decimal("margin_left", { precision: 6, scale: 2 }).default("5").notNull(),
+  gapHorizontal: decimal("gap_horizontal", { precision: 6, scale: 2 }).default("2").notNull(),
+  gapVertical: decimal("gap_vertical", { precision: 6, scale: 2 }).default("2").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+});
+
+export const insertBarcodeLabelTemplateSchema = createInsertSchema(barcodeLabelTemplates).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+  createdBy: true,
+});
+
+export type InsertBarcodeLabelTemplate = z.infer<typeof insertBarcodeLabelTemplateSchema>;
+export type BarcodeLabelTemplate = typeof barcodeLabelTemplates.$inferSelect;
+
+// Schema for updating stock inward item prices
+export const updateStockInwardItemSchema = z.object({
+  rate: z.string().optional(),
+  mrp: z.string().optional(),
+  size: z.string().optional(),
+  sizeCode: z.number().optional(),
+});
+
+export type UpdateStockInwardItem = z.infer<typeof updateStockInwardItemSchema>;
+
+// ============================================================================
 // RELATIONS
 // ============================================================================
 
