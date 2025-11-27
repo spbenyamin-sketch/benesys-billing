@@ -28,6 +28,7 @@ import {
   FileEdit,
   CreditCard,
   PackagePlus,
+  Barcode,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -96,6 +97,11 @@ export function AppSidebar() {
       title: "Stock Inward",
       url: "/stock-inward",
       icon: PackagePlus,
+    },
+    {
+      title: "Barcode Management",
+      url: "/barcode-management",
+      icon: Barcode,
     },
     {
       title: "Payments",
