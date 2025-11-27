@@ -14,6 +14,8 @@ import {
   insertBillTemplateSchema,
   insertCompanySchema,
   insertAgentSchema,
+  insertBarcodeLabelTemplateSchema,
+  updateStockInwardItemSchema,
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -899,6 +901,148 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error completing purchase:", error);
       res.status(500).json({ message: "Failed to complete purchase" });
+    }
+  });
+
+  // ==================== STOCK INWARD BARCODE MANAGEMENT ====================
+
+  // Get all stock inward items with filters
+  app.get("/api/stock-inward-items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const filters: { purchaseId?: number; status?: string; size?: string } = {};
+      if (req.query.purchaseId) filters.purchaseId = parseInt(req.query.purchaseId);
+      if (req.query.status) filters.status = req.query.status;
+      if (req.query.size) filters.size = req.query.size;
+      
+      const items = await storage.getAllStockInwardItems(req.companyId, filters);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching stock inward items:", error);
+      res.status(500).json({ message: "Failed to fetch stock inward items" });
+    }
+  });
+
+  // Get single stock inward item
+  app.get("/api/stock-inward-items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.getStockInwardItem(id, req.companyId);
+      if (!item) {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      res.json(item);
+    } catch (error) {
+      console.error("Error fetching stock inward item:", error);
+      res.status(500).json({ message: "Failed to fetch stock inward item" });
+    }
+  });
+
+  // Update stock inward item (price/size)
+  app.patch("/api/stock-inward-items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = updateStockInwardItemSchema.parse(req.body);
+      const updated = await storage.updateStockInwardItem(id, validated, req.companyId);
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating stock inward item:", error);
+      res.status(500).json({ message: "Failed to update stock inward item" });
+    }
+  });
+
+  // Bulk create stock inward items with multiple sizes
+  app.post("/api/purchase-items/:id/generate-bulk-barcodes", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchaseItemId = parseInt(req.params.id);
+      const { sizeEntries, baseData } = req.body;
+      
+      if (!sizeEntries || !Array.isArray(sizeEntries)) {
+        return res.status(400).json({ message: "sizeEntries array required" });
+      }
+      
+      // Validate size entries
+      for (const entry of sizeEntries) {
+        if (!entry.size || typeof entry.quantity !== 'number' || entry.quantity < 1) {
+          return res.status(400).json({ message: "Each size entry must have size and quantity >= 1" });
+        }
+      }
+      
+      const createdItems = await storage.createBulkStockInwardItems(
+        purchaseItemId, 
+        sizeEntries, 
+        baseData || {}, 
+        req.companyId
+      );
+      res.json(createdItems);
+    } catch (error) {
+      console.error("Error generating bulk barcodes:", error);
+      res.status(500).json({ message: "Failed to generate bulk barcodes" });
+    }
+  });
+
+  // ==================== BARCODE LABEL TEMPLATE ROUTES ====================
+
+  // Get all barcode label templates
+  app.get("/api/barcode-label-templates", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const templates = await storage.getBarcodeLabelTemplates(req.companyId);
+      res.json(templates);
+    } catch (error) {
+      console.error("Error fetching barcode label templates:", error);
+      res.status(500).json({ message: "Failed to fetch barcode label templates" });
+    }
+  });
+
+  // Get default barcode label template
+  app.get("/api/barcode-label-templates/default", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const template = await storage.getDefaultBarcodeLabelTemplate(req.companyId);
+      res.json(template || null);
+    } catch (error) {
+      console.error("Error fetching default barcode label template:", error);
+      res.status(500).json({ message: "Failed to fetch default barcode label template" });
+    }
+  });
+
+  // Create barcode label template
+  app.post("/api/barcode-label-templates", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const validated = insertBarcodeLabelTemplateSchema.parse(req.body);
+      const template = await storage.createBarcodeLabelTemplate(validated, req.user.id, req.companyId);
+      res.json(template);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating barcode label template:", error);
+      res.status(500).json({ message: "Failed to create barcode label template" });
+    }
+  });
+
+  // Update barcode label template
+  app.patch("/api/barcode-label-templates/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const template = await storage.updateBarcodeLabelTemplate(id, req.body, req.companyId);
+      res.json(template);
+    } catch (error) {
+      console.error("Error updating barcode label template:", error);
+      res.status(500).json({ message: "Failed to update barcode label template" });
+    }
+  });
+
+  // Delete barcode label template
+  app.delete("/api/barcode-label-templates/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteBarcodeLabelTemplate(id, req.companyId);
+      res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting barcode label template:", error);
+      res.status(500).json({ message: "Failed to delete barcode label template" });
     }
   });
 
