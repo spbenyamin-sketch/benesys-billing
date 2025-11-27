@@ -19,6 +19,9 @@ import Parties from "@/pages/parties";
 import Items from "@/pages/items";
 import Agents from "@/pages/agents";
 import SalesBilling from "@/pages/sales-billing";
+import SalesB2B from "@/pages/sales-b2b";
+import SalesB2C from "@/pages/sales-b2c";
+import SalesEstimate from "@/pages/sales-estimate";
 import Sales from "@/pages/sales";
 import Purchases from "@/pages/purchases";
 import PurchaseEntry from "@/pages/purchase-entry";
@@ -31,6 +34,7 @@ import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
 import PurchaseReport from "@/pages/reports/purchase-report";
 import Ledger from "@/pages/reports/ledger";
+import Invoice from "@/pages/invoice";
 import UserManagement from "@/pages/user-management";
 import BillSettings from "@/pages/bill-settings";
 import Companies from "@/pages/companies";
@@ -50,8 +54,12 @@ function Router() {
       <Route path="/parties" component={Parties} />
       <Route path="/items" component={Items} />
       <Route path="/agents" component={Agents} />
+      <Route path="/sales/b2b" component={SalesB2B} />
+      <Route path="/sales/b2c" component={SalesB2C} />
+      <Route path="/sales/estimate" component={SalesEstimate} />
       <Route path="/sales/new" component={SalesBilling} />
       <Route path="/sales" component={Sales} />
+      <Route path="/invoice/:id" component={Invoice} />
       <Route path="/purchases/new" component={PurchaseEntry} />
       <Route path="/purchases/:id" component={PurchaseDetail} />
       <Route path="/purchases" component={Purchases} />

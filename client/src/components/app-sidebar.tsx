@@ -23,6 +23,9 @@ import {
   Shield,
   Building2,
   UserCircle,
+  Briefcase,
+  Store,
+  FileEdit,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -37,9 +40,19 @@ export function AppSidebar() {
 
   const salesMenuItems = [
     {
-      title: "New Sale",
-      url: "/sales/new",
-      icon: FileText,
+      title: "B2B Credit Sale",
+      url: "/sales/b2b",
+      icon: Briefcase,
+    },
+    {
+      title: "B2C Retail Sale",
+      url: "/sales/b2c",
+      icon: Store,
+    },
+    {
+      title: "Estimate",
+      url: "/sales/estimate",
+      icon: FileEdit,
     },
     {
       title: "Sales List",

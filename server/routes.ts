@@ -471,6 +471,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get single sale by ID
+  app.get("/api/sales/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const sale = await storage.getSale(parseInt(req.params.id), req.companyId);
+      if (!sale) {
+        return res.status(404).json({ message: "Sale not found" });
+      }
+      res.json(sale);
+    } catch (error) {
+      console.error("Error fetching sale:", error);
+      res.status(500).json({ message: "Failed to fetch sale" });
+    }
+  });
+
+  // Get sale items by sale ID
+  app.get("/api/sales/:id/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const items = await storage.getSaleItems(parseInt(req.params.id), req.companyId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching sale items:", error);
+      res.status(500).json({ message: "Failed to fetch sale items" });
+    }
+  });
+
   // ==================== PURCHASE ROUTES ====================
   app.get("/api/purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
@@ -561,6 +586,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching stock:", error);
       res.status(500).json({ message: "Failed to fetch stock" });
+    }
+  });
+
+  // Barcode lookup - get inventory item by barcode
+  app.get("/api/inventory/barcode/:barcode", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const barcode = req.params.barcode;
+      const inventoryItem = await storage.getInventoryByBarcode(barcode, req.companyId);
+      
+      if (!inventoryItem) {
+        return res.status(404).json({ message: "Item not found with this barcode" });
+      }
+      
+      res.json(inventoryItem);
+    } catch (error) {
+      console.error("Error fetching inventory by barcode:", error);
+      res.status(500).json({ message: "Failed to fetch inventory by barcode" });
+    }
+  });
+
+  // Get party outstanding balance
+  app.get("/api/parties/:id/outstanding", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const partyId = parseInt(req.params.id);
+      const outstanding = await storage.getPartyOutstanding(partyId, req.companyId);
+      res.json({ partyId, outstanding });
+    } catch (error) {
+      console.error("Error fetching party outstanding:", error);
+      res.status(500).json({ message: "Failed to fetch party outstanding" });
     }
   });
 

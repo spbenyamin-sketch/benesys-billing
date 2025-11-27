@@ -235,6 +235,9 @@ export const sales = pgTable("sales", {
   companyId: integer("company_id").references(() => companies.id).notNull(),
   invoiceNo: integer("invoice_no").notNull(),
   billType: varchar("bill_type", { length: 10 }).notNull(), // GST or EST
+  saleType: varchar("sale_type", { length: 10 }).default("B2C").notNull(), // B2B, B2C, ESTIMATE
+  paymentMode: varchar("payment_mode", { length: 10 }).default("CASH").notNull(), // CASH, CARD, CREDIT
+  inclusiveTax: boolean("inclusive_tax").default(false).notNull(), // true=rate includes tax
   date: date("date").notNull(),
   time: varchar("time", { length: 10 }),
   partyId: integer("party_id").references(() => parties.id),
@@ -244,6 +247,7 @@ export const sales = pgTable("sales", {
   partyGstNo: varchar("party_gst_no", { length: 50 }),
   gstType: integer("gst_type").default(0).notNull(), // 0=local (CGST+SGST), 1=inter-state (IGST)
   saleValue: decimal("sale_value", { precision: 12, scale: 2 }).default("0").notNull(),
+  discountTotal: decimal("discount_total", { precision: 12, scale: 2 }).default("0").notNull(), // Total discount
   taxValue: decimal("tax_value", { precision: 12, scale: 2 }).default("0").notNull(),
   cgstTotal: decimal("cgst_total", { precision: 12, scale: 2 }).default("0").notNull(),
   sgstTotal: decimal("sgst_total", { precision: 12, scale: 2 }).default("0").notNull(),
@@ -254,6 +258,8 @@ export const sales = pgTable("sales", {
   amountReturn: decimal("amount_return", { precision: 12, scale: 2 }).default("0").notNull(),
   byCard: decimal("by_card", { precision: 12, scale: 2 }).default("0").notNull(),
   byCash: decimal("by_cash", { precision: 12, scale: 2 }).default("0").notNull(),
+  printOutstanding: boolean("print_outstanding").default(false).notNull(), // B2B: print outstanding on invoice
+  partyOutstanding: decimal("party_outstanding", { precision: 12, scale: 2 }).default("0").notNull(), // Outstanding at time of sale
   mobile: varchar("mobile", { length: 20 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -276,14 +282,19 @@ export const saleItems = pgTable("sale_items", {
   id: serial("id").primaryKey(),
   saleId: integer("sale_id").references(() => sales.id).notNull(),
   itemId: integer("item_id").references(() => items.id),
+  purchaseItemId: integer("purchase_item_id").references(() => purchaseItems.id), // Link to inventory for barcode scanned items
   itemCode: varchar("item_code", { length: 50 }),
+  barcode: varchar("barcode", { length: 100 }), // Barcode if scanned from inventory
   itemName: varchar("item_name", { length: 300 }).notNull(),
   hsnCode: varchar("hsn_code", { length: 50 }),
   quality: varchar("quality", { length: 100 }),
   size: varchar("size", { length: 50 }),
   quantity: decimal("quantity", { precision: 12, scale: 3 }).notNull(),
-  rate: decimal("rate", { precision: 12, scale: 2 }).notNull(),
-  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  rate: decimal("rate", { precision: 12, scale: 2 }).notNull(), // Could be inclusive or exclusive rate
+  mrp: decimal("mrp", { precision: 12, scale: 2 }).default("0").notNull(), // MRP from inventory
+  discount: decimal("discount", { precision: 12, scale: 2 }).default("0").notNull(), // Discount amount per item
+  discountPercent: decimal("discount_percent", { precision: 5, scale: 2 }).default("0").notNull(), // Discount percentage
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(), // After discount
   saleValue: decimal("sale_value", { precision: 12, scale: 2 }).default("0").notNull(),
   taxValue: decimal("tax_value", { precision: 12, scale: 2 }).default("0").notNull(),
   tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(),
@@ -424,6 +435,8 @@ export const billTemplates = pgTable("bill_templates", {
   showTaxBreakup: boolean("show_tax_breakup").default(true).notNull(),
   showHsnCode: boolean("show_hsn_code").default(true).notNull(),
   showItemCode: boolean("show_item_code").default(true).notNull(),
+  showOutstandingDefault: boolean("show_outstanding_default").default(true).notNull(), // B2B: default setting to print outstanding
+  showCashReturn: boolean("show_cash_return").default(true).notNull(), // B2C: show cash given/return on invoice
   paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(), // A4, A5, etc
   fontSize: integer("font_size").default(10).notNull(),
   isDefault: boolean("is_default").default(false).notNull(),

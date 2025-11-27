@@ -77,6 +77,8 @@ export interface IStorage {
 
   // Sales operations
   getSales(companyId: number): Promise<Sale[]>;
+  getSale(id: number, companyId: number): Promise<Sale | undefined>;
+  getSaleItems(saleId: number, companyId: number): Promise<SaleItem[]>;
   getNextInvoiceNumber(billType: string, companyId: number): Promise<number>;
   createSale(sale: InsertSale, items: InsertSaleItem[], userId: string, companyId: number): Promise<Sale>;
 
@@ -94,6 +96,8 @@ export interface IStorage {
   // Stock operations
   getStock(companyId: number): Promise<any[]>;
   updateStock(itemId: number, quantityChange: number, companyId: number): Promise<void>;
+  getInventoryByBarcode(barcode: string, companyId: number): Promise<any | undefined>;
+  getPartyOutstanding(partyId: number, companyId: number): Promise<number>;
 
   // Report operations
   getDashboardMetrics(companyId: number): Promise<any>;
@@ -471,6 +475,27 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(sales.date), desc(sales.id));
   }
 
+  async getSale(id: number, companyId: number): Promise<Sale | undefined> {
+    const [sale] = await db
+      .select()
+      .from(sales)
+      .where(and(eq(sales.id, id), eq(sales.companyId, companyId)));
+    return sale;
+  }
+
+  async getSaleItems(saleId: number, companyId: number): Promise<SaleItem[]> {
+    // First verify the sale belongs to the company
+    const sale = await this.getSale(saleId, companyId);
+    if (!sale) {
+      return [];
+    }
+    
+    return await db
+      .select()
+      .from(saleItems)
+      .where(eq(saleItems.saleId, saleId));
+  }
+
   async getNextInvoiceNumber(billType: string, companyId: number): Promise<number> {
     const [result] = await db
       .select({ maxNo: sql<number>`COALESCE(MAX(${sales.invoiceNo}), 0)` })
@@ -711,6 +736,86 @@ export class DatabaseStorage implements IStorage {
         lastUpdated: new Date(),
       })
       .where(and(eq(stock.itemId, itemId), eq(stock.companyId, companyId)));
+  }
+
+  async getInventoryByBarcode(barcode: string, companyId: number): Promise<any | undefined> {
+    // Find purchase item by barcode with available stock
+    const [result] = await db
+      .select({
+        purchaseItemId: purchaseItems.id,
+        barcode: purchaseItems.barcode,
+        itemId: purchaseItems.itemId,
+        itemName: purchaseItems.itname,
+        brandName: purchaseItems.brandname,
+        hsnCode: items.hsnCode,
+        tax: items.tax,
+        cgst: items.cgst,
+        sgst: items.sgst,
+        cost: purchaseItems.cost,
+        mrp: purchaseItems.rrate, // Retail rate as MRP
+        brate: purchaseItems.brate, // B2B rate
+        arate: purchaseItems.arate, // Actual rate
+        stockQty: purchaseItems.stockqty,
+        expDate: purchaseItems.expdate,
+        packType: items.packType,
+      })
+      .from(purchaseItems)
+      .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
+      .leftJoin(items, eq(purchaseItems.itemId, items.id))
+      .where(
+        and(
+          eq(purchaseItems.barcode, barcode),
+          eq(purchases.companyId, companyId),
+          sql`${purchaseItems.stockqty} > 0`
+        )
+      )
+      .limit(1);
+
+    return result;
+  }
+
+  async getPartyOutstanding(partyId: number, companyId: number): Promise<number> {
+    // Get party opening balance
+    const [party] = await db
+      .select({
+        openingDebit: parties.openingDebit,
+        openingCredit: parties.openingCredit,
+      })
+      .from(parties)
+      .where(and(eq(parties.id, partyId), eq(parties.companyId, companyId)));
+
+    if (!party) return 0;
+
+    // Get total sales to party
+    const [salesTotal] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+      .from(sales)
+      .where(and(eq(sales.partyId, partyId), eq(sales.companyId, companyId)));
+
+    // Get total purchases from party
+    const [purchasesTotal] = await db
+      .select({ total: sql<string>`COALESCE(SUM(${purchases.amount}), 0)` })
+      .from(purchases)
+      .where(and(eq(purchases.partyId, partyId), eq(purchases.companyId, companyId)));
+
+    // Get total payments
+    const [paymentsTotal] = await db
+      .select({
+        credit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`,
+        debit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
+      })
+      .from(payments)
+      .where(and(eq(payments.partyId, partyId), eq(payments.companyId, companyId)));
+
+    const openingBal = parseFloat(party.openingDebit || "0") - parseFloat(party.openingCredit || "0");
+    const salesAmt = parseFloat(salesTotal?.total || "0");
+    const purchasesAmt = parseFloat(purchasesTotal?.total || "0");
+    const paymentsCredit = parseFloat(paymentsTotal?.credit || "0");
+    const paymentsDebit = parseFloat(paymentsTotal?.debit || "0");
+
+    // Outstanding = Opening + Sales - Purchases - Payments Received + Payments Made
+    const outstanding = openingBal + salesAmt - purchasesAmt - paymentsCredit + paymentsDebit;
+    return outstanding;
   }
 
   // ==================== REPORT OPERATIONS ====================
