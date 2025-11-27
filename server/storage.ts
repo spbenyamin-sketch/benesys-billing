@@ -1222,7 +1222,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStockInwardItems(purchaseItemId: number, items: InsertStockInwardItem[], companyId: number): Promise<StockInwardItem[]> {
-    // First get the purchase item to find its purchaseId
+    // First get the purchase item to find its purchaseId and item details
     const [purchaseItem] = await db
       .select()
       .from(purchaseItems)
@@ -1248,6 +1248,22 @@ export class DatabaseStorage implements IStorage {
           purchaseItemId,
           purchaseId: purchaseItem.purchaseId,
           companyId,
+          itemId: purchaseItem.itemId,
+          // Copy product info from purchase item
+          itname: purchaseItem.itname || "Unknown Item",
+          brandname: purchaseItem.brandname,
+          quality: purchaseItem.quality,
+          dno1: purchaseItem.dno1,
+          pattern: purchaseItem.pattern,
+          sleeve: purchaseItem.sleeve,
+          size: purchaseItem.name || purchaseItem.size1,
+          // Pricing info (use correct field names from purchaseItems)
+          cost: purchaseItem.cost || "0",
+          ncost: purchaseItem.ncost || purchaseItem.cost || "0",
+          lcost: purchaseItem.lcost || purchaseItem.cost || "0",
+          rate: purchaseItem.rrate || purchaseItem.cost || "0",
+          mrp: purchaseItem.mrp || purchaseItem.rrate || "0",
+          tax: purchaseItem.tax || "0",
         })
         .returning();
       createdItems.push(created);
