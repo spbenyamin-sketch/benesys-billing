@@ -11,6 +11,7 @@ import {
   payments,
   stock,
   billTemplates,
+  barcodeLabelTemplates,
   companies,
   userCompanies,
   agents,
@@ -36,6 +37,8 @@ import {
   type InsertStock,
   type BillTemplate,
   type InsertBillTemplate,
+  type BarcodeLabelTemplate,
+  type InsertBarcodeLabelTemplate,
   type Company,
   type InsertCompany,
   type Agent,
@@ -137,6 +140,19 @@ export interface IStorage {
   getSizeMaster(): Promise<any[]>;
   createPurchaseEntry(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase>;
   updatePurchase(id: number, purchase: Partial<InsertPurchase>, companyId: number): Promise<Purchase>;
+  
+  // Stock Inward Barcode Management
+  getAllStockInwardItems(companyId: number, filters?: { purchaseId?: number; status?: string; size?: string }): Promise<StockInwardItem[]>;
+  getStockInwardItem(id: number, companyId: number): Promise<StockInwardItem | undefined>;
+  updateStockInwardItem(id: number, updates: { rate?: string; mrp?: string; size?: string; sizeCode?: number }, companyId: number): Promise<StockInwardItem>;
+  createBulkStockInwardItems(purchaseItemId: number, sizeEntries: Array<{ size: string; sizeCode: number; quantity: number }>, baseData: Partial<InsertStockInwardItem>, companyId: number): Promise<StockInwardItem[]>;
+  
+  // Barcode Label Template operations
+  getBarcodeLabelTemplates(companyId: number): Promise<any[]>;
+  getDefaultBarcodeLabelTemplate(companyId: number): Promise<any | undefined>;
+  createBarcodeLabelTemplate(template: any, userId: string, companyId: number): Promise<any>;
+  updateBarcodeLabelTemplate(id: number, template: any, companyId: number): Promise<any>;
+  deleteBarcodeLabelTemplate(id: number, companyId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1361,6 +1377,200 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(purchases.id, id), eq(purchases.companyId, companyId)))
       .returning();
     return updated;
+  }
+
+  // ==================== STOCK INWARD BARCODE MANAGEMENT ====================
+  
+  async getAllStockInwardItems(companyId: number, filters?: { purchaseId?: number; status?: string; size?: string }): Promise<StockInwardItem[]> {
+    let query = db
+      .select()
+      .from(stockInwardItems)
+      .where(eq(stockInwardItems.companyId, companyId));
+    
+    const conditions: any[] = [eq(stockInwardItems.companyId, companyId)];
+    
+    if (filters?.purchaseId) {
+      conditions.push(eq(stockInwardItems.purchaseId, filters.purchaseId));
+    }
+    if (filters?.status) {
+      conditions.push(eq(stockInwardItems.status, filters.status));
+    }
+    if (filters?.size) {
+      conditions.push(eq(stockInwardItems.size, filters.size));
+    }
+    
+    return await db
+      .select()
+      .from(stockInwardItems)
+      .where(and(...conditions))
+      .orderBy(desc(stockInwardItems.createdAt));
+  }
+
+  async getStockInwardItem(id: number, companyId: number): Promise<StockInwardItem | undefined> {
+    const [item] = await db
+      .select()
+      .from(stockInwardItems)
+      .where(and(
+        eq(stockInwardItems.id, id),
+        eq(stockInwardItems.companyId, companyId)
+      ));
+    return item;
+  }
+
+  async updateStockInwardItem(id: number, updates: { rate?: string; mrp?: string; size?: string; sizeCode?: number }, companyId: number): Promise<StockInwardItem> {
+    const [updated] = await db
+      .update(stockInwardItems)
+      .set(updates)
+      .where(and(
+        eq(stockInwardItems.id, id),
+        eq(stockInwardItems.companyId, companyId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async createBulkStockInwardItems(
+    purchaseItemId: number, 
+    sizeEntries: Array<{ size: string; sizeCode: number; quantity: number }>, 
+    baseData: Partial<InsertStockInwardItem>, 
+    companyId: number
+  ): Promise<StockInwardItem[]> {
+    // Verify purchase item exists and belongs to company
+    const purchaseItem = await db
+      .select()
+      .from(purchaseItems)
+      .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
+      .where(and(
+        eq(purchaseItems.id, purchaseItemId),
+        eq(purchases.companyId, companyId)
+      ));
+    
+    if (purchaseItem.length === 0) {
+      throw new Error("Purchase item not found or does not belong to this company");
+    }
+    
+    const pItem = purchaseItem[0].purchase_items;
+    const purchase = purchaseItem[0].purchases;
+    
+    const createdItems: StockInwardItem[] = [];
+    let currentSerial = await this.getNextGlobalSerial(companyId);
+    
+    for (const entry of sizeEntries) {
+      for (let i = 0; i < entry.quantity; i++) {
+        const barcode = `${companyId}${currentSerial.toString().padStart(10, '0')}`;
+        
+        const [created] = await db
+          .insert(stockInwardItems)
+          .values({
+            purchaseItemId,
+            purchaseId: pItem.purchaseId,
+            companyId,
+            itemId: pItem.itemId,
+            serial: currentSerial,
+            barcode,
+            itname: pItem.itname || "Unknown Item",
+            brandname: pItem.brandname,
+            quality: pItem.quality,
+            dno1: pItem.dno1,
+            pattern: pItem.pattern,
+            sleeve: pItem.sleeve,
+            size: entry.size,
+            sizeCode: entry.sizeCode,
+            cost: baseData.cost || pItem.cost || "0",
+            ncost: baseData.ncost || pItem.ncost || pItem.cost || "0",
+            lcost: baseData.lcost || pItem.lcost || pItem.cost || "0",
+            rate: baseData.rate || pItem.rrate || pItem.cost || "0",
+            mrp: baseData.mrp || pItem.mrp || pItem.rrate || "0",
+            tax: pItem.tax || "0",
+            status: "available",
+          })
+          .returning();
+        
+        createdItems.push(created);
+        currentSerial++;
+      }
+    }
+    
+    // Mark purchase item as barcode generated
+    await db
+      .update(purchaseItems)
+      .set({ barcodeGenerated: true })
+      .where(eq(purchaseItems.id, purchaseItemId));
+    
+    return createdItems;
+  }
+
+  // ==================== BARCODE LABEL TEMPLATE OPERATIONS ====================
+  
+  async getBarcodeLabelTemplates(companyId: number): Promise<BarcodeLabelTemplate[]> {
+    return await db
+      .select()
+      .from(barcodeLabelTemplates)
+      .where(eq(barcodeLabelTemplates.companyId, companyId))
+      .orderBy(desc(barcodeLabelTemplates.createdAt));
+  }
+
+  async getDefaultBarcodeLabelTemplate(companyId: number): Promise<BarcodeLabelTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(barcodeLabelTemplates)
+      .where(and(
+        eq(barcodeLabelTemplates.companyId, companyId),
+        eq(barcodeLabelTemplates.isDefault, true)
+      ));
+    return template;
+  }
+
+  async createBarcodeLabelTemplate(template: InsertBarcodeLabelTemplate, userId: string, companyId: number): Promise<BarcodeLabelTemplate> {
+    // If this is set as default, unset other defaults
+    if (template.isDefault) {
+      await db
+        .update(barcodeLabelTemplates)
+        .set({ isDefault: false })
+        .where(eq(barcodeLabelTemplates.companyId, companyId));
+    }
+    
+    const [created] = await db
+      .insert(barcodeLabelTemplates)
+      .values({
+        ...template,
+        companyId,
+        createdBy: userId,
+      })
+      .returning();
+    return created;
+  }
+
+  async updateBarcodeLabelTemplate(id: number, template: Partial<InsertBarcodeLabelTemplate>, companyId: number): Promise<BarcodeLabelTemplate> {
+    // If this is set as default, unset other defaults
+    if (template.isDefault) {
+      await db
+        .update(barcodeLabelTemplates)
+        .set({ isDefault: false })
+        .where(eq(barcodeLabelTemplates.companyId, companyId));
+    }
+    
+    const [updated] = await db
+      .update(barcodeLabelTemplates)
+      .set({
+        ...template,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(barcodeLabelTemplates.id, id),
+        eq(barcodeLabelTemplates.companyId, companyId)
+      ))
+      .returning();
+    return updated;
+  }
+
+  async deleteBarcodeLabelTemplate(id: number, companyId: number): Promise<void> {
+    await db
+      .delete(barcodeLabelTemplates)
+      .where(and(
+        eq(barcodeLabelTemplates.id, id),
+        eq(barcodeLabelTemplates.companyId, companyId)
+      ));
   }
 }
 
