@@ -153,6 +153,14 @@ export default function BarcodeManagement() {
 
   const { data: purchases } = useQuery<Purchase[]>({
     queryKey: ["/api/purchases"],
+    queryFn: async () => {
+      const res = await fetch("/api/purchases", {
+        credentials: "include",
+        headers: getCompanyHeader(),
+      });
+      if (!res.ok) throw new Error("Failed to fetch purchases");
+      return res.json();
+    },
   });
 
   const filteredItems = useMemo(() => {
@@ -175,25 +183,43 @@ export default function BarcodeManagement() {
     onSuccess: () => {
       toast({ title: "Success", description: "Item updated successfully" });
       setEditingId(null);
+      setEditRate("");
+      setEditMrp("");
       queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update item", variant: "destructive" });
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error?.message || "Failed to update item", 
+        variant: "destructive" 
+      });
     },
   });
 
   const handleStartEdit = (item: StockInwardItem) => {
     setEditingId(item.id);
-    setEditRate(item.rate);
-    setEditMrp(item.mrp);
+    setEditRate(parseFloat(item.rate).toFixed(2));
+    setEditMrp(parseFloat(item.mrp).toFixed(2));
   };
 
   const handleSaveEdit = (id: number) => {
+    const rateNum = parseFloat(editRate);
+    const mrpNum = parseFloat(editMrp);
+    
+    if (isNaN(rateNum) || rateNum < 0) {
+      toast({ title: "Invalid Rate", description: "Please enter a valid rate", variant: "destructive" });
+      return;
+    }
+    if (isNaN(mrpNum) || mrpNum < 0) {
+      toast({ title: "Invalid MRP", description: "Please enter a valid MRP", variant: "destructive" });
+      return;
+    }
+    
     updateItemMutation.mutate({
       id,
       data: {
-        rate: editRate,
-        mrp: editMrp,
+        rate: rateNum.toFixed(2),
+        mrp: mrpNum.toFixed(2),
       },
     });
   };
