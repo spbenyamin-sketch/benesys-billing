@@ -1222,6 +1222,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStockInwardItems(purchaseItemId: number, items: InsertStockInwardItem[], companyId: number): Promise<StockInwardItem[]> {
+    // First get the purchase item to find its purchaseId
+    const [purchaseItem] = await db
+      .select()
+      .from(purchaseItems)
+      .where(eq(purchaseItems.id, purchaseItemId));
+    
+    if (!purchaseItem) {
+      throw new Error("Purchase item not found");
+    }
+    
+    // Verify the purchase belongs to this company
+    const purchase = await this.getPurchase(purchaseItem.purchaseId, companyId);
+    if (!purchase) {
+      throw new Error("Purchase not found or does not belong to this company");
+    }
+    
     const createdItems: StockInwardItem[] = [];
     
     for (const item of items) {
@@ -1230,6 +1246,7 @@ export class DatabaseStorage implements IStorage {
         .values({
           ...item,
           purchaseItemId,
+          purchaseId: purchaseItem.purchaseId,
           companyId,
         })
         .returning();
