@@ -44,7 +44,7 @@ import SelectCompany from "@/pages/select-company";
 
 function Router() {
   const { isAuthenticated, user } = useAuth();
-  const isSuperAdmin = user?.role === "admin";
+  const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   if (!isAuthenticated) {
     return null;
@@ -94,7 +94,7 @@ function AppContent() {
     "--sidebar-width-icon": "3rem",
   } as React.CSSProperties;
 
-  const isSuperAdmin = user?.role === "admin";
+  const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   // Show loading state
   if (setupLoading || authLoading) {
