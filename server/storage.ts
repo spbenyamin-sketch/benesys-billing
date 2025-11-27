@@ -6,6 +6,8 @@ import {
   saleItems,
   purchases,
   purchaseItems,
+  stockInwardItems,
+  sizeMaster,
   payments,
   stock,
   billTemplates,
@@ -26,6 +28,8 @@ import {
   type InsertPurchase,
   type PurchaseItem,
   type InsertPurchaseItem,
+  type StockInwardItem,
+  type InsertStockInwardItem,
   type Payment,
   type InsertPayment,
   type Stock,
@@ -119,6 +123,20 @@ export interface IStorage {
   getNextAgentCode(companyId: number): Promise<number>;
   createAgent(agent: InsertAgent, userId: string, companyId: number): Promise<Agent>;
   updateAgent(id: number, agent: InsertAgent, companyId: number): Promise<Agent>;
+
+  // Stock Inward operations
+  getPendingPurchases(companyId: number): Promise<Purchase[]>;
+  getPurchaseItems(purchaseId: number, companyId: number): Promise<PurchaseItem[]>;
+  addPurchaseItem(item: InsertPurchaseItem, companyId: number): Promise<PurchaseItem>;
+  updatePurchaseItem(id: number, item: Partial<InsertPurchaseItem>, companyId: number): Promise<PurchaseItem>;
+  deletePurchaseItem(id: number, companyId: number): Promise<void>;
+  createStockInwardItems(purchaseItemId: number, items: InsertStockInwardItem[], companyId: number): Promise<StockInwardItem[]>;
+  getStockInwardItems(purchaseItemId: number, companyId: number): Promise<StockInwardItem[]>;
+  getNextGlobalSerial(companyId: number): Promise<number>;
+  completePurchase(purchaseId: number, companyId: number): Promise<void>;
+  getSizeMaster(): Promise<any[]>;
+  createPurchaseEntry(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase>;
+  updatePurchase(id: number, purchase: Partial<InsertPurchase>, companyId: number): Promise<Purchase>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -739,34 +757,36 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInventoryByBarcode(barcode: string, companyId: number): Promise<any | undefined> {
-    // Find purchase item by barcode with available stock
+    // Find stock inward item by barcode with available status
     const [result] = await db
       .select({
-        purchaseItemId: purchaseItems.id,
-        barcode: purchaseItems.barcode,
-        itemId: purchaseItems.itemId,
-        itemName: purchaseItems.itname,
-        brandName: purchaseItems.brandname,
+        stockInwardId: stockInwardItems.id,
+        barcode: stockInwardItems.barcode,
+        itemId: stockInwardItems.itemId,
+        itemName: stockInwardItems.itname,
+        brandName: stockInwardItems.brandname,
+        quality: stockInwardItems.quality,
+        size: stockInwardItems.size,
         hsnCode: items.hsnCode,
-        tax: items.tax,
+        tax: stockInwardItems.tax,
         cgst: items.cgst,
         sgst: items.sgst,
-        cost: purchaseItems.cost,
-        mrp: purchaseItems.rrate, // Retail rate as MRP
-        brate: purchaseItems.brate, // B2B rate
-        arate: purchaseItems.arate, // Actual rate
-        stockQty: purchaseItems.stockqty,
-        expDate: purchaseItems.expdate,
+        cost: stockInwardItems.cost,
+        ncost: stockInwardItems.ncost,
+        lcost: stockInwardItems.lcost,
+        rate: stockInwardItems.rate, // Sale rate
+        mrp: stockInwardItems.mrp,
+        expDate: stockInwardItems.expdate,
         packType: items.packType,
+        status: stockInwardItems.status,
       })
-      .from(purchaseItems)
-      .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
-      .leftJoin(items, eq(purchaseItems.itemId, items.id))
+      .from(stockInwardItems)
+      .leftJoin(items, eq(stockInwardItems.itemId, items.id))
       .where(
         and(
-          eq(purchaseItems.barcode, barcode),
-          eq(purchases.companyId, companyId),
-          sql`${purchaseItems.stockqty} > 0`
+          eq(stockInwardItems.barcode, barcode),
+          eq(stockInwardItems.companyId, companyId),
+          eq(stockInwardItems.status, "available")
         )
       )
       .limit(1);
@@ -1109,6 +1129,203 @@ export class DatabaseStorage implements IStorage {
       .update(agents)
       .set({ ...agent, updatedAt: new Date() })
       .where(and(eq(agents.id, id), eq(agents.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  // ==================== STOCK INWARD OPERATIONS ====================
+  
+  async getPendingPurchases(companyId: number): Promise<Purchase[]> {
+    return await db
+      .select()
+      .from(purchases)
+      .where(and(
+        eq(purchases.companyId, companyId),
+        eq(purchases.stockInwardCompleted, false)
+      ))
+      .orderBy(desc(purchases.date), desc(purchases.purchaseNo));
+  }
+
+  async getPurchaseItems(purchaseId: number, companyId: number): Promise<PurchaseItem[]> {
+    // First verify purchase belongs to company
+    const purchase = await this.getPurchase(purchaseId, companyId);
+    if (!purchase) return [];
+    
+    return await db
+      .select()
+      .from(purchaseItems)
+      .where(eq(purchaseItems.purchaseId, purchaseId))
+      .orderBy(purchaseItems.serial);
+  }
+
+  async addPurchaseItem(item: InsertPurchaseItem, companyId: number): Promise<PurchaseItem> {
+    // Verify the purchase belongs to this company
+    const purchase = await this.getPurchase(item.purchaseId, companyId);
+    if (!purchase) {
+      throw new Error("Purchase not found or does not belong to this company");
+    }
+    
+    const [newItem] = await db
+      .insert(purchaseItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+
+  async updatePurchaseItem(id: number, item: Partial<InsertPurchaseItem>, companyId: number): Promise<PurchaseItem> {
+    // First get the purchase item to verify company access
+    const [existingItem] = await db
+      .select()
+      .from(purchaseItems)
+      .where(eq(purchaseItems.id, id));
+    
+    if (!existingItem) {
+      throw new Error("Purchase item not found");
+    }
+    
+    const purchase = await this.getPurchase(existingItem.purchaseId, companyId);
+    if (!purchase) {
+      throw new Error("Purchase not found or does not belong to this company");
+    }
+    
+    const [updated] = await db
+      .update(purchaseItems)
+      .set(item)
+      .where(eq(purchaseItems.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePurchaseItem(id: number, companyId: number): Promise<void> {
+    // First get the purchase item to verify company access
+    const [existingItem] = await db
+      .select()
+      .from(purchaseItems)
+      .where(eq(purchaseItems.id, id));
+    
+    if (!existingItem) return;
+    
+    const purchase = await this.getPurchase(existingItem.purchaseId, companyId);
+    if (!purchase) {
+      throw new Error("Purchase not found or does not belong to this company");
+    }
+    
+    // Delete related stock inward items first
+    await db
+      .delete(stockInwardItems)
+      .where(eq(stockInwardItems.purchaseItemId, id));
+    
+    // Delete the purchase item
+    await db
+      .delete(purchaseItems)
+      .where(eq(purchaseItems.id, id));
+  }
+
+  async createStockInwardItems(purchaseItemId: number, items: InsertStockInwardItem[], companyId: number): Promise<StockInwardItem[]> {
+    const createdItems: StockInwardItem[] = [];
+    
+    for (const item of items) {
+      const [created] = await db
+        .insert(stockInwardItems)
+        .values({
+          ...item,
+          purchaseItemId,
+          companyId,
+        })
+        .returning();
+      createdItems.push(created);
+    }
+    
+    // Mark purchase item as barcode generated
+    await db
+      .update(purchaseItems)
+      .set({ barcodeGenerated: true })
+      .where(eq(purchaseItems.id, purchaseItemId));
+    
+    return createdItems;
+  }
+
+  async getStockInwardItems(purchaseItemId: number, companyId: number): Promise<StockInwardItem[]> {
+    return await db
+      .select()
+      .from(stockInwardItems)
+      .where(and(
+        eq(stockInwardItems.purchaseItemId, purchaseItemId),
+        eq(stockInwardItems.companyId, companyId)
+      ))
+      .orderBy(stockInwardItems.serial);
+  }
+
+  async getNextGlobalSerial(companyId: number): Promise<number> {
+    const [result] = await db
+      .select({ maxSerial: sql<number>`COALESCE(MAX(${stockInwardItems.serial}), 0)` })
+      .from(stockInwardItems)
+      .where(eq(stockInwardItems.companyId, companyId));
+    return (result?.maxSerial || 0) + 1;
+  }
+
+  async completePurchase(purchaseId: number, companyId: number): Promise<void> {
+    // Verify purchase belongs to company
+    const purchase = await this.getPurchase(purchaseId, companyId);
+    if (!purchase) {
+      throw new Error("Purchase not found or does not belong to this company");
+    }
+    
+    // Calculate totals from purchase items
+    const items = await this.getPurchaseItems(purchaseId, companyId);
+    let totalQty = 0;
+    let totalAmount = 0;
+    
+    for (const item of items) {
+      totalQty += parseFloat(item.qty.toString());
+      totalAmount += parseFloat(item.cost.toString()) * parseFloat(item.qty.toString());
+    }
+    
+    await db
+      .update(purchases)
+      .set({
+        stockInwardCompleted: true,
+        status: "completed",
+        totalQty: totalQty.toString(),
+        amount: totalAmount.toString(),
+        updatedAt: new Date(),
+      })
+      .where(and(eq(purchases.id, purchaseId), eq(purchases.companyId, companyId)));
+  }
+
+  async getSizeMaster(): Promise<any[]> {
+    return await db
+      .select()
+      .from(sizeMaster)
+      .orderBy(sizeMaster.sortOrder);
+  }
+
+  async createPurchaseEntry(purchaseData: InsertPurchase, userId: string, companyId: number): Promise<Purchase> {
+    const purchaseNo = await this.getNextPurchaseNumber(companyId);
+    
+    const [newPurchase] = await db
+      .insert(purchases)
+      .values({
+        ...purchaseData,
+        purchaseNo,
+        status: "pending",
+        stockInwardCompleted: false,
+        createdBy: userId,
+        companyId,
+      })
+      .returning();
+    
+    return newPurchase;
+  }
+
+  async updatePurchase(id: number, purchaseData: Partial<InsertPurchase>, companyId: number): Promise<Purchase> {
+    const [updated] = await db
+      .update(purchases)
+      .set({
+        ...purchaseData,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(purchases.id, id), eq(purchases.companyId, companyId)))
       .returning();
     return updated;
   }

@@ -743,6 +743,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== PURCHASE ENTRY (Phase 1 - Bill Outline) ====================
+  
+  // Create purchase entry (bill header only, no items)
+  app.post("/api/purchase-entries", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const validated = insertPurchaseSchema.parse(req.body);
+      const userId = req.user.id;
+      const purchase = await storage.createPurchaseEntry(validated, userId, req.companyId);
+      res.json(purchase);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating purchase entry:", error);
+      res.status(500).json({ message: "Failed to create purchase entry" });
+    }
+  });
+
+  // Update purchase entry
+  app.put("/api/purchase-entries/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const purchase = await storage.updatePurchase(id, req.body, req.companyId);
+      res.json(purchase);
+    } catch (error) {
+      console.error("Error updating purchase entry:", error);
+      res.status(500).json({ message: "Failed to update purchase entry" });
+    }
+  });
+
+  // Get pending purchases for stock inward
+  app.get("/api/pending-purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchases = await storage.getPendingPurchases(req.companyId);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Error fetching pending purchases:", error);
+      res.status(500).json({ message: "Failed to fetch pending purchases" });
+    }
+  });
+
+  // ==================== STOCK INWARD (Phase 2 - Item Entry) ====================
+
+  // Get size master for size conversion
+  app.get("/api/size-master", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const sizes = await storage.getSizeMaster();
+      res.json(sizes);
+    } catch (error) {
+      console.error("Error fetching size master:", error);
+      res.status(500).json({ message: "Failed to fetch size master" });
+    }
+  });
+
+  // Get next global serial for barcode generation
+  app.get("/api/next-global-serial", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const serial = await storage.getNextGlobalSerial(req.companyId);
+      res.json({ serial });
+    } catch (error) {
+      console.error("Error fetching next global serial:", error);
+      res.status(500).json({ message: "Failed to fetch next global serial" });
+    }
+  });
+
+  // Get purchase items for a purchase
+  app.get("/api/purchases/:id/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchaseId = parseInt(req.params.id);
+      const items = await storage.getPurchaseItems(purchaseId, req.companyId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching purchase items:", error);
+      res.status(500).json({ message: "Failed to fetch purchase items" });
+    }
+  });
+
+  // Add purchase item (stock inward entry)
+  app.post("/api/purchase-items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const item = await storage.addPurchaseItem(req.body, req.companyId);
+      res.json(item);
+    } catch (error) {
+      console.error("Error adding purchase item:", error);
+      res.status(500).json({ message: "Failed to add purchase item" });
+    }
+  });
+
+  // Update purchase item
+  app.put("/api/purchase-items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const item = await storage.updatePurchaseItem(id, req.body, req.companyId);
+      res.json(item);
+    } catch (error) {
+      console.error("Error updating purchase item:", error);
+      res.status(500).json({ message: "Failed to update purchase item" });
+    }
+  });
+
+  // Delete purchase item
+  app.delete("/api/purchase-items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deletePurchaseItem(id, req.companyId);
+      res.json({ message: "Purchase item deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting purchase item:", error);
+      res.status(500).json({ message: "Failed to delete purchase item" });
+    }
+  });
+
+  // Generate barcodes for a purchase item (create stock inward items)
+  app.post("/api/purchase-items/:id/generate-barcodes", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchaseItemId = parseInt(req.params.id);
+      const { items } = req.body;
+      
+      if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "Items array required" });
+      }
+      
+      const createdItems = await storage.createStockInwardItems(purchaseItemId, items, req.companyId);
+      res.json(createdItems);
+    } catch (error) {
+      console.error("Error generating barcodes:", error);
+      res.status(500).json({ message: "Failed to generate barcodes" });
+    }
+  });
+
+  // Get stock inward items for a purchase item
+  app.get("/api/purchase-items/:id/stock-inward-items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchaseItemId = parseInt(req.params.id);
+      const items = await storage.getStockInwardItems(purchaseItemId, req.companyId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching stock inward items:", error);
+      res.status(500).json({ message: "Failed to fetch stock inward items" });
+    }
+  });
+
+  // Complete purchase (mark as stock inward completed)
+  app.post("/api/purchases/:id/complete", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const purchaseId = parseInt(req.params.id);
+      await storage.completePurchase(purchaseId, req.companyId);
+      res.json({ message: "Purchase completed successfully" });
+    } catch (error) {
+      console.error("Error completing purchase:", error);
+      res.status(500).json({ message: "Failed to complete purchase" });
+    }
+  });
+
   // ==================== OBJECT STORAGE ROUTES ====================
   app.post("/api/objects/upload", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
