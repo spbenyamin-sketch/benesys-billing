@@ -80,9 +80,9 @@ export default function PurchaseEntry() {
     queryKey: ["/api/purchases"],
   });
 
-  const generateBarcode = (serial: number): string => {
+  const generateBarcode = (serial: number, prefix: string = barcodePrefix): string => {
     const paddedSerial = serial.toString().padStart(6, '0');
-    return `${barcodePrefix}${paddedSerial}`;
+    return `${prefix}${paddedSerial}`;
   };
 
   const form = useForm<PurchaseItemForm>({
@@ -98,20 +98,21 @@ export default function PurchaseEntry() {
     },
   });
 
+  const currentSerial = form.watch("serial");
+
   useEffect(() => {
     if ((nextSerialData as any)?.serial && purchaseItems.length === 0) {
       const nextSerial = (nextSerialData as any).serial;
       form.setValue("serial", nextSerial);
-      form.setValue("barcode", generateBarcode(nextSerial));
+      form.setValue("barcode", generateBarcode(nextSerial, barcodePrefix));
     }
-  }, [nextSerialData, purchaseItems.length]);
+  }, [nextSerialData, purchaseItems.length, barcodePrefix]);
 
   useEffect(() => {
-    const serial = form.watch("serial");
-    if (serial) {
-      form.setValue("barcode", generateBarcode(serial));
+    if (currentSerial) {
+      form.setValue("barcode", generateBarcode(currentSerial, barcodePrefix));
     }
-  }, [form.watch("serial")]);
+  }, [currentSerial, barcodePrefix]);
 
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -150,7 +151,7 @@ export default function PurchaseEntry() {
     const dqty = Number(data.dqty || 0);
     
     const rates = calculateRates(cost, tax);
-    const barcode = data.barcode || generateBarcode(data.serial);
+    const barcode = data.barcode || generateBarcode(data.serial, barcodePrefix);
     
     const newItem: PurchaseItem = {
       ...data,
@@ -172,7 +173,7 @@ export default function PurchaseEntry() {
     const nextSerial = ((nextSerialData as any)?.serial || 1) + purchaseItems.length + 1;
     form.reset({
       serial: nextSerial,
-      barcode: generateBarcode(nextSerial),
+      barcode: generateBarcode(nextSerial, barcodePrefix),
       qty: 1,
       cost: 0,
       tax: 0,
@@ -223,7 +224,7 @@ export default function PurchaseEntry() {
       items: purchaseItems.map(item => ({
         purchaseId: 0,
         serial: Number(item.serial),
-        barcode: item.barcode || generateBarcode(item.serial),
+        barcode: item.barcode || generateBarcode(item.serial, barcodePrefix),
         itname: item.itname,
         brandname: item.brandname || "",
         name: item.name || "",
@@ -246,16 +247,19 @@ export default function PurchaseEntry() {
     createPurchaseMutation.mutate(purchaseData);
   };
 
-  const resetForm = () => {
+  const resetForm = async () => {
     setPurchaseItems([]);
     setSelectedParty(null);
     setInvoiceNo("");
     setPurchaseDate(new Date().toISOString().split('T')[0]);
     setEditingIndex(null);
-    refetchSerial();
+    
+    const result = await refetchSerial();
+    const newSerial = (result.data as any)?.serial || 1;
+    
     form.reset({
-      serial: (nextSerialData as any)?.serial || 1,
-      barcode: generateBarcode((nextSerialData as any)?.serial || 1),
+      serial: newSerial,
+      barcode: generateBarcode(newSerial, barcodePrefix),
       qty: 1,
       cost: 0,
       tax: 0,
