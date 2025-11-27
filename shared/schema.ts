@@ -314,20 +314,30 @@ export type InsertSaleItem = z.infer<typeof insertSaleItemSchema>;
 export type SaleItem = typeof saleItems.$inferSelect;
 
 // ============================================================================
-// PURCHASE TABLES
+// PURCHASE TABLES (Bill Header - Phase 1)
 // ============================================================================
 
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
-  purchaseNo: integer("purchase_no").notNull(),
+  purchaseNo: integer("purchase_no").notNull(), // Entry number for stock inward
   date: date("date").notNull(),
   invoiceNo: varchar("invoice_no", { length: 50 }),
   partyId: integer("party_id").references(() => parties.id),
   partyName: varchar("party_name", { length: 200 }),
   city: varchar("city", { length: 100 }),
+  // Bill totals
+  invoiceAmount: decimal("invoice_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  discountAmount: decimal("discount_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  packingAmount: decimal("packing_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  otherCharges: decimal("other_charges", { precision: 12, scale: 2 }).default("0").notNull(),
+  profitPercent: decimal("profit_percent", { precision: 5, scale: 2 }).default("0").notNull(), // RST profit %
+  rstPercent: decimal("rst_percent", { precision: 5, scale: 2 }).default("0").notNull(), // Additional % 
+  surchargePercent: decimal("surcharge_percent", { precision: 5, scale: 2 }).default("0").notNull(), // SC %
+  // Calculated totals (updated from stock inward)
   totalQty: decimal("total_qty", { precision: 12, scale: 2 }).default("0").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  // Tax breakdown by rate
   val0: decimal("val_0", { precision: 12, scale: 2 }).default("0").notNull(),
   val5: decimal("val_5", { precision: 12, scale: 2 }).default("0").notNull(),
   val12: decimal("val_12", { precision: 12, scale: 2 }).default("0").notNull(),
@@ -343,6 +353,9 @@ export const purchases = pgTable("purchases", {
   stax12: decimal("stax_12", { precision: 12, scale: 2 }).default("0").notNull(),
   stax18: decimal("stax_18", { precision: 12, scale: 2 }).default("0").notNull(),
   stax28: decimal("stax_28", { precision: 12, scale: 2 }).default("0").notNull(),
+  // Status
+  status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, completed
+  stockInwardCompleted: boolean("stock_inward_completed").default(false).notNull(),
   details: text("details"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -360,27 +373,99 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
 
+// ============================================================================
+// STOCK INWARD BATCHES (Item Entry - Phase 2)
+// ============================================================================
+
 export const purchaseItems = pgTable("purchase_items", {
   id: serial("id").primaryKey(),
   purchaseId: integer("purchase_id").references(() => purchases.id).notNull(),
   itemId: integer("item_id").references(() => items.id),
   serial: integer("serial").notNull(),
-  barcode: varchar("barcode", { length: 100 }),
   itname: varchar("itname", { length: 300 }).notNull(),
   brandname: varchar("brandname", { length: 200 }),
-  name: varchar("name", { length: 200 }),
-  qty: decimal("qty", { precision: 12, scale: 2 }).notNull(),
-  cost: decimal("cost", { precision: 12, scale: 2 }).notNull(),
+  name: varchar("name", { length: 200 }), // Quality/Size description
+  // Cost breakdown (from BARIDNX)
+  cost: decimal("cost", { precision: 12, scale: 2 }).notNull(), // Bill cost
+  qty: decimal("qty", { precision: 12, scale: 2 }).notNull(), // Total qty for this entry
+  pcs: decimal("pcs", { precision: 12, scale: 2 }).default("0").notNull(), // Pieces (for measured items)
+  // Rate differences and discounts
+  rd: decimal("rd", { precision: 12, scale: 2 }).default("0").notNull(), // Rate difference 1
+  dis: decimal("dis", { precision: 5, scale: 2 }).default("0").notNull(), // Discount % 1
+  rd1: decimal("rd1", { precision: 12, scale: 2 }).default("0").notNull(), // Rate difference 2
+  dis1: decimal("dis1", { precision: 5, scale: 2 }).default("0").notNull(), // Discount % 2
+  ag: decimal("ag", { precision: 5, scale: 2 }).default("0").notNull(), // Agent %
+  addc: decimal("addc", { precision: 12, scale: 2 }).default("0").notNull(), // Additional cost
+  // Calculated costs
+  ncost: decimal("ncost", { precision: 12, scale: 2 }).default("0").notNull(), // Net cost after discounts
+  lcost: decimal("lcost", { precision: 12, scale: 2 }).default("0").notNull(), // Landing cost
+  netcost: decimal("netcost", { precision: 12, scale: 2 }).default("0").notNull(), // Final net cost
+  // Tax and pricing
   tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(),
+  prft: decimal("prft", { precision: 5, scale: 2 }).default("0").notNull(), // Profit %
+  rrate: decimal("rrate", { precision: 12, scale: 2 }).default("0").notNull(), // Retail rate (MRP)
+  mrp: decimal("mrp", { precision: 12, scale: 2 }).default("0").notNull(), // MRP
+  // Legacy fields for compatibility
   arate: decimal("arate", { precision: 12, scale: 2 }).default("0").notNull(),
-  rrate: decimal("rrate", { precision: 12, scale: 2 }).default("0").notNull(),
   brate: decimal("brate", { precision: 12, scale: 2 }).default("0").notNull(),
   profit: decimal("profit", { precision: 12, scale: 2 }).default("0").notNull(),
   prper: decimal("prper", { precision: 5, scale: 2 }).default("0").notNull(),
+  // Product details
+  quality: varchar("quality", { length: 100 }), // TAG field
+  dno1: varchar("dno1", { length: 50 }), // Design number
+  pattern: varchar("pattern", { length: 100 }),
+  sleeve: varchar("sleeve", { length: 100 }), // Color
+  sl: varchar("sl", { length: 50 }), // Short code
+  // Size details
+  size1: varchar("size1", { length: 10 }), // Starting size
+  size2: varchar("size2", { length: 10 }), // Ending size
+  jc: varchar("jc", { length: 1 }).default("J"), // J=Jump, C=Continuous, M=Manual
+  fv: varchar("fv", { length: 1 }).default("F"), // F=Fixed, V=Variable
+  // Size-wise quantities (s1-s12)
+  s1: integer("s1").default(0).notNull(),
+  s2: integer("s2").default(0).notNull(),
+  s3: integer("s3").default(0).notNull(),
+  s4: integer("s4").default(0).notNull(),
+  s5: integer("s5").default(0).notNull(),
+  s6: integer("s6").default(0).notNull(),
+  s7: integer("s7").default(0).notNull(),
+  s8: integer("s8").default(0).notNull(),
+  s9: integer("s9").default(0).notNull(),
+  s10: integer("s10").default(0).notNull(),
+  s11: integer("s11").default(0).notNull(),
+  s12: integer("s12").default(0).notNull(),
+  // Size-wise rates (r1-r12)
+  r1: decimal("r1", { precision: 12, scale: 2 }).default("0").notNull(),
+  r2: decimal("r2", { precision: 12, scale: 2 }).default("0").notNull(),
+  r3: decimal("r3", { precision: 12, scale: 2 }).default("0").notNull(),
+  r4: decimal("r4", { precision: 12, scale: 2 }).default("0").notNull(),
+  r5: decimal("r5", { precision: 12, scale: 2 }).default("0").notNull(),
+  r6: decimal("r6", { precision: 12, scale: 2 }).default("0").notNull(),
+  r7: decimal("r7", { precision: 12, scale: 2 }).default("0").notNull(),
+  r8: decimal("r8", { precision: 12, scale: 2 }).default("0").notNull(),
+  r9: decimal("r9", { precision: 12, scale: 2 }).default("0").notNull(),
+  r10: decimal("r10", { precision: 12, scale: 2 }).default("0").notNull(),
+  r11: decimal("r11", { precision: 12, scale: 2 }).default("0").notNull(),
+  r12: decimal("r12", { precision: 12, scale: 2 }).default("0").notNull(),
+  // Size-wise MRP (mrp1-mrp12)
+  mrp1: decimal("mrp1", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp2: decimal("mrp2", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp3: decimal("mrp3", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp4: decimal("mrp4", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp5: decimal("mrp5", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp6: decimal("mrp6", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp7: decimal("mrp7", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp8: decimal("mrp8", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp9: decimal("mrp9", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp10: decimal("mrp10", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp11: decimal("mrp11", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp12: decimal("mrp12", { precision: 12, scale: 2 }).default("0").notNull(),
+  // Status
   expdate: date("expdate"),
-  dqty: decimal("dqty", { precision: 12, scale: 2 }).default("0").notNull(),
+  dqty: decimal("dqty", { precision: 12, scale: 2 }).default("0").notNull(), // Damaged qty
   saleqty: decimal("saleqty", { precision: 12, scale: 2 }).default("0").notNull(),
   stockqty: decimal("stockqty", { precision: 12, scale: 2 }).default("0").notNull(),
+  barcodeGenerated: boolean("barcode_generated").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -391,6 +476,69 @@ export const insertPurchaseItemSchema = createInsertSchema(purchaseItems).omit({
 
 export type InsertPurchaseItem = z.infer<typeof insertPurchaseItemSchema>;
 export type PurchaseItem = typeof purchaseItems.$inferSelect;
+
+// ============================================================================
+// STOCK INWARD ITEMS (Individual Barcodes - One per unit)
+// ============================================================================
+
+export const stockInwardItems = pgTable("stock_inward_items", {
+  id: serial("id").primaryKey(),
+  purchaseItemId: integer("purchase_item_id").references(() => purchaseItems.id).notNull(),
+  purchaseId: integer("purchase_id").references(() => purchases.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  itemId: integer("item_id").references(() => items.id),
+  // Unique identification
+  serial: integer("serial").notNull(), // Global serial number
+  barcode: varchar("barcode", { length: 100 }).notNull(), // Unique barcode per unit
+  // Product info (copied from purchaseItems for quick lookup)
+  itname: varchar("itname", { length: 300 }).notNull(),
+  brandname: varchar("brandname", { length: 200 }),
+  quality: varchar("quality", { length: 100 }), // TAG
+  dno1: varchar("dno1", { length: 50 }), // Design number
+  pattern: varchar("pattern", { length: 100 }),
+  sleeve: varchar("sleeve", { length: 100 }), // Color
+  // Size for this specific unit
+  size: varchar("size", { length: 10 }),
+  sizeCode: integer("size_code"), // Numeric code (45, 47, 49, etc.)
+  // Pricing for this unit
+  cost: decimal("cost", { precision: 12, scale: 2 }).notNull(),
+  ncost: decimal("ncost", { precision: 12, scale: 2 }).notNull(), // Net cost
+  lcost: decimal("lcost", { precision: 12, scale: 2 }).notNull(), // Landing cost
+  rate: decimal("rate", { precision: 12, scale: 2 }).notNull(), // Sale rate
+  mrp: decimal("mrp", { precision: 12, scale: 2 }).notNull(), // MRP
+  tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(),
+  // Stock status
+  status: varchar("status", { length: 20 }).default("available").notNull(), // available, sold, returned, damaged
+  soldAt: timestamp("sold_at"),
+  saleId: integer("sale_id").references(() => sales.id),
+  saleItemId: integer("sale_item_id").references(() => saleItems.id),
+  expdate: date("expdate"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_stock_inward_barcode").on(table.barcode),
+  index("idx_stock_inward_status").on(table.status),
+  index("idx_stock_inward_company").on(table.companyId),
+]);
+
+export const insertStockInwardItemSchema = createInsertSchema(stockInwardItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertStockInwardItem = z.infer<typeof insertStockInwardItemSchema>;
+export type StockInwardItem = typeof stockInwardItems.$inferSelect;
+
+// ============================================================================
+// SIZE MASTER (Size code conversion from VFP)
+// ============================================================================
+
+export const sizeMaster = pgTable("size_master", {
+  id: serial("id").primaryKey(),
+  code: varchar("code", { length: 10 }).notNull().unique(), // F, S, M, L, XL, 2L, 3L, etc.
+  numericCode: integer("numeric_code").notNull(), // 45, 47, 49, 51, 53, 55, 57, etc.
+  description: varchar("description", { length: 50 }),
+  sortOrder: integer("sort_order").default(0).notNull(),
+});
 
 // ============================================================================
 // PAYMENT TABLES
@@ -501,7 +649,7 @@ export const purchasesRelations = relations(purchases, ({ one, many }) => ({
   items: many(purchaseItems),
 }));
 
-export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
+export const purchaseItemsRelations = relations(purchaseItems, ({ one, many }) => ({
   purchase: one(purchases, {
     fields: [purchaseItems.purchaseId],
     references: [purchases.id],
@@ -509,6 +657,26 @@ export const purchaseItemsRelations = relations(purchaseItems, ({ one }) => ({
   item: one(items, {
     fields: [purchaseItems.itemId],
     references: [items.id],
+  }),
+  stockInwardItems: many(stockInwardItems),
+}));
+
+export const stockInwardItemsRelations = relations(stockInwardItems, ({ one }) => ({
+  purchaseItem: one(purchaseItems, {
+    fields: [stockInwardItems.purchaseItemId],
+    references: [purchaseItems.id],
+  }),
+  purchase: one(purchases, {
+    fields: [stockInwardItems.purchaseId],
+    references: [purchases.id],
+  }),
+  item: one(items, {
+    fields: [stockInwardItems.itemId],
+    references: [items.id],
+  }),
+  sale: one(sales, {
+    fields: [stockInwardItems.saleId],
+    references: [sales.id],
   }),
 }));
 
