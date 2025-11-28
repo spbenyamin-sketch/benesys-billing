@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings } from "lucide-react";
+import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings, Trash2 } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface StockInwardItem {
   id: number;
@@ -196,6 +197,50 @@ export default function BarcodeManagement() {
     },
   });
 
+  const deleteItemMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/stock-inward-items/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: "Barcode deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error?.message || "Failed to delete barcode", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      return apiRequest("POST", `/api/stock-inward-items/bulk-delete`, { ids });
+    },
+    onSuccess: () => {
+      toast({ title: "Success", description: `${selectedItems.size} barcodes deleted successfully` });
+      setSelectedItems(new Set());
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Error", 
+        description: error?.message || "Failed to delete barcodes", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleDeleteItem = (id: number) => {
+    deleteItemMutation.mutate(id);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedItems.size === 0) return;
+    bulkDeleteMutation.mutate(Array.from(selectedItems));
+  };
+
   const handleStartEdit = (item: StockInwardItem) => {
     setEditingId(item.id);
     setEditRate(parseFloat(item.rate).toFixed(2));
@@ -287,6 +332,31 @@ export default function BarcodeManagement() {
             <Settings className="h-4 w-4 mr-2" />
             Label Designer
           </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                disabled={selectedItems.size === 0 || bulkDeleteMutation.isPending}
+                data-testid="button-bulk-delete"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete ({selectedItems.size})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete Selected Barcodes</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to delete {selectedItems.size} barcode(s)? This action cannot be undone.
+                  Note: Sold barcodes cannot be deleted.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleBulkDelete}>Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <Button
             onClick={handlePrintLabels}
             disabled={selectedItems.size === 0}
@@ -492,15 +562,41 @@ export default function BarcodeManagement() {
                             </Button>
                           </div>
                         ) : (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleStartEdit(item)}
-                            disabled={item.status === "sold"}
-                            data-testid={`button-edit-${item.id}`}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleStartEdit(item)}
+                              disabled={item.status === "sold"}
+                              data-testid={`button-edit-${item.id}`}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  disabled={item.status === "sold" || deleteItemMutation.isPending}
+                                  data-testid={`button-delete-${item.id}`}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete Barcode</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete barcode {item.barcode}? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => handleDeleteItem(item.id)}>Delete</AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
                         )}
                       </TableCell>
                     </TableRow>

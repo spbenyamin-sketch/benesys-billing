@@ -953,6 +953,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete stock inward item (barcode)
+  app.delete("/api/stock-inward-items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteStockInwardItem(id, req.companyId);
+      res.json({ message: "Barcode deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting stock inward item:", error);
+      res.status(500).json({ message: "Failed to delete barcode" });
+    }
+  });
+
+  // Bulk delete stock inward items
+  app.post("/api/stock-inward-items/bulk-delete", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { ids } = req.body;
+      if (!ids || !Array.isArray(ids)) {
+        return res.status(400).json({ message: "ids array required" });
+      }
+      await storage.bulkDeleteStockInwardItems(ids, req.companyId);
+      res.json({ message: `${ids.length} barcodes deleted successfully` });
+    } catch (error) {
+      console.error("Error bulk deleting stock inward items:", error);
+      res.status(500).json({ message: "Failed to delete barcodes" });
+    }
+  });
+
   // Bulk create stock inward items with multiple sizes
   app.post("/api/purchase-items/:id/generate-bulk-barcodes", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {

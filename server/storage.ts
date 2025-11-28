@@ -146,6 +146,8 @@ export interface IStorage {
   getStockInwardItem(id: number, companyId: number): Promise<StockInwardItem | undefined>;
   updateStockInwardItem(id: number, updates: { rate?: string; mrp?: string; size?: string; sizeCode?: number }, companyId: number): Promise<StockInwardItem>;
   createBulkStockInwardItems(purchaseItemId: number, sizeEntries: Array<{ size: string; sizeCode: number; quantity: number }>, baseData: Partial<InsertStockInwardItem>, companyId: number): Promise<StockInwardItem[]>;
+  deleteStockInwardItem(id: number, companyId: number): Promise<void>;
+  bulkDeleteStockInwardItems(ids: number[], companyId: number): Promise<void>;
   
   // Barcode Label Template operations
   getBarcodeLabelTemplates(companyId: number): Promise<any[]>;
@@ -773,7 +775,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInventoryByBarcode(barcode: string, companyId: number): Promise<any | undefined> {
-    // Find stock inward item by barcode with available status
+    // Find stock inward item by barcode - check for both "available" and "in_stock" statuses
     const [result] = await db
       .select({
         stockInwardId: stockInwardItems.id,
@@ -782,6 +784,9 @@ export class DatabaseStorage implements IStorage {
         itemName: stockInwardItems.itname,
         brandName: stockInwardItems.brandname,
         quality: stockInwardItems.quality,
+        dno1: stockInwardItems.dno1,
+        pattern: stockInwardItems.pattern,
+        sleeve: stockInwardItems.sleeve,
         size: stockInwardItems.size,
         hsnCode: items.hsnCode,
         tax: stockInwardItems.tax,
@@ -802,7 +807,10 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(stockInwardItems.barcode, barcode),
           eq(stockInwardItems.companyId, companyId),
-          eq(stockInwardItems.status, "available")
+          or(
+            eq(stockInwardItems.status, "available"),
+            eq(stockInwardItems.status, "in_stock")
+          )
         )
       )
       .limit(1);
@@ -1498,6 +1506,39 @@ export class DatabaseStorage implements IStorage {
       .where(eq(purchaseItems.id, purchaseItemId));
     
     return createdItems;
+  }
+
+  async deleteStockInwardItem(id: number, companyId: number): Promise<void> {
+    // Only allow deletion of items that are not sold
+    const [item] = await db
+      .select()
+      .from(stockInwardItems)
+      .where(and(
+        eq(stockInwardItems.id, id),
+        eq(stockInwardItems.companyId, companyId)
+      ));
+    
+    if (!item) {
+      throw new Error("Barcode not found");
+    }
+    
+    if (item.status === "sold") {
+      throw new Error("Cannot delete a sold barcode");
+    }
+    
+    await db
+      .delete(stockInwardItems)
+      .where(and(
+        eq(stockInwardItems.id, id),
+        eq(stockInwardItems.companyId, companyId)
+      ));
+  }
+
+  async bulkDeleteStockInwardItems(ids: number[], companyId: number): Promise<void> {
+    // Only delete items that are not sold
+    for (const id of ids) {
+      await this.deleteStockInwardItem(id, companyId);
+    }
   }
 
   // ==================== BARCODE LABEL TEMPLATE OPERATIONS ====================
