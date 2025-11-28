@@ -10,12 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Trash2, Save, Barcode, RefreshCw, Package, ArrowLeft, Check, Calculator } from "lucide-react";
+import { Plus, Trash2, Save, Barcode, RefreshCw, Package, ArrowLeft, Check, Calculator, Layers, Hash } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Link, useLocation, useSearch } from "wouter";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const SIZE_CODES: { [key: string]: number } = {
   "F": 45, "S": 47, "M": 49, "L": 51, "XL": 53, "2L": 55, "3L": 57,
@@ -43,6 +45,7 @@ const purchaseItemSchema = z.object({
   expensePercent: z.number().min(0).optional(),
   expenseAmount: z.number().min(0).optional(),
   profitPercent: z.number().min(0).optional(),
+  mrpPercent: z.number().min(0).optional(),
   mrp: z.number().min(0).optional(),
 });
 
@@ -69,7 +72,6 @@ interface PurchaseItem {
   itname: string;
   brandname: string | null;
   name: string | null;
-  hsn: string | null;
   quality: string | null;
   dno1: string | null;
   pattern: string | null;
@@ -77,16 +79,14 @@ interface PurchaseItem {
   qty: string;
   cost: string;
   tax: string;
-  discountPercent: string | null;
-  discountAmount: string | null;
-  netCost: string | null;
-  expensePercent: string | null;
-  expenseAmount: string | null;
-  landingCost: string | null;
-  profitPercent: string | null;
-  profitAmount: string | null;
-  rate: string | null;
-  mrp: string | null;
+  dis: string | null;      // Discount %
+  rd: string | null;       // Discount amount (rate difference)
+  addc: string | null;     // Additional cost % (expense)
+  ncost: string | null;    // Net cost
+  lcost: string | null;    // Landing cost
+  prft: string | null;     // Profit %
+  rrate: string | null;    // Selling rate
+  mrp: string | null;      // MRP
   barcodeGenerated: boolean;
 }
 
@@ -102,6 +102,11 @@ export default function StockInward() {
   );
   const [barcodePrefix, setBarcodePrefix] = useState("SKR");
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  
+  // Barcode generation mode dialog
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [barcodeDialogItem, setBarcodeDialogItem] = useState<PurchaseItem | null>(null);
+  const [barcodeMode, setBarcodeMode] = useState<"unique" | "bulk">("unique");
 
   const { data: pendingPurchases } = useQuery<Purchase[]>({
     queryKey: ["/api/pending-purchases"],
@@ -167,6 +172,7 @@ export default function StockInward() {
       expensePercent: 0,
       expenseAmount: 0,
       profitPercent: 10,
+      mrpPercent: 0,
       mrp: 0,
     },
   });
@@ -305,7 +311,8 @@ export default function StockInward() {
     },
   });
 
-  const generateBarcodesMutation = useMutation({
+  // Generate UNIQUE barcodes (one per unit)
+  const generateUniqueBarcodesMutation = useMutation({
     mutationFn: async ({ purchaseItemId, qty }: { purchaseItemId: number; qty: number }) => {
       const startSerial = (nextSerialData as any)?.serial || 1;
       const items = [];
@@ -316,20 +323,54 @@ export default function StockInward() {
           serial,
           barcode: generateBarcode(serial, barcodePrefix),
           status: "in_stock",
+          qty: 1, // Each barcode has qty of 1
         });
       }
       
       return (await apiRequest("POST", `/api/purchase-items/${purchaseItemId}/generate-barcodes`, { items })).json();
     },
     onSuccess: (_, variables) => {
-      toast({ title: "Success", description: `Generated ${variables.qty} unique barcodes` });
+      toast({ title: "Success", description: `Generated ${variables.qty} unique barcodes (1 barcode per unit)` });
       refetchItems();
       refetchSerial();
+      setBarcodeDialogOpen(false);
+      setBarcodeDialogItem(null);
     },
     onError: (error: any) => {
       toast({
         title: "Error",
         description: error.message || "Failed to generate barcodes",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  // Generate BULK barcode (one barcode for all units)
+  const generateBulkBarcodesMutation = useMutation({
+    mutationFn: async ({ purchaseItemId, qty }: { purchaseItemId: number; qty: number }) => {
+      const startSerial = (nextSerialData as any)?.serial || 1;
+      const items = [
+        {
+          serial: startSerial,
+          barcode: generateBarcode(startSerial, barcodePrefix),
+          status: "in_stock",
+          qty: qty, // Single barcode with full quantity
+        }
+      ];
+      
+      return (await apiRequest("POST", `/api/purchase-items/${purchaseItemId}/generate-barcodes`, { items })).json();
+    },
+    onSuccess: (_, variables) => {
+      toast({ title: "Success", description: `Generated 1 bulk barcode for ${variables.qty} units` });
+      refetchItems();
+      refetchSerial();
+      setBarcodeDialogOpen(false);
+      setBarcodeDialogItem(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to generate barcode",
         variant: "destructive",
       });
     },
@@ -366,9 +407,16 @@ export default function StockInward() {
       data.profitPercent || 10
     );
 
+    // Calculate MRP from rate + MRP%
+    const mrpPercent = data.mrpPercent || 0;
+    const calculatedMrp = data.mrp && data.mrp > 0 
+      ? data.mrp 
+      : parseFloat(rates.rate) * (1 + mrpPercent / 100);
+
     const sizeCode = SIZE_CODES[data.sizeName?.toUpperCase() || ""] || 0;
     const nextSerial = (purchaseItems?.length || 0) + 1;
 
+    // Map frontend fields to database schema fields
     const itemData = {
       purchaseId: selectedPurchaseId,
       serial: nextSerial,
@@ -376,7 +424,6 @@ export default function StockInward() {
       itname: data.itname,
       brandname: data.brandname || "",
       name: data.sizeName || "",
-      hsn: data.hsn || "",
       quality: data.quality || "",
       dno1: data.dno1 || "",
       pattern: data.pattern || "",
@@ -384,17 +431,15 @@ export default function StockInward() {
       qty: data.qty.toString(),
       cost: data.cost.toString(),
       tax: data.tax.toString(),
-      sizeCode,
-      discountPercent: (data.discountPercent || 0).toString(),
-      discountAmount: rates.discountAmount,
-      netCost: rates.netCost,
-      expensePercent: (data.expensePercent || 0).toString(),
-      expenseAmount: rates.expenseAmount,
-      landingCost: rates.landingCost,
-      profitPercent: (data.profitPercent || 10).toString(),
-      profitAmount: rates.profitAmount,
-      rate: rates.rate,
-      mrp: data.mrp?.toString() || rates.rate,
+      // Database field mappings:
+      dis: (data.discountPercent || 0).toString(),  // Discount %
+      rd: rates.discountAmount,                      // Rate difference (discount amount)
+      addc: (data.expensePercent || 0).toString(),  // Additional cost %
+      ncost: rates.netCost,                         // Net cost after discounts
+      lcost: rates.landingCost,                     // Landing cost
+      prft: (data.profitPercent || 10).toString(),  // Profit %
+      rrate: rates.rate,                            // Retail rate (selling rate)
+      mrp: calculatedMrp.toFixed(2),                // MRP
     };
 
     if (editingItemId) {
@@ -406,12 +451,17 @@ export default function StockInward() {
 
   const handleEditItem = (item: PurchaseItem) => {
     setEditingItemId(item.id);
+    // Map database fields back to form fields
+    const rate = parseFloat(item.rrate || "0");
+    const mrp = parseFloat(item.mrp || "0");
+    const mrpPercent = rate > 0 ? ((mrp - rate) / rate) * 100 : 0;
+    
     form.reset({
       itemId: item.itemId || null,
       itname: item.itname,
       brandname: item.brandname || "",
       sizeName: item.name || "",
-      hsn: item.hsn || "",
+      hsn: "",
       quality: item.quality || "",
       dno1: item.dno1 || "",
       pattern: item.pattern || "",
@@ -419,10 +469,11 @@ export default function StockInward() {
       qty: parseFloat(item.qty),
       cost: parseFloat(item.cost),
       tax: parseFloat(item.tax),
-      discountPercent: parseFloat(item.discountPercent || "0"),
-      expensePercent: parseFloat(item.expensePercent || "0"),
-      profitPercent: parseFloat(item.profitPercent || "10"),
-      mrp: parseFloat(item.mrp || "0"),
+      discountPercent: parseFloat(item.dis || "0"),
+      expensePercent: parseFloat(item.addc || "0"),
+      profitPercent: parseFloat(item.prft || "10"),
+      mrpPercent: mrpPercent > 0 ? mrpPercent : 0,
+      mrp: mrp,
     });
   };
 
@@ -430,9 +481,23 @@ export default function StockInward() {
     deleteItemMutation.mutate(id);
   };
 
-  const handleGenerateBarcodes = (item: PurchaseItem) => {
-    const qty = parseInt(item.qty);
-    generateBarcodesMutation.mutate({ purchaseItemId: item.id, qty });
+  // Open barcode generation dialog
+  const handleOpenBarcodeDialog = (item: PurchaseItem) => {
+    setBarcodeDialogItem(item);
+    setBarcodeMode("unique"); // Default to unique
+    setBarcodeDialogOpen(true);
+  };
+  
+  // Handle barcode generation based on selected mode
+  const handleGenerateBarcodes = () => {
+    if (!barcodeDialogItem) return;
+    const qty = parseInt(barcodeDialogItem.qty);
+    
+    if (barcodeMode === "unique") {
+      generateUniqueBarcodesMutation.mutate({ purchaseItemId: barcodeDialogItem.id, qty });
+    } else {
+      generateBulkBarcodesMutation.mutate({ purchaseItemId: barcodeDialogItem.id, qty });
+    }
   };
 
   const handleCompletePurchase = () => {
@@ -736,15 +801,32 @@ export default function StockInward() {
                     />
                   </div>
                   <div>
+                    <Label htmlFor="mrpPercent">MRP %</Label>
+                    <Input
+                      id="mrpPercent"
+                      type="number"
+                      step="0.01"
+                      {...form.register("mrpPercent", { valueAsNumber: true })}
+                      placeholder="0"
+                      data-testid="input-mrp-percent"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      MRP = Rate + (Rate × MRP%)
+                    </p>
+                  </div>
+                  <div>
                     <Label htmlFor="mrp">MRP (Override)</Label>
                     <Input
                       id="mrp"
                       type="number"
                       step="0.01"
                       {...form.register("mrp", { valueAsNumber: true })}
-                      placeholder="Auto calculated"
+                      placeholder="Auto from MRP%"
                       data-testid="input-mrp"
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Leave blank to use MRP%
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="hsn">HSN Code</Label>
@@ -827,15 +909,35 @@ export default function StockInward() {
                 <span>Selling Rate:</span>
                 <span className="font-mono text-primary">₹{calculatedRates.rate}</span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">+ MRP Margin ({form.watch("mrpPercent") || 0}%):</span>
+                <span className="font-mono text-blue-500">
+                  +₹{(parseFloat(calculatedRates.rate) * (form.watch("mrpPercent") || 0) / 100).toFixed(2)}
+                </span>
+              </div>
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>MRP:</span>
                 <span className="font-mono text-green-600">
-                  ₹{(form.watch("mrp") && (form.watch("mrp") || 0) > 0) ? (form.watch("mrp") || 0).toFixed(2) : calculatedRates.rate}
+                  ₹{(() => {
+                    const mrpOverride = form.watch("mrp");
+                    const mrpPercent = form.watch("mrpPercent") || 0;
+                    const rate = parseFloat(calculatedRates.rate);
+                    if (mrpOverride && mrpOverride > 0) {
+                      return mrpOverride.toFixed(2);
+                    }
+                    return (rate * (1 + mrpPercent / 100)).toFixed(2);
+                  })()}
                 </span>
               </div>
               <div className="text-center text-xs text-muted-foreground mt-4">
-                Total Value: ₹{(parseFloat((form.watch("mrp") && (form.watch("mrp") || 0) > 0) ? (form.watch("mrp") || 0).toString() : calculatedRates.rate) * (watchQty || 1)).toFixed(2)}
+                Total Value: ₹{(() => {
+                  const mrpOverride = form.watch("mrp");
+                  const mrpPercent = form.watch("mrpPercent") || 0;
+                  const rate = parseFloat(calculatedRates.rate);
+                  const mrp = (mrpOverride && mrpOverride > 0) ? mrpOverride : rate * (1 + mrpPercent / 100);
+                  return (mrp * (watchQty || 1)).toFixed(2);
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -901,9 +1003,9 @@ export default function StockInward() {
                         </TableCell>
                         <TableCell className="text-right font-mono">{parseFloat(item.qty).toFixed(0)}</TableCell>
                         <TableCell className="text-right font-mono">₹{parseFloat(item.cost).toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono">₹{parseFloat(item.landingCost || "0").toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono font-semibold">₹{parseFloat(item.rate || "0").toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-primary font-semibold">₹{parseFloat(item.mrp || item.rate || "0").toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono">₹{parseFloat(item.lcost || "0").toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono font-semibold">₹{parseFloat(item.rrate || "0").toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-primary font-semibold">₹{parseFloat(item.mrp || item.rrate || "0").toFixed(2)}</TableCell>
                         <TableCell className="text-center">
                           {item.barcodeGenerated ? (
                             <Badge variant="default">
@@ -914,8 +1016,8 @@ export default function StockInward() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleGenerateBarcodes(item)}
-                              disabled={generateBarcodesMutation.isPending}
+                              onClick={() => handleOpenBarcodeDialog(item)}
+                              disabled={generateUniqueBarcodesMutation.isPending || generateBulkBarcodesMutation.isPending}
                               data-testid={`button-generate-${item.id}`}
                             >
                               <Barcode className="mr-1 h-3 w-3" />
@@ -985,6 +1087,89 @@ export default function StockInward() {
           )}
         </Card>
       </div>
+      
+      {/* Barcode Generation Mode Dialog */}
+      <Dialog open={barcodeDialogOpen} onOpenChange={setBarcodeDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Barcodes</DialogTitle>
+            <DialogDescription>
+              Choose how you want to generate barcodes for {barcodeDialogItem?.qty || 0} units of {barcodeDialogItem?.itname}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="py-4">
+            <RadioGroup 
+              value={barcodeMode} 
+              onValueChange={(value: "unique" | "bulk") => setBarcodeMode(value)}
+              className="space-y-4"
+            >
+              <div className="flex items-start space-x-3 p-4 border rounded-lg hover-elevate cursor-pointer" onClick={() => setBarcodeMode("unique")}>
+                <RadioGroupItem value="unique" id="unique" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="unique" className="flex items-center gap-2 cursor-pointer">
+                    <Hash className="h-4 w-4 text-primary" />
+                    <span className="font-semibold">Unique Barcodes</span>
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Generate {barcodeDialogItem?.qty || 0} unique barcodes (one barcode per unit).
+                    Each unit gets its own barcode for individual tracking.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge variant="outline">1 barcode = 1 unit</Badge>
+                    <Badge variant="secondary">{barcodeDialogItem?.qty || 0} barcodes total</Badge>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3 p-4 border rounded-lg hover-elevate cursor-pointer" onClick={() => setBarcodeMode("bulk")}>
+                <RadioGroupItem value="bulk" id="bulk" className="mt-1" />
+                <div className="flex-1">
+                  <Label htmlFor="bulk" className="flex items-center gap-2 cursor-pointer">
+                    <Layers className="h-4 w-4 text-orange-500" />
+                    <span className="font-semibold">Bulk Barcode</span>
+                  </Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Generate 1 barcode for all {barcodeDialogItem?.qty || 0} units.
+                    Same barcode used for the entire quantity.
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    <Badge variant="outline">1 barcode = {barcodeDialogItem?.qty || 0} units</Badge>
+                    <Badge variant="secondary">1 barcode total</Badge>
+                  </div>
+                </div>
+              </div>
+            </RadioGroup>
+          </div>
+          
+          <DialogFooter className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setBarcodeDialogOpen(false)}
+              data-testid="button-cancel-barcode"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleGenerateBarcodes}
+              disabled={generateUniqueBarcodesMutation.isPending || generateBulkBarcodesMutation.isPending}
+              data-testid="button-confirm-barcode"
+            >
+              {(generateUniqueBarcodesMutation.isPending || generateBulkBarcodesMutation.isPending) ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Barcode className="mr-2 h-4 w-4" />
+                  Generate {barcodeMode === "unique" ? `${barcodeDialogItem?.qty || 0} Barcodes` : "1 Bulk Barcode"}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
