@@ -50,6 +50,7 @@ interface SaleLineItem {
   tempId: string;
   itemId: number | null;
   purchaseItemId: number | null;
+  stockInwardId: number | null;
   barcode: string;
   itemCode: string;
   itemName: string;
@@ -68,6 +69,7 @@ interface SaleLineItem {
   cgst: number;
   sgst: number;
   stockQty: number | null;
+  isFromBarcode: boolean;
 }
 
 export default function SalesB2C() {
@@ -110,19 +112,24 @@ export default function SalesB2C() {
     if (!barcodeInput.trim()) return;
 
     try {
-      const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
+      const response = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
+      const data: any = await response.json();
+      
+      // Get rate from barcode data - use mrp first, then rate (selling rate from stock inward)
+      const saleRate = parseFloat(data.mrp) || parseFloat(data.rate) || 0;
       
       const newItem: SaleLineItem = {
         tempId: Date.now().toString(),
         itemId: data.itemId,
         purchaseItemId: data.purchaseItemId,
+        stockInwardId: data.stockInwardId,
         barcode: data.barcode || "",
         itemCode: "",
         itemName: data.itemName || "",
         hsnCode: data.hsnCode || "",
         quantity: 1,
-        rate: parseFloat(data.mrp) || parseFloat(data.rrate) || 0,
-        mrp: parseFloat(data.mrp) || 0,
+        rate: saleRate,
+        mrp: parseFloat(data.mrp) || saleRate,
         discount: 0,
         discountPercent: 0,
         amount: 0,
@@ -133,7 +140,8 @@ export default function SalesB2C() {
         taxValue: 0,
         cgst: 0,
         sgst: 0,
-        stockQty: parseFloat(data.stockQty) || 0,
+        stockQty: 1,
+        isFromBarcode: true,
       };
 
       recalculateItem(newItem);
@@ -143,7 +151,7 @@ export default function SalesB2C() {
       
       toast({
         title: "Item Added",
-        description: `${data.itemName} added`,
+        description: `${data.itemName} - ₹${saleRate.toFixed(2)}`,
       });
     } catch (error) {
       toast({
@@ -196,6 +204,7 @@ export default function SalesB2C() {
         tempId: Date.now().toString(),
         itemId: null,
         purchaseItemId: null,
+        stockInwardId: null,
         barcode: "",
         itemCode: "",
         itemName: "",
@@ -214,6 +223,7 @@ export default function SalesB2C() {
         cgst: 0,
         sgst: 0,
         stockQty: null,
+        isFromBarcode: false,
       },
     ]);
   };
@@ -544,26 +554,38 @@ export default function SalesB2C() {
                             )}
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={item.quantity}
-                              onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
-                              className="w-16"
-                              data-testid={`input-qty-${item.tempId}`}
-                            />
+                            {item.isFromBarcode ? (
+                              <span className="font-mono text-sm" data-testid={`text-qty-${item.tempId}`}>
+                                {item.quantity}
+                              </span>
+                            ) : (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1"
+                                value={item.quantity}
+                                onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
+                                className="w-16"
+                                data-testid={`input-qty-${item.tempId}`}
+                              />
+                            )}
                           </TableCell>
                           <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={item.rate}
-                              onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
-                              className="w-20"
-                              data-testid={`input-rate-${item.tempId}`}
-                            />
+                            {item.isFromBarcode ? (
+                              <span className="font-mono text-sm font-medium" data-testid={`text-rate-${item.tempId}`}>
+                                ₹{item.rate.toFixed(2)}
+                              </span>
+                            ) : (
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.rate}
+                                onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                                className="w-20"
+                                data-testid={`input-rate-${item.tempId}`}
+                              />
+                            )}
                           </TableCell>
                           <TableCell>
                             <Input
