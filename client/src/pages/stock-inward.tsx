@@ -31,6 +31,10 @@ const purchaseItemSchema = z.object({
   brandname: z.string().optional(),
   sizeName: z.string().optional(),
   hsn: z.string().optional(),
+  quality: z.string().optional(),
+  dno1: z.string().optional(),
+  pattern: z.string().optional(),
+  sleeve: z.string().optional(),
   qty: z.number().min(1, "Quantity required"),
   cost: z.number().min(0, "Cost required"),
   tax: z.number().min(0).max(100),
@@ -61,9 +65,15 @@ interface PurchaseItem {
   purchaseId: number;
   serial: number;
   barcode: string | null;
+  itemId: number | null;
   itname: string;
   brandname: string | null;
   name: string | null;
+  hsn: string | null;
+  quality: string | null;
+  dno1: string | null;
+  pattern: string | null;
+  sleeve: string | null;
   qty: string;
   cost: string;
   tax: string;
@@ -140,10 +150,15 @@ export default function StockInward() {
   const form = useForm<PurchaseItemForm>({
     resolver: zodResolver(purchaseItemSchema),
     defaultValues: {
+      itemId: null,
       itname: "",
       brandname: "",
       sizeName: "",
       hsn: "",
+      quality: "",
+      dno1: "",
+      pattern: "",
+      sleeve: "",
       qty: 1,
       cost: 0,
       tax: 0,
@@ -155,6 +170,22 @@ export default function StockInward() {
       mrp: 0,
     },
   });
+
+  const handleItemSelect = (itemId: string) => {
+    const item = (masterItems as any)?.find((i: any) => i.id.toString() === itemId);
+    if (item) {
+      form.setValue("itemId", item.id);
+      form.setValue("itname", item.name || "");
+      form.setValue("brandname", item.brand || "");
+      form.setValue("hsn", item.hsn || "");
+      if (item.mrp) {
+        form.setValue("mrp", parseFloat(item.mrp));
+      }
+      if (item.tax) {
+        form.setValue("tax", parseFloat(item.tax));
+      }
+    }
+  };
 
   const watchCost = form.watch("cost");
   const watchQty = form.watch("qty");
@@ -209,10 +240,15 @@ export default function StockInward() {
       refetchItems();
       refetchSerial();
       form.reset({
+        itemId: null,
         itname: "",
         brandname: "",
         sizeName: "",
         hsn: "",
+        quality: "",
+        dno1: "",
+        pattern: "",
+        sleeve: "",
         qty: 1,
         cost: 0,
         tax: 0,
@@ -336,10 +372,15 @@ export default function StockInward() {
     const itemData = {
       purchaseId: selectedPurchaseId,
       serial: nextSerial,
+      itemId: data.itemId || null,
       itname: data.itname,
       brandname: data.brandname || "",
       name: data.sizeName || "",
       hsn: data.hsn || "",
+      quality: data.quality || "",
+      dno1: data.dno1 || "",
+      pattern: data.pattern || "",
+      sleeve: data.sleeve || "",
       qty: data.qty.toString(),
       cost: data.cost.toString(),
       tax: data.tax.toString(),
@@ -366,9 +407,15 @@ export default function StockInward() {
   const handleEditItem = (item: PurchaseItem) => {
     setEditingItemId(item.id);
     form.reset({
+      itemId: item.itemId || null,
       itname: item.itname,
       brandname: item.brandname || "",
       sizeName: item.name || "",
+      hsn: item.hsn || "",
+      quality: item.quality || "",
+      dno1: item.dno1 || "",
+      pattern: item.pattern || "",
+      sleeve: item.sleeve || "",
       qty: parseFloat(item.qty),
       cost: parseFloat(item.cost),
       tax: parseFloat(item.tax),
@@ -533,11 +580,24 @@ export default function StockInward() {
               <form onSubmit={form.handleSubmit(handleAddItem)} className="space-y-4">
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-2">
-                    <Label htmlFor="itname">Item Name *</Label>
+                    <Label htmlFor="itemSelect">Select Item from Master *</Label>
+                    <Select onValueChange={handleItemSelect}>
+                      <SelectTrigger data-testid="select-item-master">
+                        <SelectValue placeholder="Select from item master" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(masterItems as any)?.map((item: any) => (
+                          <SelectItem key={item.id} value={item.id.toString()}>
+                            {item.name} {item.brand ? `- ${item.brand}` : ""}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Input
                       id="itname"
                       {...form.register("itname")}
-                      placeholder="Enter item name"
+                      placeholder="Or enter item name manually"
+                      className="mt-2"
                       data-testid="input-item-name"
                     />
                     {form.formState.errors.itname && (
@@ -555,28 +615,51 @@ export default function StockInward() {
                   </div>
                   <div>
                     <Label htmlFor="sizeName">Size</Label>
-                    <Select onValueChange={(v) => form.setValue("sizeName", v)}>
-                      <SelectTrigger data-testid="select-size">
-                        <SelectValue placeholder="Select size" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="F">F (Free)</SelectItem>
-                        <SelectItem value="S">S (Small)</SelectItem>
-                        <SelectItem value="M">M (Medium)</SelectItem>
-                        <SelectItem value="L">L (Large)</SelectItem>
-                        <SelectItem value="XL">XL</SelectItem>
-                        <SelectItem value="2L">2L/XXL</SelectItem>
-                        <SelectItem value="3L">3L/XXXL</SelectItem>
-                        <SelectItem value="OS">OS (One Size)</SelectItem>
-                        <SelectItem value="32">32</SelectItem>
-                        <SelectItem value="34">34</SelectItem>
-                        <SelectItem value="36">36</SelectItem>
-                        <SelectItem value="38">38</SelectItem>
-                        <SelectItem value="40">40</SelectItem>
-                        <SelectItem value="42">42</SelectItem>
-                        <SelectItem value="44">44</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Input
+                      id="sizeName"
+                      {...form.register("sizeName")}
+                      placeholder="Enter size (e.g. M, L, 32)"
+                      data-testid="input-size"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-4">
+                  <div>
+                    <Label htmlFor="quality">Quality</Label>
+                    <Input
+                      id="quality"
+                      {...form.register("quality")}
+                      placeholder="Quality"
+                      data-testid="input-quality"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dno1">Design Number</Label>
+                    <Input
+                      id="dno1"
+                      {...form.register("dno1")}
+                      placeholder="Design No."
+                      data-testid="input-dno1"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pattern">Pattern</Label>
+                    <Input
+                      id="pattern"
+                      {...form.register("pattern")}
+                      placeholder="Pattern"
+                      data-testid="input-pattern"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sleeve">Color</Label>
+                    <Input
+                      id="sleeve"
+                      {...form.register("sleeve")}
+                      placeholder="Color"
+                      data-testid="input-color"
+                    />
                   </div>
                 </div>
 
@@ -782,6 +865,7 @@ export default function StockInward() {
                       <TableHead>#</TableHead>
                       <TableHead>Item Name</TableHead>
                       <TableHead>Brand/Size</TableHead>
+                      <TableHead>Details</TableHead>
                       <TableHead className="text-right">Qty</TableHead>
                       <TableHead className="text-right">Cost</TableHead>
                       <TableHead className="text-right">Landing</TableHead>
@@ -798,6 +882,14 @@ export default function StockInward() {
                         <TableCell>
                           {item.brandname && <span>{item.brandname}</span>}
                           {item.name && <Badge variant="outline" className="ml-1">{item.name}</Badge>}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="flex flex-wrap gap-1">
+                            {item.quality && <Badge variant="secondary" className="text-xs">{item.quality}</Badge>}
+                            {item.dno1 && <Badge variant="secondary" className="text-xs">D:{item.dno1}</Badge>}
+                            {item.pattern && <Badge variant="secondary" className="text-xs">{item.pattern}</Badge>}
+                            {item.sleeve && <Badge variant="secondary" className="text-xs">{item.sleeve}</Badge>}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right font-mono">{parseFloat(item.qty).toFixed(0)}</TableCell>
                         <TableCell className="text-right font-mono">₹{parseFloat(item.cost).toFixed(2)}</TableCell>
