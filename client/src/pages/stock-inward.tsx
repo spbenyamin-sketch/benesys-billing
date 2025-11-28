@@ -827,8 +827,15 @@ export default function StockInward() {
                 <span>Selling Rate:</span>
                 <span className="font-mono text-primary">₹{calculatedRates.rate}</span>
               </div>
+              <Separator />
+              <div className="flex justify-between text-lg font-bold">
+                <span>MRP:</span>
+                <span className="font-mono text-green-600">
+                  ₹{(form.watch("mrp") && (form.watch("mrp") || 0) > 0) ? (form.watch("mrp") || 0).toFixed(2) : calculatedRates.rate}
+                </span>
+              </div>
               <div className="text-center text-xs text-muted-foreground mt-4">
-                Total Value: ₹{(parseFloat(calculatedRates.rate) * (watchQty || 1)).toFixed(2)}
+                Total Value: ₹{(parseFloat((form.watch("mrp") && (form.watch("mrp") || 0) > 0) ? (form.watch("mrp") || 0).toString() : calculatedRates.rate) * (watchQty || 1)).toFixed(2)}
               </div>
             </CardContent>
           </Card>
@@ -870,6 +877,7 @@ export default function StockInward() {
                       <TableHead className="text-right">Cost</TableHead>
                       <TableHead className="text-right">Landing</TableHead>
                       <TableHead className="text-right">Rate</TableHead>
+                      <TableHead className="text-right">MRP</TableHead>
                       <TableHead className="text-center">Barcodes</TableHead>
                       <TableHead className="text-center">Actions</TableHead>
                     </TableRow>
@@ -894,7 +902,8 @@ export default function StockInward() {
                         <TableCell className="text-right font-mono">{parseFloat(item.qty).toFixed(0)}</TableCell>
                         <TableCell className="text-right font-mono">₹{parseFloat(item.cost).toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono">₹{parseFloat(item.landingCost || "0").toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono">₹{parseFloat(item.rate || "0").toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono font-semibold">₹{parseFloat(item.rate || "0").toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono text-primary font-semibold">₹{parseFloat(item.mrp || item.rate || "0").toFixed(2)}</TableCell>
                         <TableCell className="text-center">
                           {item.barcodeGenerated ? (
                             <Badge variant="default">
