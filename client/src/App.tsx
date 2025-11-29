@@ -35,6 +35,7 @@ import BarcodeManagement from "@/pages/barcode-management";
 import Outstanding from "@/pages/reports/outstanding";
 import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
+import CategoriesReport from "@/pages/reports/categories-report";
 import PurchaseReport from "@/pages/reports/purchase-report";
 import Ledger from "@/pages/reports/ledger";
 import PaymentsReport from "@/pages/reports/payments-report";
@@ -80,6 +81,7 @@ function Router() {
       <Route path="/reports/sales" component={SalesReport} />
       <Route path="/reports/purchases" component={PurchaseReport} />
       <Route path="/reports/items" component={ItemsReport} />
+      <Route path="/reports/categories" component={CategoriesReport} />
       <Route path="/reports/payments" component={PaymentsReport} />
       <Route path="/reports/ledger/:id" component={Ledger} />
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}

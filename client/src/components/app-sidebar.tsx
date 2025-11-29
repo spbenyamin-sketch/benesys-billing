@@ -127,9 +127,14 @@ export function AppSidebar() {
       icon: ShoppingCart,
     },
     {
-      title: "Item Report",
+      title: "Item Wise Sales",
       url: "/reports/items",
       icon: Package,
+    },
+    {
+      title: "Category Wise Sales",
+      url: "/reports/categories",
+      icon: BarChart3,
     },
     {
       title: "Payment Report",
