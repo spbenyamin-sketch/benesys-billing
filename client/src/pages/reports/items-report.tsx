@@ -113,11 +113,16 @@ export default function ItemsReport() {
   const [endDate, setEndDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [saleType, setSaleType] = useState("all");
+  const [selectedItemId, setSelectedItemId] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
   const { currentCompany } = useCompany();
 
+  const { data: masterItems } = useQuery({
+    queryKey: ["/api/items"],
+  });
+
   const { data: items, isLoading } = useQuery<ItemReport[]>({
-    queryKey: ["/api/reports/items", { startDate, endDate, saleType: saleType === "all" ? "" : saleType }],
+    queryKey: ["/api/reports/items", { startDate, endDate, saleType: saleType === "all" ? "" : saleType, itemId: selectedItemId }],
   });
 
   const handlePrint = useReactToPrint({
@@ -165,7 +170,7 @@ export default function ItemsReport() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-5">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date</Label>
               <Input
@@ -197,6 +202,22 @@ export default function ItemsReport() {
                   <SelectItem value="B2B">B2B (Credit)</SelectItem>
                   <SelectItem value="B2C">B2C (Retail)</SelectItem>
                   <SelectItem value="ESTIMATE">Estimate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="itemId">Item Master</Label>
+              <Select value={selectedItemId} onValueChange={setSelectedItemId} data-testid="select-item-master">
+                <SelectTrigger id="itemId">
+                  <SelectValue placeholder="All Items" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Items</SelectItem>
+                  {masterItems?.map((item) => (
+                    <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.code} - {item.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
