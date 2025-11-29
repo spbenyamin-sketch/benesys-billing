@@ -212,7 +212,6 @@ export default function ItemsReport() {
                   <SelectValue placeholder="All Items" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Items</SelectItem>
                   {masterItems?.map((item) => (
                     <SelectItem key={item.id} value={item.id.toString()}>
                       {item.code} - {item.name}
