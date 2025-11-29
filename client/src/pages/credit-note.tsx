@@ -179,45 +179,33 @@ export default function CreditNote() {
     const discountPercent = parseFloat(item.discountPercent.toString()) || 0;
     const taxRate = item.taxRate || 0;
 
+    let amount = qty * rate;
+    const discount = amount * (discountPercent / 100);
+    amount = amount - discount;
+    item.discount = discount;
+
+    let saleValue: number;
+    let taxValue: number;
+
     if (inclusiveTax) {
-      const baseRate = rate / (1 + taxRate / 100);
-      const grossAmount = qty * rate;
-      const discount = grossAmount * (discountPercent / 100);
-      const netAmount = grossAmount - discount;
-      const saleValue = netAmount / (1 + taxRate / 100);
-      const taxValue = netAmount - saleValue;
-      
-      item.amount = grossAmount;
-      item.discount = discount;
-      item.saleValue = saleValue;
-      item.taxValue = taxValue;
-      
-      if (gstType === 0) {
-        item.cgst = taxValue / 2;
-        item.sgst = taxValue / 2;
-      } else {
-        item.cgst = 0;
-        item.sgst = 0;
-      }
+      saleValue = amount / (1 + taxRate / 100);
+      taxValue = amount - saleValue;
     } else {
-      const grossAmount = qty * rate;
-      const discount = grossAmount * (discountPercent / 100);
-      const saleValue = grossAmount - discount;
-      const taxValue = saleValue * (taxRate / 100);
-      const netAmount = saleValue + taxValue;
+      saleValue = amount;
+      taxValue = saleValue * (taxRate / 100);
+    }
 
-      item.amount = netAmount;
-      item.discount = discount;
-      item.saleValue = saleValue;
-      item.taxValue = taxValue;
+    item.amount = inclusiveTax ? amount : saleValue;
+    item.saleValue = saleValue;
+    item.taxValue = taxValue;
 
-      if (gstType === 0) {
-        item.cgst = taxValue / 2;
-        item.sgst = taxValue / 2;
-      } else {
-        item.cgst = 0;
-        item.sgst = 0;
-      }
+    if (gstType === 0) {
+      item.cgst = taxValue / 2;
+      item.sgst = taxValue / 2;
+    } else {
+      item.cgst = taxValue;
+      item.sgst = 0;
+    }
     }
   };
 
