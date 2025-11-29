@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { usePrintSettings } from "@/hooks/use-print-settings";
 import { Plus, Trash2, Save, Barcode, Search, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -59,6 +60,7 @@ interface SaleLineItem {
 export default function SalesEstimate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
@@ -266,7 +268,8 @@ export default function SalesEstimate() {
         description: "Estimate saved successfully",
       });
 
-      window.open(`/invoice/${data.id}`, '_blank');
+      const printParam = shouldAutoPrint("EST") ? "?print=auto" : "";
+      window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);
       setSelectedPartyId(null);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "wouter";
+import { useParams, useSearch } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,7 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
 import { InvoiceA4Print, InvoiceThermalPrint } from "@/components/InvoicePrint";
+import { usePrintSettings } from "@/hooks/use-print-settings";
 
 interface SaleItem {
   id: number;
@@ -85,10 +86,15 @@ interface BillTemplate {
 
 export default function Invoice() {
   const params = useParams();
+  const searchString = useSearch();
   const saleId = params.id;
   const [hasPrinted, setHasPrinted] = useState(false);
   const [templateReady, setTemplateReady] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const { shouldAutoPrint } = usePrintSettings();
+  
+  const searchParams = new URLSearchParams(searchString);
+  const autoPrintRequested = searchParams.get("print") === "auto";
 
   const { data: sale, isLoading: saleLoading } = useQuery<Sale>({
     queryKey: ["/api/sales", saleId],
@@ -160,12 +166,20 @@ export default function Invoice() {
 
   useEffect(() => {
     if (sale && items && templateReady && !hasPrinted && !saleLoading && !itemsLoading) {
-      setHasPrinted(true);
-      setTimeout(() => {
-        handlePrint();
-      }, 1000);
+      const billType = sale.billType === "EST" ? "EST" : 
+                       sale.billType === "CN" ? "CN" : 
+                       sale.saleType || "B2C";
+      
+      const shouldPrint = autoPrintRequested || shouldAutoPrint(billType);
+      
+      if (shouldPrint) {
+        setHasPrinted(true);
+        setTimeout(() => {
+          handlePrint();
+        }, 800);
+      }
     }
-  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint]);
+  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, autoPrintRequested, shouldAutoPrint]);
 
   if (isLoading) {
     return (

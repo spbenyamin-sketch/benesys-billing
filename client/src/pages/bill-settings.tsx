@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Printer, Eye, FileText, Trash2, Edit2 } from "lucide-react";
+import { Settings, Save, Printer, Eye, FileText, Trash2, Edit2, Zap, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { LogoUploader } from "@/components/LogoUploader";
+import { usePrintSettings as usePrintSettingsHook, savePrintSettings, PrintSettings } from "@/hooks/use-print-settings";
 
 interface BillTemplate {
   id: number;
@@ -94,6 +95,265 @@ const defaultFormData = {
   fontSize: 10,
   isDefault: false,
 };
+
+function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
+  const { toast } = useToast();
+  const { settings: hookSettings } = usePrintSettingsHook();
+  const [settings, setSettings] = useState<PrintSettings>(hookSettings);
+
+  useEffect(() => {
+    setSettings(hookSettings);
+  }, [hookSettings]);
+
+  const handleSave = () => {
+    savePrintSettings(settings);
+    toast({
+      title: "Settings Saved",
+      description: "Your print preferences have been saved.",
+    });
+  };
+
+  const handleReset = () => {
+    const defaultSettings: PrintSettings = {
+      autoPrintB2B: false,
+      autoPrintB2C: true,
+      autoPrintEstimate: false,
+      autoPrintCreditNote: false,
+      printCopiesB2B: 2,
+      printCopiesB2C: 1,
+      printCopiesEstimate: 1,
+      printCopiesCreditNote: 2,
+      showPrintConfirmation: true,
+      defaultPrinterName: "",
+    };
+    setSettings(defaultSettings);
+    savePrintSettings(defaultSettings);
+    toast({
+      title: "Settings Reset",
+      description: "Print settings have been reset to defaults.",
+    });
+  };
+
+  const getAssignedTemplate = (type: string) => {
+    return templates.find(t => t.assignedTo === type);
+  };
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Zap className="h-5 w-5" />
+            Quick Print Settings
+          </CardTitle>
+          <CardDescription>
+            Configure automatic printing after saving sales. Print dialog will still appear (browser security).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <Label className="text-base font-medium">Auto-Print After Save</Label>
+            <p className="text-sm text-muted-foreground">
+              Enable to automatically open print dialog when a sale is saved.
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoPrintB2B" className="font-normal">B2B Credit Sale</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Template: {getAssignedTemplate("b2b")?.name || "Not assigned"}
+                  </p>
+                </div>
+                <Switch
+                  id="autoPrintB2B"
+                  checked={settings.autoPrintB2B}
+                  onCheckedChange={(checked) => setSettings({ ...settings, autoPrintB2B: checked })}
+                  data-testid="switch-auto-print-b2b"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoPrintB2C" className="font-normal">B2C Retail Sale</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Template: {getAssignedTemplate("b2c")?.name || "Not assigned"}
+                  </p>
+                </div>
+                <Switch
+                  id="autoPrintB2C"
+                  checked={settings.autoPrintB2C}
+                  onCheckedChange={(checked) => setSettings({ ...settings, autoPrintB2C: checked })}
+                  data-testid="switch-auto-print-b2c"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoPrintEstimate" className="font-normal">Estimate/Quotation</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Template: {getAssignedTemplate("estimate")?.name || "Not assigned"}
+                  </p>
+                </div>
+                <Switch
+                  id="autoPrintEstimate"
+                  checked={settings.autoPrintEstimate}
+                  onCheckedChange={(checked) => setSettings({ ...settings, autoPrintEstimate: checked })}
+                  data-testid="switch-auto-print-estimate"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoPrintCreditNote" className="font-normal">Credit Note</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Template: {getAssignedTemplate("credit_note")?.name || "Not assigned"}
+                  </p>
+                </div>
+                <Switch
+                  id="autoPrintCreditNote"
+                  checked={settings.autoPrintCreditNote}
+                  onCheckedChange={(checked) => setSettings({ ...settings, autoPrintCreditNote: checked })}
+                  data-testid="switch-auto-print-credit-note"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t pt-4 space-y-4">
+            <Label className="text-base font-medium">Print Confirmation</Label>
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label htmlFor="showPrintConfirmation" className="font-normal">Show Print Prompt</Label>
+                <p className="text-xs text-muted-foreground">
+                  Ask before printing when auto-print is enabled
+                </p>
+              </div>
+              <Switch
+                id="showPrintConfirmation"
+                checked={settings.showPrintConfirmation}
+                onCheckedChange={(checked) => setSettings({ ...settings, showPrintConfirmation: checked })}
+                data-testid="switch-print-confirmation"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button onClick={handleSave} data-testid="button-save-print-settings">
+              <Save className="mr-2 h-4 w-4" />
+              Save Settings
+            </Button>
+            <Button variant="outline" onClick={handleReset}>
+              Reset to Defaults
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Printer className="h-5 w-5" />
+            Print Copies
+          </CardTitle>
+          <CardDescription>
+            Set default number of copies for each sale type
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="copiesB2B">B2B Credit Sale</Label>
+              <Select
+                value={settings.printCopiesB2B.toString()}
+                onValueChange={(value) => setSettings({ ...settings, printCopiesB2B: parseInt(value) })}
+              >
+                <SelectTrigger id="copiesB2B" data-testid="select-copies-b2b">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="copiesB2C">B2C Retail Sale</Label>
+              <Select
+                value={settings.printCopiesB2C.toString()}
+                onValueChange={(value) => setSettings({ ...settings, printCopiesB2C: parseInt(value) })}
+              >
+                <SelectTrigger id="copiesB2C" data-testid="select-copies-b2c">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="copiesEstimate">Estimate</Label>
+              <Select
+                value={settings.printCopiesEstimate.toString()}
+                onValueChange={(value) => setSettings({ ...settings, printCopiesEstimate: parseInt(value) })}
+              >
+                <SelectTrigger id="copiesEstimate" data-testid="select-copies-estimate">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="copiesCreditNote">Credit Note</Label>
+              <Select
+                value={settings.printCopiesCreditNote.toString()}
+                onValueChange={(value) => setSettings({ ...settings, printCopiesCreditNote: parseInt(value) })}
+              >
+                <SelectTrigger id="copiesCreditNote" data-testid="select-copies-credit-note">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">How Quick Print Works</span>
+            </div>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+              <li>After saving a sale, print dialog opens automatically</li>
+              <li>Browser print dialog appears for printer selection</li>
+              <li>Use your browser's "Save as PDF" for digital copies</li>
+              <li>Set "Remember my choice" in browser for faster printing</li>
+            </ul>
+          </div>
+
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-lg p-4">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+              <strong>Note:</strong> For truly silent printing without dialogs, consider using dedicated POS software with direct printer integration. Web browsers require print dialog for security.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
 
 export default function BillSettings() {
   const { toast } = useToast();
@@ -222,7 +482,7 @@ export default function BillSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="standard" data-testid="tab-standard">
             <FileText className="mr-2 h-4 w-4" />
             A4 / B4 Format
@@ -230,6 +490,10 @@ export default function BillSettings() {
           <TabsTrigger value="thermal" data-testid="tab-thermal">
             <Printer className="mr-2 h-4 w-4" />
             Thermal Printer
+          </TabsTrigger>
+          <TabsTrigger value="print-settings" data-testid="tab-print-settings">
+            <Zap className="mr-2 h-4 w-4" />
+            Quick Print
           </TabsTrigger>
         </TabsList>
 
@@ -722,6 +986,10 @@ export default function BillSettings() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="print-settings" className="mt-6">
+          <PrintSettingsTab templates={templates || []} />
         </TabsContent>
       </Tabs>
 

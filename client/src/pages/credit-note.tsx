@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { usePrintSettings } from "@/hooks/use-print-settings";
 import { Plus, Trash2, Save, Barcode, Search, Printer, AlertCircle, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -78,6 +79,7 @@ interface CreditNoteLineItem {
 
 export default function CreditNote() {
   const { toast } = useToast();
+  const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
@@ -377,7 +379,8 @@ export default function CreditNote() {
         description: "Credit Note saved successfully",
       });
 
-      window.open(`/invoice/${data.id}`, '_blank');
+      const printParam = shouldAutoPrint("CN") ? "?print=auto" : "";
+      window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);
       setSelectedPartyId(null);

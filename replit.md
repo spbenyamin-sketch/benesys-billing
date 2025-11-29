@@ -157,3 +157,38 @@ Templates can be assigned to specific transaction types:
 - Uses react-to-print v3.x with contentRef pattern
 - Print components use useReactToPrint hook with contentRef
 - Hidden print containers positioned off-screen for rendering
+
+### Quick Print Settings
+Location: Bill Settings > Quick Print tab
+
+**Auto-Print After Save:**
+- Configure automatic print dialog for each sale type (B2B, B2C, Estimate, Credit Note)
+- When enabled, saving a sale opens print dialog automatically
+- Settings stored in localStorage (`printSettings` key)
+
+**Print Copies Configuration:**
+- Set default number of copies (1-5) per sale type
+- B2B defaults to 2 copies, others default to 1
+
+**URL Parameter:**
+- `?print=auto` triggers auto-print when navigating to invoice page
+- Invoice page uses `usePrintSettings` hook to check print preferences
+- Auto-print respects per-sale-type settings
+
+**Hook Usage:**
+```typescript
+import { usePrintSettings } from "@/hooks/use-print-settings";
+const { shouldAutoPrint, getPrintCopies, showConfirmation } = usePrintSettings();
+```
+
+**Browser Limitations:**
+- Browser security requires print dialog (cannot bypass)
+- Users should set browser to "remember my choice" for faster printing
+
+## Stock Management
+
+### Item Movement History
+- API: `GET /api/items/:id/history`
+- Returns consolidated data: item details, stock level, purchases, sales, movement summary
+- Shows total purchased/sold quantities and current balance
+- Accessible from Stock page grid/list view via history button
