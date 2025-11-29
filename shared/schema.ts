@@ -580,6 +580,8 @@ export const billTemplates = pgTable("bill_templates", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
   name: varchar("name", { length: 100 }).notNull(),
+  formatType: varchar("format_type", { length: 20 }).default("A4").notNull(), // A4, B4, thermal_3inch, thermal_4inch
+  assignedTo: varchar("assigned_to", { length: 20 }), // b2b, b2c, estimate - null means not assigned
   logoUrl: text("logo_url"), // Company logo URL from object storage
   headerText: text("header_text"), // Company branding text at top
   footerText: text("footer_text"), // Footer notes
@@ -588,7 +590,11 @@ export const billTemplates = pgTable("bill_templates", {
   showItemCode: boolean("show_item_code").default(true).notNull(),
   showOutstandingDefault: boolean("show_outstanding_default").default(true).notNull(), // B2B: default setting to print outstanding
   showCashReturn: boolean("show_cash_return").default(true).notNull(), // B2C: show cash given/return on invoice
-  paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(), // A4, A5, etc
+  showPartyBalance: boolean("show_party_balance").default(false).notNull(), // Show party outstanding balance
+  showBankDetails: boolean("show_bank_details").default(false).notNull(), // Show company bank details
+  bankDetails: text("bank_details"), // Bank account details for payment
+  termsAndConditions: text("terms_and_conditions"), // Terms and conditions text
+  paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(), // A4, B4, 3inch, 4inch
   fontSize: integer("font_size").default(10).notNull(),
   isDefault: boolean("is_default").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

@@ -700,6 +700,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/bill-templates/assigned/:type', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { type } = req.params;
+      const template = await storage.getBillTemplateByAssignment(type, req.companyId);
+      res.json(template || null);
+    } catch (error) {
+      console.error("Error fetching assigned bill template:", error);
+      res.status(500).json({ message: "Failed to fetch bill template" });
+    }
+  });
+
   app.post('/api/bill-templates', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);

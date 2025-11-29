@@ -116,6 +116,7 @@ export interface IStorage {
   // Bill Template operations
   getBillTemplates(companyId: number): Promise<BillTemplate[]>;
   getDefaultBillTemplate(companyId: number): Promise<BillTemplate | undefined>;
+  getBillTemplateByAssignment(assignedTo: string, companyId: number): Promise<BillTemplate | undefined>;
   createBillTemplate(template: InsertBillTemplate, userId: string, companyId: number): Promise<BillTemplate>;
   updateBillTemplate(id: number, template: InsertBillTemplate, companyId: number): Promise<BillTemplate>;
   deleteBillTemplate(id: number, companyId: number): Promise<void>;
@@ -1001,6 +1002,15 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(billTemplates.isDefault, true), eq(billTemplates.companyId, companyId)))
       .limit(1);
     return template;
+  }
+
+  async getBillTemplateByAssignment(assignedTo: string, companyId: number): Promise<BillTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(billTemplates)
+      .where(and(eq(billTemplates.assignedTo, assignedTo), eq(billTemplates.companyId, companyId)))
+      .limit(1);
+    return template || await this.getDefaultBillTemplate(companyId);
   }
 
   async createBillTemplate(template: InsertBillTemplate, userId: string, companyId: number): Promise<BillTemplate> {

@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -15,58 +17,135 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Printer, Eye } from "lucide-react";
+import { Settings, Save, Printer, Eye, FileText, Trash2, Edit2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { LogoUploader } from "@/components/LogoUploader";
 
 interface BillTemplate {
   id: number;
   name: string;
+  formatType: string;
+  assignedTo: string | null;
   logoUrl: string | null;
   headerText: string | null;
   footerText: string | null;
   showTaxBreakup: boolean;
   showHsnCode: boolean;
   showItemCode: boolean;
+  showOutstandingDefault: boolean;
+  showCashReturn: boolean;
+  showPartyBalance: boolean;
+  showBankDetails: boolean;
+  bankDetails: string | null;
+  termsAndConditions: string | null;
   paperSize: string;
   fontSize: number;
   isDefault: boolean;
 }
 
+const FORMAT_TYPES = [
+  { value: "A4", label: "A4 (210 × 297 mm)", description: "Standard paper - Like Tally" },
+  { value: "B4", label: "B4 (250 × 353 mm)", description: "Large paper - Like Tally" },
+  { value: "thermal_3inch", label: "Thermal 3 inch (80mm)", description: "POS thermal printer" },
+  { value: "thermal_4inch", label: "Thermal 4 inch (112mm)", description: "Wide thermal printer" },
+];
+
+const ASSIGNMENT_OPTIONS = [
+  { value: "none", label: "Not Assigned" },
+  { value: "b2b", label: "B2B Credit Sale" },
+  { value: "b2c", label: "B2C Retail Sale" },
+  { value: "estimate", label: "Estimate/Quotation" },
+];
+
+const defaultFormData = {
+  id: null as number | null,
+  name: "",
+  formatType: "A4",
+  assignedTo: "none",
+  logoUrl: "",
+  headerText: "",
+  footerText: "Thank you for your business!",
+  showTaxBreakup: true,
+  showHsnCode: true,
+  showItemCode: false,
+  showOutstandingDefault: true,
+  showCashReturn: true,
+  showPartyBalance: false,
+  showBankDetails: false,
+  bankDetails: "",
+  termsAndConditions: "",
+  paperSize: "A4",
+  fontSize: 10,
+  isDefault: false,
+};
+
 export default function BillSettings() {
   const { toast } = useToast();
   const [showPreview, setShowPreview] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "Thermal Printer 3 inch",
-    logoUrl: "",
-    headerText: "",
-    footerText: "Thank you for your business!\nVisit Again",
-    showTaxBreakup: true,
-    showHsnCode: true,
-    showItemCode: false,
-    paperSize: "3inch",
-    fontSize: 10,
-    isDefault: true,
-  });
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [formData, setFormData] = useState(defaultFormData);
+  const [activeTab, setActiveTab] = useState("standard");
 
-  const { data: templates } = useQuery<BillTemplate[]>({
+  const { data: templates, isLoading } = useQuery<BillTemplate[]>({
     queryKey: ["/api/bill-templates"],
   });
 
   const saveMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/bill-templates", formData);
+      const payload = {
+        ...formData,
+        assignedTo: formData.assignedTo === "none" ? null : formData.assignedTo,
+        paperSize: formData.formatType.startsWith("thermal") 
+          ? (formData.formatType === "thermal_3inch" ? "3inch" : "4inch")
+          : formData.formatType,
+      };
+      
+      if (formData.id) {
+        return apiRequest("PUT", `/api/bill-templates/${formData.id}`, payload);
+      }
+      return apiRequest("POST", "/api/bill-templates", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bill-templates"] });
       toast({
         title: "Success",
-        description: "Bill template saved successfully",
+        description: formData.id ? "Template updated successfully" : "Template saved successfully",
+      });
+      resetForm();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/bill-templates/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/bill-templates"] });
+      toast({
+        title: "Success",
+        description: "Template deleted successfully",
       });
     },
     onError: (error: Error) => {
@@ -78,324 +157,744 @@ export default function BillSettings() {
     },
   });
 
+  const resetForm = () => {
+    setFormData(defaultFormData);
+  };
+
+  const loadTemplate = (template: BillTemplate) => {
+    setFormData({
+      id: template.id,
+      name: template.name,
+      formatType: template.formatType || "A4",
+      assignedTo: template.assignedTo || "none",
+      logoUrl: template.logoUrl || "",
+      headerText: template.headerText || "",
+      footerText: template.footerText || "",
+      showTaxBreakup: template.showTaxBreakup,
+      showHsnCode: template.showHsnCode,
+      showItemCode: template.showItemCode,
+      showOutstandingDefault: template.showOutstandingDefault,
+      showCashReturn: template.showCashReturn,
+      showPartyBalance: template.showPartyBalance || false,
+      showBankDetails: template.showBankDetails || false,
+      bankDetails: template.bankDetails || "",
+      termsAndConditions: template.termsAndConditions || "",
+      paperSize: template.paperSize,
+      fontSize: template.fontSize,
+      isDefault: template.isDefault,
+    });
+    
+    if (template.formatType?.startsWith("thermal")) {
+      setActiveTab("thermal");
+    } else {
+      setActiveTab("standard");
+    }
+  };
+
+  const getAssignmentBadge = (assignedTo: string | null) => {
+    if (!assignedTo) return null;
+    const option = ASSIGNMENT_OPTIONS.find(o => o.value === assignedTo);
+    return option ? (
+      <Badge variant="secondary" className="ml-2">
+        {option.label}
+      </Badge>
+    ) : null;
+  };
+
+  const getFormatBadge = (formatType: string) => {
+    const format = FORMAT_TYPES.find(f => f.value === formatType);
+    return format ? format.label : formatType;
+  };
+
+  const standardTemplates = templates?.filter(t => !t.formatType?.startsWith("thermal")) || [];
+  const thermalTemplates = templates?.filter(t => t.formatType?.startsWith("thermal")) || [];
+
+  const isThermal = formData.formatType.startsWith("thermal");
+
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Bill Settings</h1>
         <p className="text-muted-foreground mt-2">
-          Customize invoice printing for thermal printers (3 inch / 4 inch)
+          Configure invoice formats for A4, B4, and thermal printers. Assign templates to B2B, B2C, or Estimate.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Settings className="h-5 w-5" />
-              Template Configuration
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Template Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                data-testid="input-template-name"
-              />
-            </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="standard" data-testid="tab-standard">
+            <FileText className="mr-2 h-4 w-4" />
+            A4 / B4 Format
+          </TabsTrigger>
+          <TabsTrigger value="thermal" data-testid="tab-thermal">
+            <Printer className="mr-2 h-4 w-4" />
+            Thermal Printer
+          </TabsTrigger>
+        </TabsList>
 
-            <LogoUploader
-              currentLogoUrl={formData.logoUrl}
-              onLogoChange={(logoUrl) =>
-                setFormData({ ...formData, logoUrl })
-              }
-            />
-
-            <div className="space-y-2">
-              <Label htmlFor="paperSize">Paper Size</Label>
-              <Select
-                value={formData.paperSize}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, paperSize: value })
-                }
-              >
-                <SelectTrigger id="paperSize" data-testid="select-paper-size">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="3inch">3 Inch (80mm)</SelectItem>
-                  <SelectItem value="4inch">4 Inch (112mm)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="fontSize">Font Size</Label>
-              <Select
-                value={formData.fontSize.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, fontSize: parseInt(value) })
-                }
-              >
-                <SelectTrigger id="fontSize" data-testid="select-font-size">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="8">Small (8pt)</SelectItem>
-                  <SelectItem value="10">Medium (10pt)</SelectItem>
-                  <SelectItem value="12">Large (12pt)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="headerText">Header Text (Company Info)</Label>
-              <Textarea
-                id="headerText"
-                placeholder="Store Name&#10;Address&#10;Phone, GST No"
-                value={formData.headerText}
-                onChange={(e) =>
-                  setFormData({ ...formData, headerText: e.target.value })
-                }
-                rows={4}
-                data-testid="input-header-text"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="footerText">Footer Text</Label>
-              <Textarea
-                id="footerText"
-                placeholder="Thank you for your business!"
-                value={formData.footerText}
-                onChange={(e) =>
-                  setFormData({ ...formData, footerText: e.target.value })
-                }
-                rows={3}
-                data-testid="input-footer-text"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <Label>Display Options</Label>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="showTaxBreakup" className="font-normal">
-                  Show Tax Breakup (CGST/SGST)
-                </Label>
-                <Switch
-                  id="showTaxBreakup"
-                  checked={formData.showTaxBreakup}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, showTaxBreakup: checked })
-                  }
-                  data-testid="switch-tax-breakup"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="showHsnCode" className="font-normal">
-                  Show HSN Code
-                </Label>
-                <Switch
-                  id="showHsnCode"
-                  checked={formData.showHsnCode}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, showHsnCode: checked })
-                  }
-                  data-testid="switch-hsn-code"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="showItemCode" className="font-normal">
-                  Show Item Code
-                </Label>
-                <Switch
-                  id="showItemCode"
-                  checked={formData.showItemCode}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, showItemCode: checked })
-                  }
-                  data-testid="switch-item-code"
-                />
-              </div>
-              <div className="flex items-center justify-between">
-                <Label htmlFor="isDefault" className="font-normal">
-                  Set as Default Template
-                </Label>
-                <Switch
-                  id="isDefault"
-                  checked={formData.isDefault}
-                  onCheckedChange={(checked) =>
-                    setFormData({ ...formData, isDefault: checked })
-                  }
-                  data-testid="switch-default"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button
-                onClick={() => saveMutation.mutate()}
-                disabled={saveMutation.isPending}
-                data-testid="button-save-template"
-              >
-                <Save className="mr-2 h-4 w-4" />
-                {saveMutation.isPending ? "Saving..." : "Save Template"}
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowPreview(true)}
-                data-testid="button-preview"
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                Preview
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Printer className="h-5 w-5" />
-              Saved Templates
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {templates && templates.length > 0 ? (
-              <div className="space-y-2">
-                {templates.map((template) => (
-                  <div
-                    key={template.id}
-                    className="flex items-center justify-between p-3 border rounded-md"
-                  >
-                    <div>
-                      <div className="font-medium">{template.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {template.paperSize} • Font: {template.fontSize}pt
-                        {template.isDefault && " • Default"}
-                      </div>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setFormData({
-                          name: template.name,
-                          logoUrl: template.logoUrl || "",
-                          headerText: template.headerText || "",
-                          footerText: template.footerText || "",
-                          showTaxBreakup: template.showTaxBreakup,
-                          showHsnCode: template.showHsnCode,
-                          showItemCode: template.showItemCode,
-                          paperSize: template.paperSize,
-                          fontSize: template.fontSize,
-                          isDefault: template.isDefault,
-                        });
-                      }}
-                      data-testid={`button-load-${template.id}`}
-                    >
-                      Load
-                    </Button>
+        <TabsContent value="standard" className="mt-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5" />
+                  {formData.id ? "Edit Template" : "Create A4/B4 Template"}
+                </CardTitle>
+                <CardDescription>
+                  Standard paper formats like Tally for GST invoices
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Template Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., GST Invoice A4"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      data-testid="input-template-name"
+                    />
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No templates saved yet
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="formatType">Paper Format</Label>
+                    <Select
+                      value={formData.formatType}
+                      onValueChange={(value) => setFormData({ ...formData, formatType: value })}
+                    >
+                      <SelectTrigger id="formatType" data-testid="select-format-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
+                        <SelectItem value="B4">B4 (250 × 353 mm)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assignedTo">Assign to Transaction Type</Label>
+                  <Select
+                    value={formData.assignedTo}
+                    onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
+                  >
+                    <SelectTrigger id="assignedTo" data-testid="select-assigned-to">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSIGNMENT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <LogoUploader
+                  currentLogoUrl={formData.logoUrl}
+                  onLogoChange={(logoUrl) => setFormData({ ...formData, logoUrl })}
+                />
+
+                <div className="space-y-2">
+                  <Label htmlFor="headerText">Header Text (Company Info)</Label>
+                  <Textarea
+                    id="headerText"
+                    placeholder="Company Name&#10;Address, City&#10;GSTIN: XXXXXXXXXXXX&#10;Phone: XXXXXXXXXX"
+                    value={formData.headerText}
+                    onChange={(e) => setFormData({ ...formData, headerText: e.target.value })}
+                    rows={4}
+                    data-testid="input-header-text"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bankDetails">Bank Details (Optional)</Label>
+                    <Textarea
+                      id="bankDetails"
+                      placeholder="Bank: XXX&#10;A/C: XXXXX&#10;IFSC: XXXXX"
+                      value={formData.bankDetails}
+                      onChange={(e) => setFormData({ ...formData, bankDetails: e.target.value })}
+                      rows={3}
+                      data-testid="input-bank-details"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="termsAndConditions">Terms & Conditions</Label>
+                    <Textarea
+                      id="termsAndConditions"
+                      placeholder="1. Goods once sold...&#10;2. Subject to jurisdiction..."
+                      value={formData.termsAndConditions}
+                      onChange={(e) => setFormData({ ...formData, termsAndConditions: e.target.value })}
+                      rows={3}
+                      data-testid="input-terms"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="footerText">Footer Text</Label>
+                  <Textarea
+                    id="footerText"
+                    placeholder="Thank you for your business!"
+                    value={formData.footerText}
+                    onChange={(e) => setFormData({ ...formData, footerText: e.target.value })}
+                    rows={2}
+                    data-testid="input-footer-text"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fontSize">Font Size</Label>
+                  <Select
+                    value={formData.fontSize.toString()}
+                    onValueChange={(value) => setFormData({ ...formData, fontSize: parseInt(value) })}
+                  >
+                    <SelectTrigger id="fontSize" data-testid="select-font-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="8">Small (8pt)</SelectItem>
+                      <SelectItem value="9">Medium-Small (9pt)</SelectItem>
+                      <SelectItem value="10">Medium (10pt)</SelectItem>
+                      <SelectItem value="11">Medium-Large (11pt)</SelectItem>
+                      <SelectItem value="12">Large (12pt)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <Label>Display Options</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showTaxBreakup" className="font-normal">Tax Breakup (CGST/SGST)</Label>
+                      <Switch
+                        id="showTaxBreakup"
+                        checked={formData.showTaxBreakup}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showTaxBreakup: checked })}
+                        data-testid="switch-tax-breakup"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showHsnCode" className="font-normal">HSN Code</Label>
+                      <Switch
+                        id="showHsnCode"
+                        checked={formData.showHsnCode}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showHsnCode: checked })}
+                        data-testid="switch-hsn-code"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showItemCode" className="font-normal">Item Code</Label>
+                      <Switch
+                        id="showItemCode"
+                        checked={formData.showItemCode}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showItemCode: checked })}
+                        data-testid="switch-item-code"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showPartyBalance" className="font-normal">Party Balance</Label>
+                      <Switch
+                        id="showPartyBalance"
+                        checked={formData.showPartyBalance}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showPartyBalance: checked })}
+                        data-testid="switch-party-balance"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showBankDetails" className="font-normal">Bank Details</Label>
+                      <Switch
+                        id="showBankDetails"
+                        checked={formData.showBankDetails}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showBankDetails: checked })}
+                        data-testid="switch-bank-details"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showOutstandingDefault" className="font-normal">Outstanding (B2B)</Label>
+                      <Switch
+                        id="showOutstandingDefault"
+                        checked={formData.showOutstandingDefault}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showOutstandingDefault: checked })}
+                        data-testid="switch-outstanding"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={() => saveMutation.mutate()}
+                    disabled={saveMutation.isPending || !formData.name}
+                    data-testid="button-save-template"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {saveMutation.isPending ? "Saving..." : formData.id ? "Update Template" : "Save Template"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowPreview(true)} data-testid="button-preview">
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  {formData.id && (
+                    <Button variant="ghost" onClick={resetForm}>
+                      Cancel Edit
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Saved A4/B4 Templates
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                ) : standardTemplates.length > 0 ? (
+                  <div className="space-y-2">
+                    {standardTemplates.map((template) => (
+                      <div
+                        key={template.id}
+                        className="flex items-center justify-between p-3 border rounded-md hover-elevate"
+                      >
+                        <div>
+                          <div className="font-medium flex items-center flex-wrap gap-1">
+                            {template.name}
+                            {getAssignmentBadge(template.assignedTo)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {getFormatBadge(template.formatType)} • Font: {template.fontSize}pt
+                            {template.isDefault && " • Default"}
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => loadTemplate(template)}
+                            data-testid={`button-edit-${template.id}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDeleteConfirm(template.id)}
+                            data-testid={`button-delete-${template.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No A4/B4 templates saved yet. Create one to get started.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="thermal" className="mt-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Printer className="h-5 w-5" />
+                  {formData.id ? "Edit Template" : "Create Thermal Template"}
+                </CardTitle>
+                <CardDescription>
+                  Configure for POS thermal printers (80mm or 112mm width)
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Template Name</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g., POS Receipt 3 inch"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      data-testid="input-thermal-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="thermalFormat">Printer Width</Label>
+                    <Select
+                      value={formData.formatType}
+                      onValueChange={(value) => setFormData({ ...formData, formatType: value })}
+                    >
+                      <SelectTrigger id="thermalFormat" data-testid="select-thermal-format">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="thermal_3inch">3 Inch (80mm)</SelectItem>
+                        <SelectItem value="thermal_4inch">4 Inch (112mm)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assignedTo">Assign to Transaction Type</Label>
+                  <Select
+                    value={formData.assignedTo}
+                    onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
+                  >
+                    <SelectTrigger id="assignedTo" data-testid="select-thermal-assigned-to">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSIGNMENT_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <LogoUploader
+                  currentLogoUrl={formData.logoUrl}
+                  onLogoChange={(logoUrl) => setFormData({ ...formData, logoUrl })}
+                />
+
+                <div className="space-y-2">
+                  <Label htmlFor="headerText">Header Text (Shop Info)</Label>
+                  <Textarea
+                    id="headerText"
+                    placeholder="Shop Name&#10;Address&#10;Phone, GST No"
+                    value={formData.headerText}
+                    onChange={(e) => setFormData({ ...formData, headerText: e.target.value })}
+                    rows={3}
+                    data-testid="input-thermal-header"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="footerText">Footer Text</Label>
+                  <Textarea
+                    id="footerText"
+                    placeholder="Thank you! Visit Again"
+                    value={formData.footerText}
+                    onChange={(e) => setFormData({ ...formData, footerText: e.target.value })}
+                    rows={2}
+                    data-testid="input-thermal-footer"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fontSize">Font Size</Label>
+                  <Select
+                    value={formData.fontSize.toString()}
+                    onValueChange={(value) => setFormData({ ...formData, fontSize: parseInt(value) })}
+                  >
+                    <SelectTrigger id="fontSize" data-testid="select-thermal-font-size">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="8">Small (8pt)</SelectItem>
+                      <SelectItem value="10">Medium (10pt)</SelectItem>
+                      <SelectItem value="12">Large (12pt)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <Label>Display Options</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showTaxBreakup" className="font-normal">Tax Breakup (CGST/SGST)</Label>
+                      <Switch
+                        id="showTaxBreakup"
+                        checked={formData.showTaxBreakup}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showTaxBreakup: checked })}
+                        data-testid="switch-thermal-tax"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showHsnCode" className="font-normal">HSN Code</Label>
+                      <Switch
+                        id="showHsnCode"
+                        checked={formData.showHsnCode}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showHsnCode: checked })}
+                        data-testid="switch-thermal-hsn"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="showCashReturn" className="font-normal">Cash Given/Return (B2C)</Label>
+                      <Switch
+                        id="showCashReturn"
+                        checked={formData.showCashReturn}
+                        onCheckedChange={(checked) => setFormData({ ...formData, showCashReturn: checked })}
+                        data-testid="switch-cash-return"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={() => saveMutation.mutate()}
+                    disabled={saveMutation.isPending || !formData.name}
+                    data-testid="button-save-thermal"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {saveMutation.isPending ? "Saving..." : formData.id ? "Update Template" : "Save Template"}
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowPreview(true)} data-testid="button-thermal-preview">
+                    <Eye className="mr-2 h-4 w-4" />
+                    Preview
+                  </Button>
+                  {formData.id && (
+                    <Button variant="ghost" onClick={resetForm}>
+                      Cancel Edit
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Printer className="h-5 w-5" />
+                  Saved Thermal Templates
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
+                ) : thermalTemplates.length > 0 ? (
+                  <div className="space-y-2">
+                    {thermalTemplates.map((template) => (
+                      <div
+                        key={template.id}
+                        className="flex items-center justify-between p-3 border rounded-md hover-elevate"
+                      >
+                        <div>
+                          <div className="font-medium flex items-center flex-wrap gap-1">
+                            {template.name}
+                            {getAssignmentBadge(template.assignedTo)}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {template.formatType === "thermal_3inch" ? "3 inch (80mm)" : "4 inch (112mm)"} • Font: {template.fontSize}pt
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => loadTemplate(template)}
+                            data-testid={`button-edit-thermal-${template.id}`}
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => setDeleteConfirm(template.id)}
+                            data-testid={`button-delete-thermal-${template.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-8">
+                    No thermal templates saved yet. Create one to get started.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={isThermal ? "max-w-sm" : "max-w-2xl"}>
           <DialogHeader>
-            <DialogTitle>Bill Preview - {formData.paperSize}</DialogTitle>
+            <DialogTitle>Bill Preview - {formData.formatType}</DialogTitle>
           </DialogHeader>
-          <div
-            className="border rounded-lg p-4 bg-white text-black"
-            style={{
-              width: formData.paperSize === "3inch" ? "80mm" : "112mm",
-              fontSize: `${formData.fontSize}px`,
-              fontFamily: "monospace",
-            }}
-          >
-            {formData.logoUrl && (
-              <div className="text-center mb-2">
-                <img
-                  src={formData.logoUrl}
-                  alt="Company Logo"
-                  className="mx-auto max-h-16 object-contain"
-                  data-testid="img-preview-logo"
-                />
-              </div>
-            )}
-            <div className="text-center space-y-1">
-              {formData.headerText?.split("\n").map((line, i) => (
-                <div key={i} className="font-semibold">
-                  {line}
+          {isThermal ? (
+            <div
+              className="border rounded-lg p-4 bg-white text-black mx-auto"
+              style={{
+                width: formData.formatType === "thermal_3inch" ? "80mm" : "112mm",
+                fontSize: `${formData.fontSize}px`,
+                fontFamily: "monospace",
+              }}
+            >
+              {formData.logoUrl && (
+                <div className="text-center mb-2">
+                  <img
+                    src={formData.logoUrl}
+                    alt="Company Logo"
+                    className="mx-auto max-h-12 object-contain"
+                  />
                 </div>
-              ))}
+              )}
+              <div className="text-center space-y-0.5">
+                {formData.headerText?.split("\n").map((line, i) => (
+                  <div key={i} className={i === 0 ? "font-bold" : ""}>{line}</div>
+                ))}
+              </div>
+              <div className="border-t border-dashed border-black my-2" />
+              <div className="text-xs">
+                <div className="flex justify-between"><span>Date:</span><span>29/11/2025</span></div>
+                <div className="flex justify-between"><span>Bill No:</span><span>1001</span></div>
+              </div>
+              <div className="border-t border-dashed border-black my-2" />
+              <div className="text-xs space-y-1">
+                <div className="flex justify-between"><span>1x Sample Item</span><span>₹100.00</span></div>
+                {formData.showHsnCode && <div className="opacity-70">HSN: 1234</div>}
+              </div>
+              <div className="border-t border-dashed border-black my-2" />
+              <div className="text-xs space-y-0.5">
+                <div className="flex justify-between"><span>Subtotal:</span><span>₹100.00</span></div>
+                {formData.showTaxBreakup && (
+                  <>
+                    <div className="flex justify-between"><span>CGST 9%:</span><span>₹9.00</span></div>
+                    <div className="flex justify-between"><span>SGST 9%:</span><span>₹9.00</span></div>
+                  </>
+                )}
+                <div className="flex justify-between font-bold"><span>Total:</span><span>₹118.00</span></div>
+                {formData.showCashReturn && (
+                  <>
+                    <div className="flex justify-between"><span>Cash:</span><span>₹120.00</span></div>
+                    <div className="flex justify-between"><span>Return:</span><span>₹2.00</span></div>
+                  </>
+                )}
+              </div>
+              <div className="border-t border-dashed border-black my-2" />
+              <div className="text-center text-xs">
+                {formData.footerText?.split("\n").map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </div>
             </div>
-            <div className="border-t border-dashed border-black my-2" />
-            <div className="text-xs">
-              <div className="flex justify-between">
-                <span>Date:</span>
-                <span>23/11/2025</span>
+          ) : (
+            <div
+              className="border rounded-lg p-6 bg-white text-black"
+              style={{ fontSize: `${formData.fontSize}px` }}
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  {formData.logoUrl && (
+                    <img src={formData.logoUrl} alt="Logo" className="max-h-16 mb-2" />
+                  )}
+                  <div className="whitespace-pre-line font-semibold">{formData.headerText}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold">TAX INVOICE</div>
+                  <div>Invoice No: INV-1001</div>
+                  <div>Date: 29/11/2025</div>
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span>Bill No:</span>
-                <span>1001</span>
+              
+              <div className="border-t border-b py-2 mb-4">
+                <div className="font-semibold">Bill To:</div>
+                <div>Customer Name</div>
+                <div>Address, City - 400001</div>
+                <div>GSTIN: 27XXXXXXXXXXXXX</div>
               </div>
-            </div>
-            <div className="border-t border-dashed border-black my-2" />
-            <div className="text-xs space-y-1">
-              <div className="font-semibold">Item Name</div>
-              <div className="flex justify-between">
-                <span>1x Sample Item</span>
-                <span>₹100.00</span>
+
+              <table className="w-full text-sm mb-4">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-1">#</th>
+                    <th className="text-left py-1">Item</th>
+                    {formData.showHsnCode && <th className="text-left py-1">HSN</th>}
+                    <th className="text-right py-1">Qty</th>
+                    <th className="text-right py-1">Rate</th>
+                    <th className="text-right py-1">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-1">1</td>
+                    <td className="py-1">Sample Item</td>
+                    {formData.showHsnCode && <td className="py-1">1234</td>}
+                    <td className="text-right py-1">1</td>
+                    <td className="text-right py-1">₹100.00</td>
+                    <td className="text-right py-1">₹100.00</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div className="flex justify-end">
+                <div className="w-64 text-sm">
+                  <div className="flex justify-between py-1"><span>Subtotal:</span><span>₹100.00</span></div>
+                  {formData.showTaxBreakup && (
+                    <>
+                      <div className="flex justify-between py-1"><span>CGST 9%:</span><span>₹9.00</span></div>
+                      <div className="flex justify-between py-1"><span>SGST 9%:</span><span>₹9.00</span></div>
+                    </>
+                  )}
+                  <div className="flex justify-between py-1 font-bold border-t"><span>Grand Total:</span><span>₹118.00</span></div>
+                </div>
               </div>
-              {formData.showHsnCode && (
-                <div className="text-xs opacity-70">HSN: 1234</div>
+
+              {formData.showBankDetails && formData.bankDetails && (
+                <div className="mt-4 text-sm">
+                  <div className="font-semibold">Bank Details:</div>
+                  <div className="whitespace-pre-line">{formData.bankDetails}</div>
+                </div>
+              )}
+
+              {formData.termsAndConditions && (
+                <div className="mt-4 text-xs text-muted-foreground">
+                  <div className="font-semibold">Terms & Conditions:</div>
+                  <div className="whitespace-pre-line">{formData.termsAndConditions}</div>
+                </div>
+              )}
+
+              {formData.footerText && (
+                <div className="mt-4 text-center text-sm border-t pt-2">
+                  {formData.footerText}
+                </div>
               )}
             </div>
-            <div className="border-t border-dashed border-black my-2" />
-            <div className="text-xs space-y-1">
-              <div className="flex justify-between">
-                <span>Subtotal:</span>
-                <span>₹100.00</span>
-              </div>
-              {formData.showTaxBreakup && (
-                <>
-                  <div className="flex justify-between">
-                    <span>CGST 9%:</span>
-                    <span>₹9.00</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>SGST 9%:</span>
-                    <span>₹9.00</span>
-                  </div>
-                </>
-              )}
-              <div className="flex justify-between font-semibold">
-                <span>Total:</span>
-                <span>₹118.00</span>
-              </div>
-            </div>
-            <div className="border-t border-dashed border-black my-2" />
-            <div className="text-center text-xs space-y-1">
-              {formData.footerText?.split("\n").map((line, i) => (
-                <div key={i}>{line}</div>
-              ))}
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteConfirm !== null} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Template?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the template.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (deleteConfirm) {
+                  deleteMutation.mutate(deleteConfirm);
+                  setDeleteConfirm(null);
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
