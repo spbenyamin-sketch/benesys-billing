@@ -84,6 +84,27 @@ export default function UserManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
+  // Only admins can access this page
+  const isAdmin = currentUser?.role === "admin";
+
+  if (!isAdmin) {
+    return (
+      <div className="p-6">
+        <Card>
+          <CardContent className="py-12">
+            <div className="text-center space-y-4">
+              <Shield className="w-12 h-12 mx-auto text-red-600" />
+              <h2 className="text-2xl font-bold">Access Denied</h2>
+              <p className="text-muted-foreground">
+                Only Super Admins can access user management
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
   });
@@ -277,7 +298,11 @@ export default function UserManagement() {
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button data-testid="button-create-user">
+            <Button 
+              data-testid="button-create-user"
+              disabled={!isAdmin}
+              title={!isAdmin ? "Only admins can create users" : ""}
+            >
               <Plus className="mr-2 h-4 w-4" />
               Create User
             </Button>
@@ -600,7 +625,7 @@ export default function UserManagement() {
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      {user.id !== currentUser?.id && (
+                      {user.id !== currentUser?.id && isAdmin && (
                         <Button
                           size="icon"
                           variant="ghost"
