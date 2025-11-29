@@ -846,29 +846,53 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ==================== STOCK OPERATIONS ====================
-  async getStock(companyId: number): Promise<any[]> {
-    // Include stock for company-specific items AND shared items
+  async getStock(companyId: number, partyId?: number, itemId?: number): Promise<any[]> {
+    // Get stock from stockInwardItems with party information
+    const conditions = [eq(stockInwardItems.companyId, companyId)];
+    if (partyId) conditions.push(eq(purchases.partyId, partyId));
+    if (itemId) conditions.push(eq(stockInwardItems.itemId, itemId));
+
     const result = await db
       .select({
-        id: stock.id,
-        itemId: stock.itemId,
+        stockInwardId: stockInwardItems.id,
+        itemId: stockInwardItems.itemId,
         itemCode: items.code,
-        itemName: items.name,
+        itemName: stockInwardItems.itname,
         category: items.category,
         packType: items.packType,
-        quantity: stock.quantity,
-        cost: items.cost,
-        isShared: items.isShared,
+        brandName: stockInwardItems.brandname,
+        quality: stockInwardItems.quality,
+        size: stockInwardItems.size,
+        partyId: purchases.partyId,
+        partyName: purchases.partyName,
+        quantity: sql<string>`COALESCE(COUNT(${stockInwardItems.id}), 0)`,
+        cost: stockInwardItems.cost,
+        ncost: stockInwardItems.ncost,
+        rate: stockInwardItems.rate,
+        status: stockInwardItems.status,
       })
-      .from(stock)
-      .innerJoin(items, eq(stock.itemId, items.id))
-      .where(
-        and(
-          eq(stock.companyId, companyId),
-          or(eq(items.companyId, companyId), eq(items.isShared, true))
-        )
+      .from(stockInwardItems)
+      .leftJoin(items, eq(stockInwardItems.itemId, items.id))
+      .leftJoin(purchases, eq(stockInwardItems.purchaseId, purchases.id))
+      .where(and(...conditions))
+      .groupBy(
+        stockInwardItems.id,
+        stockInwardItems.itemId,
+        items.code,
+        stockInwardItems.itname,
+        items.category,
+        items.packType,
+        stockInwardItems.brandname,
+        stockInwardItems.quality,
+        stockInwardItems.size,
+        purchases.partyId,
+        purchases.partyName,
+        stockInwardItems.cost,
+        stockInwardItems.ncost,
+        stockInwardItems.rate,
+        stockInwardItems.status
       )
-      .orderBy(items.name);
+      .orderBy(purchases.partyName, stockInwardItems.itname);
     return result;
   }
 
