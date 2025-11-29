@@ -123,8 +123,22 @@ export default function PaymentsReport() {
   const printRef = useRef<HTMLDivElement>(null);
   const { currentCompany } = useCompany();
 
+  // Build query params as URL search params
+  const queryParams = new URLSearchParams();
+  if (startDate) queryParams.set("startDate", startDate);
+  if (endDate) queryParams.set("endDate", endDate);
+  if (paymentType !== "all") queryParams.set("type", paymentType);
+
+  const queryString = queryParams.toString();
+  const apiUrl = queryString ? `/api/reports/payments?${queryString}` : "/api/reports/payments";
+
   const { data: payments, isLoading } = useQuery<PaymentReport[]>({
-    queryKey: ["/api/reports/payments", { startDate, endDate, type: paymentType === "all" ? "" : paymentType }],
+    queryKey: ["/api/reports/payments", startDate, endDate, paymentType],
+    queryFn: async () => {
+      const res = await fetch(apiUrl, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
+      if (!res.ok) throw new Error("Failed to fetch payments report");
+      return res.json();
+    },
   });
 
   const handlePrint = useReactToPrint({
