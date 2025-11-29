@@ -241,12 +241,12 @@ export default function Payments() {
   const createMutation = useMutation({
     mutationFn: async (data: PaymentFormValues) => {
       const selectedParty = parties?.find(p => p.id === data.partyId);
+      const amount = parseFloat(data.amount) || 0;
       return apiRequest("POST", "/api/payments", {
         date: data.date,
-        partyId: data.partyId,
         partyName: selectedParty?.name || data.partyName,
-        credit: data.type === "credit" ? data.amount : "0",
-        debit: data.type === "debit" ? data.amount : "0",
+        credit: data.type === "credit" ? amount.toString() : "0",
+        debit: data.type === "debit" ? amount.toString() : "0",
         details: data.details,
       });
     },
@@ -272,12 +272,12 @@ export default function Payments() {
     mutationFn: async (data: PaymentFormValues) => {
       if (!editingPaymentId) throw new Error("No payment selected");
       const selectedParty = parties?.find(p => p.id === data.partyId);
+      const amount = parseFloat(data.amount) || 0;
       return apiRequest("PUT", `/api/payments/${editingPaymentId}`, {
         date: data.date,
-        partyId: data.partyId,
         partyName: selectedParty?.name || data.partyName,
-        credit: data.type === "credit" ? data.amount : "0",
-        debit: data.type === "debit" ? data.amount : "0",
+        credit: data.type === "credit" ? amount.toString() : "0",
+        debit: data.type === "debit" ? amount.toString() : "0",
         details: data.details,
       });
     },
