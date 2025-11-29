@@ -510,6 +510,8 @@ export const stockInwardItems = pgTable("stock_inward_items", {
   rate: decimal("rate", { precision: 12, scale: 2 }).notNull(), // Sale rate
   mrp: decimal("mrp", { precision: 12, scale: 2 }).notNull(), // MRP
   tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(),
+  // Quantity for this barcode (for bulk barcodes this can be > 1)
+  qty: decimal("qty", { precision: 12, scale: 2 }).default("1").notNull(),
   // Stock status
   status: varchar("status", { length: 20 }).default("available").notNull(), // available, sold, returned, damaged
   soldAt: timestamp("sold_at"),

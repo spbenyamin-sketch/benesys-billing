@@ -345,26 +345,23 @@ export default function StockInward() {
     },
   });
   
-  // Generate BULK barcode (qty individual barcodes)
+  // Generate BULK barcode (1 barcode for all qty)
   const generateBulkBarcodesMutation = useMutation({
     mutationFn: async ({ purchaseItemId, qty }: { purchaseItemId: number; qty: number }) => {
       const startSerial = (nextSerialData as any)?.serial || 1;
-      const items = [];
-      
-      for (let i = 0; i < qty; i++) {
-        const serial = startSerial + i;
-        items.push({
-          serial,
-          barcode: generateBarcode(serial, barcodePrefix),
+      const items = [
+        {
+          serial: startSerial,
+          barcode: generateBarcode(startSerial, barcodePrefix),
           status: "in_stock",
-          qty: 1, // Each barcode has qty of 1
-        });
-      }
+          qty: qty, // Single barcode with full quantity
+        }
+      ];
       
       return (await apiRequest("POST", `/api/purchase-items/${purchaseItemId}/generate-barcodes`, { items })).json();
     },
     onSuccess: (_, variables) => {
-      toast({ title: "Success", description: `Generated ${variables.qty} individual barcodes (1 barcode per unit)` });
+      toast({ title: "Success", description: `Generated 1 bulk barcode for ${variables.qty} units` });
       refetchItems();
       refetchSerial();
       setBarcodeDialogOpen(false);
