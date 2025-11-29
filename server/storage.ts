@@ -1087,8 +1087,8 @@ export class DatabaseStorage implements IStorage {
         partyCity: parties.city,
         openingDebit: parties.openingDebit,
         openingCredit: parties.openingCredit,
-        totalSales: sql<string>`COALESCE(SUM(DISTINCT ${sales.id}, ${sales.grandTotal}), 0)`,
-        totalPurchases: sql<string>`COALESCE(SUM(DISTINCT ${purchases.id}, ${purchases.amount}), 0)`,
+        totalSales: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)`,
+        totalPurchases: sql<string>`COALESCE(SUM(${purchases.amount}), 0)`,
         totalPaymentsCredit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`,
         totalPaymentsDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
       })
