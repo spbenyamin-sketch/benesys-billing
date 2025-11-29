@@ -554,21 +554,28 @@ export default function SalesB2C() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {item.isFromBarcode ? (
-                              <span className="font-mono text-sm" data-testid={`text-qty-${item.tempId}`}>
-                                {item.quantity}
-                              </span>
-                            ) : (
-                              <Input
-                                type="number"
-                                min="0"
-                                step="1"
-                                value={item.quantity}
-                                onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
-                                className="w-16"
-                                data-testid={`input-qty-${item.tempId}`}
-                              />
-                            )}
+                            <Input
+                              type="number"
+                              min="1"
+                              max={item.isFromBarcode ? (item.stockQty || 1) : undefined}
+                              step="1"
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const newQty = parseFloat(e.target.value) || 0;
+                                // Stock checking for barcode items
+                                if (item.isFromBarcode && item.stockQty !== null && newQty > item.stockQty) {
+                                  toast({
+                                    title: "Stock Limit Exceeded",
+                                    description: `Only ${item.stockQty} units available in stock`,
+                                    variant: "destructive",
+                                  });
+                                  return;
+                                }
+                                updateLineItem(item.tempId, "quantity", newQty);
+                              }}
+                              className="w-16"
+                              data-testid={`input-qty-${item.tempId}`}
+                            />
                           </TableCell>
                           <TableCell>
                             {item.isFromBarcode ? (
