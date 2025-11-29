@@ -1110,11 +1110,12 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
+  async getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string): Promise<any[]> {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (saleType) conditions.push(eq(sales.saleType, saleType));
+    if (itemId) conditions.push(eq(saleItems.itemId, parseInt(itemId)));
 
     return await db
       .select({
