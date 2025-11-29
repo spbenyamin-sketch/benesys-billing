@@ -848,13 +848,14 @@ export class DatabaseStorage implements IStorage {
   // ==================== STOCK OPERATIONS ====================
   async getStock(companyId: number, partyId?: number, itemId?: number): Promise<any[]> {
     // Get stock from stockInwardItems with party information
+    // Each record = 1 unit, so COUNT gives total quantity
     const conditions = [eq(stockInwardItems.companyId, companyId)];
     if (partyId) conditions.push(eq(purchases.partyId, partyId));
     if (itemId) conditions.push(eq(stockInwardItems.itemId, itemId));
 
     const result = await db
       .select({
-        stockInwardId: stockInwardItems.id,
+        stockInwardId: sql<number>`MIN(${stockInwardItems.id})`,
         itemId: stockInwardItems.itemId,
         itemCode: items.code,
         itemName: stockInwardItems.itname,
@@ -865,10 +866,10 @@ export class DatabaseStorage implements IStorage {
         size: stockInwardItems.size,
         partyId: purchases.partyId,
         partyName: purchases.partyName,
-        quantity: sql<string>`COALESCE(COUNT(${stockInwardItems.id}), 0)`,
-        cost: stockInwardItems.cost,
-        ncost: stockInwardItems.ncost,
-        rate: stockInwardItems.rate,
+        quantity: sql<string>`CAST(COUNT(*) AS VARCHAR)`,
+        cost: sql<string>`CAST(AVG(${stockInwardItems.cost}) AS VARCHAR)`,
+        ncost: sql<string>`CAST(AVG(${stockInwardItems.ncost}) AS VARCHAR)`,
+        rate: sql<string>`CAST(AVG(${stockInwardItems.rate}) AS VARCHAR)`,
         status: stockInwardItems.status,
       })
       .from(stockInwardItems)
@@ -876,7 +877,6 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(purchases, eq(stockInwardItems.purchaseId, purchases.id))
       .where(and(...conditions))
       .groupBy(
-        stockInwardItems.id,
         stockInwardItems.itemId,
         items.code,
         stockInwardItems.itname,
@@ -887,9 +887,6 @@ export class DatabaseStorage implements IStorage {
         stockInwardItems.size,
         purchases.partyId,
         purchases.partyName,
-        stockInwardItems.cost,
-        stockInwardItems.ncost,
-        stockInwardItems.rate,
         stockInwardItems.status
       )
       .orderBy(purchases.partyName, stockInwardItems.itname);
