@@ -866,7 +866,7 @@ export class DatabaseStorage implements IStorage {
         size: stockInwardItems.size,
         partyId: purchases.partyId,
         partyName: purchases.partyName,
-        quantity: sql<string>`CAST(COUNT(*) AS VARCHAR)`,
+        quantity: sql<string>`CAST(COALESCE(SUM(${stockInwardItems.qty}), 0) AS VARCHAR)`,
         cost: sql<string>`CAST(AVG(${stockInwardItems.cost}) AS VARCHAR)`,
         ncost: sql<string>`CAST(AVG(${stockInwardItems.ncost}) AS VARCHAR)`,
         rate: sql<string>`CAST(AVG(${stockInwardItems.rate}) AS VARCHAR)`,
