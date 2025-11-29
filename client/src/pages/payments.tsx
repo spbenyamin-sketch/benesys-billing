@@ -312,8 +312,13 @@ export default function Payments() {
     setEditingPaymentId(payment.id);
     const type = parseFloat(payment.credit) > 0 ? "credit" : "debit";
     const amount = type === "credit" ? payment.credit : payment.debit;
+    
+    // Find party ID by matching party name
+    const selectedParty = parties?.find(p => p.name === payment.partyName);
+    
     form.reset({
       date: payment.date,
+      partyId: selectedParty?.id,
       partyName: payment.partyName || "",
       type,
       amount,
