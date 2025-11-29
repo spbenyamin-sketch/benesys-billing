@@ -1087,15 +1087,18 @@ export class DatabaseStorage implements IStorage {
         partyCity: parties.city,
         openingDebit: parties.openingDebit,
         openingCredit: parties.openingCredit,
-        totalSales: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)`,
-        totalPurchases: sql<string>`COALESCE(SUM(${purchases.amount}), 0)`,
+        totalSales: sql<string>`COALESCE(SUM(DISTINCT ${sales.id}, ${sales.grandTotal}), 0)`,
+        totalPurchases: sql<string>`COALESCE(SUM(DISTINCT ${purchases.id}, ${purchases.amount}), 0)`,
         totalPaymentsCredit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`,
         totalPaymentsDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
       })
       .from(parties)
       .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId)))
       .leftJoin(purchases, and(eq(parties.id, purchases.partyId), eq(purchases.companyId, companyId)))
-      .leftJoin(payments, and(eq(parties.id, payments.partyId), eq(payments.companyId, companyId)))
+      .leftJoin(payments, and(
+        eq(parties.id, payments.partyId),
+        eq(payments.companyId, companyId)
+      ))
       .where(eq(parties.companyId, companyId))
       .groupBy(parties.id, parties.code, parties.name, parties.city, parties.openingDebit, parties.openingCredit);
 
