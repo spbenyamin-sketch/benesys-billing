@@ -114,7 +114,8 @@ export interface IStorage {
   getOutstanding(companyId: number): Promise<any[]>;
   getSalesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
   getPurchasesReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]>;
-  getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
+  getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string, category?: string): Promise<any[]>;
+  getCategoriesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
   getPaymentsReport(companyId: number, startDate?: string, endDate?: string, type?: string): Promise<any[]>;
   getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any>;
 
@@ -1136,12 +1137,13 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string): Promise<any[]> {
+  async getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string, category?: string): Promise<any[]> {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (saleType) conditions.push(eq(sales.saleType, saleType));
     if (itemId) conditions.push(eq(saleItems.itemId, parseInt(itemId)));
+    if (category) conditions.push(eq(items.category, category));
 
     return await db
       .select({
@@ -1163,6 +1165,30 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(items, eq(saleItems.itemId, items.id))
       .where(and(...conditions))
       .groupBy(saleItems.itemId, saleItems.itemCode, saleItems.itemName, saleItems.hsnCode, items.category, items.packType, saleItems.tax)
+      .orderBy(sql`SUM(${saleItems.amount}) DESC`);
+  }
+
+  async getCategoriesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
+    const conditions = [eq(sales.companyId, companyId)];
+    if (startDate) conditions.push(gte(sales.date, startDate));
+    if (endDate) conditions.push(lte(sales.date, endDate));
+    if (saleType) conditions.push(eq(sales.saleType, saleType));
+
+    return await db
+      .select({
+        category: items.category,
+        totalQty: sql<string>`SUM(${saleItems.quantity})`,
+        totalAmount: sql<string>`SUM(${saleItems.amount})`,
+        totalSaleValue: sql<string>`SUM(${saleItems.saleValue})`,
+        totalTaxValue: sql<string>`SUM(${saleItems.taxValue})`,
+        invoiceCount: sql<number>`COUNT(DISTINCT ${saleItems.saleId})`,
+        itemCount: sql<number>`COUNT(DISTINCT ${saleItems.itemId})`,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .leftJoin(items, eq(saleItems.itemId, items.id))
+      .where(and(...conditions))
+      .groupBy(items.category)
       .orderBy(sql`SUM(${saleItems.amount}) DESC`);
   }
 

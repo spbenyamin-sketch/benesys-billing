@@ -19,35 +19,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, Search, Printer } from "lucide-react";
+import { Archive, Search, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReactToPrint } from "react-to-print";
 import { useCompany } from "@/contexts/CompanyContext";
 import { format } from "date-fns";
 
-interface ItemReport {
-  itemId: number;
-  itemCode: string;
-  itemName: string;
-  hsnCode: string | null;
+interface CategoryReport {
   category: string | null;
-  packType: string | null;
-  tax: string | null;
   totalQty: string;
   totalAmount: string;
   totalSaleValue: string;
   totalTaxValue: string;
   invoiceCount: number;
+  itemCount: number;
 }
 
-function ItemsReportPrint({ 
-  items, 
-  totals, 
-  companyName, 
+function CategoriesReportPrint({
+  categories,
+  totals,
+  companyName,
   dateRange,
-  saleType 
-}: { 
-  items: ItemReport[]; 
+  saleType,
+}: {
+  categories: CategoryReport[];
   totals: { qty: number; saleValue: number; taxValue: number; amount: number };
   companyName: string;
   dateRange: string;
@@ -57,7 +52,7 @@ function ItemsReportPrint({
     <div className="p-8 bg-white text-black">
       <div className="text-center mb-6">
         <h1 className="text-xl font-bold">{companyName}</h1>
-        <h2 className="text-lg font-semibold">Item Sales Report</h2>
+        <h2 className="text-lg font-semibold">Category Wise Sales Report</h2>
         <p className="text-sm text-gray-600">{dateRange}</p>
         {saleType && <p className="text-sm text-gray-600">Sale Type: {saleType}</p>}
       </div>
@@ -65,11 +60,8 @@ function ItemsReportPrint({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b-2 border-black">
-            <th className="text-left py-1 px-1">Code</th>
-            <th className="text-left py-1 px-1">Item Name</th>
             <th className="text-left py-1 px-1">Category</th>
-            <th className="text-left py-1 px-1">HSN</th>
-            <th className="text-right py-1 px-1">Tax%</th>
+            <th className="text-right py-1 px-1">Items</th>
             <th className="text-right py-1 px-1">Bills</th>
             <th className="text-right py-1 px-1">Qty</th>
             <th className="text-right py-1 px-1">Sale Value</th>
@@ -78,25 +70,22 @@ function ItemsReportPrint({
           </tr>
         </thead>
         <tbody>
-          {items.map((item, idx) => (
+          {categories.map((cat, idx) => (
             <tr key={idx} className="border-b border-gray-200">
-              <td className="py-1 px-1 font-mono text-xs">{item.itemCode}</td>
-              <td className="py-1 px-1">{item.itemName}</td>
-              <td className="py-1 px-1">{item.category || "—"}</td>
-              <td className="py-1 px-1 font-mono text-xs">{item.hsnCode || "—"}</td>
-              <td className="text-right py-1 px-1">{item.tax ? `${parseFloat(item.tax).toFixed(1)}%` : "—"}</td>
-              <td className="text-right py-1 px-1">{item.invoiceCount}</td>
-              <td className="text-right py-1 px-1">{parseFloat(item.totalQty).toFixed(3)}</td>
-              <td className="text-right py-1 px-1">{parseFloat(item.totalSaleValue).toFixed(2)}</td>
-              <td className="text-right py-1 px-1">{parseFloat(item.totalTaxValue).toFixed(2)}</td>
-              <td className="text-right py-1 px-1 font-medium">{parseFloat(item.totalAmount).toFixed(2)}</td>
+              <td className="py-1 px-1">{cat.category || "Uncategorized"}</td>
+              <td className="text-right py-1 px-1">{cat.itemCount}</td>
+              <td className="text-right py-1 px-1">{cat.invoiceCount}</td>
+              <td className="text-right py-1 px-1">{parseFloat(cat.totalQty).toFixed(3)}</td>
+              <td className="text-right py-1 px-1">{parseFloat(cat.totalSaleValue).toFixed(2)}</td>
+              <td className="text-right py-1 px-1">{parseFloat(cat.totalTaxValue).toFixed(2)}</td>
+              <td className="text-right py-1 px-1 font-medium">{parseFloat(cat.totalAmount).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-black font-bold">
-            <td colSpan={5} className="py-2 px-1">Total ({items.length} items)</td>
-            <td className="text-right py-2 px-1">{items.reduce((s, i) => s + i.invoiceCount, 0)}</td>
+            <td colSpan={2} className="py-2 px-1">Total ({categories.length} categories)</td>
+            <td className="text-right py-2 px-1">{categories.reduce((s, c) => s + c.invoiceCount, 0)}</td>
             <td className="text-right py-2 px-1">{totals.qty.toFixed(3)}</td>
             <td className="text-right py-2 px-1">{totals.saleValue.toFixed(2)}</td>
             <td className="text-right py-2 px-1">{totals.taxValue.toFixed(2)}</td>
@@ -108,65 +97,52 @@ function ItemsReportPrint({
   );
 }
 
-export default function ItemsReport() {
+export default function CategoriesReport() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [saleType, setSaleType] = useState("all");
-  const [selectedItemId, setSelectedItemId] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
   const { currentCompany } = useCompany();
-
-  const { data: masterItems } = useQuery({
-    queryKey: ["/api/items"],
-  });
-
-  // Get unique categories from items
-  const categories = masterItems ? [...new Set(masterItems.map(item => item.category).filter(Boolean))] : [];
 
   // Build query params as URL search params
   const queryParams = new URLSearchParams();
   if (startDate) queryParams.set("startDate", startDate);
   if (endDate) queryParams.set("endDate", endDate);
   if (saleType !== "all") queryParams.set("saleType", saleType);
-  if (selectedItemId) queryParams.set("itemId", selectedItemId);
-  if (selectedCategory) queryParams.set("category", selectedCategory);
 
   const queryString = queryParams.toString();
-  const apiUrl = queryString ? `/api/reports/items?${queryString}` : "/api/reports/items";
+  const apiUrl = queryString ? `/api/reports/categories?${queryString}` : "/api/reports/categories";
 
-  const { data: items, isLoading } = useQuery<ItemReport[]>({
-    queryKey: ["/api/reports/items", startDate, endDate, saleType, selectedItemId, selectedCategory],
+  const { data: categories, isLoading } = useQuery<CategoryReport[]>({
+    queryKey: ["/api/reports/categories", startDate, endDate, saleType],
     queryFn: async () => {
       const res = await fetch(apiUrl, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
-      if (!res.ok) throw new Error("Failed to fetch items report");
+      if (!res.ok) throw new Error("Failed to fetch categories report");
       return res.json();
     },
   });
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Items-Report-${format(new Date(), "yyyy-MM-dd")}`,
+    documentTitle: `Categories-Report-${format(new Date(), "yyyy-MM-dd")}`,
   });
 
-  const filteredItems = items?.filter((item) =>
-    item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (item.category?.toLowerCase().includes(searchQuery.toLowerCase()))
+  const filteredCategories = categories?.filter((cat) =>
+    (cat.category?.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const totals = filteredItems?.reduce(
-    (acc, item) => ({
-      qty: acc.qty + parseFloat(item.totalQty),
-      saleValue: acc.saleValue + parseFloat(item.totalSaleValue),
-      taxValue: acc.taxValue + parseFloat(item.totalTaxValue),
-      amount: acc.amount + parseFloat(item.totalAmount),
+  const totals = filteredCategories?.reduce(
+    (acc, cat) => ({
+      qty: acc.qty + parseFloat(cat.totalQty),
+      saleValue: acc.saleValue + parseFloat(cat.totalSaleValue),
+      taxValue: acc.taxValue + parseFloat(cat.totalTaxValue),
+      amount: acc.amount + parseFloat(cat.totalAmount),
     }),
     { qty: 0, saleValue: 0, taxValue: 0, amount: 0 }
   ) || { qty: 0, saleValue: 0, taxValue: 0, amount: 0 };
 
-  const dateRange = startDate && endDate 
+  const dateRange = startDate && endDate
     ? `${format(new Date(startDate), "dd/MM/yyyy")} to ${format(new Date(endDate), "dd/MM/yyyy")}`
     : "All Time";
 
@@ -174,12 +150,12 @@ export default function ItemsReport() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Item Wise Sales</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Category Wise Sales</h1>
           <p className="text-muted-foreground mt-2">
-            Item-wise sales analysis for all bill types
+            Category-wise sales analysis for all bill types
           </p>
         </div>
-        <Button onClick={() => handlePrint()} disabled={!filteredItems?.length} data-testid="button-print-items-report">
+        <Button onClick={() => handlePrint()} disabled={!filteredCategories?.length} data-testid="button-print-categories-report">
           <Printer className="h-4 w-4 mr-2" />
           Print Report
         </Button>
@@ -190,7 +166,7 @@ export default function ItemsReport() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-6">
+          <div className="grid gap-4 sm:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date</Label>
               <Input
@@ -226,46 +202,16 @@ export default function ItemsReport() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory} data-testid="select-category">
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat || ""}>
-                      {cat || "Uncategorized"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="itemId">Item Master</Label>
-              <Select value={selectedItemId} onValueChange={setSelectedItemId} data-testid="select-item-master">
-                <SelectTrigger id="itemId">
-                  <SelectValue placeholder="All Items" />
-                </SelectTrigger>
-                <SelectContent>
-                  {masterItems?.map((item) => (
-                    <SelectItem key={item.id} value={item.id.toString()}>
-                      {item.code} - {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="search">Search Items</Label>
+              <Label htmlFor="search">Search Category</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Name or code..."
+                  placeholder="Search categories..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
-                  data-testid="input-search-items"
+                  data-testid="input-search-categories"
                 />
               </div>
             </div>
@@ -276,11 +222,11 @@ export default function ItemsReport() {
       <div className="grid gap-6 sm:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Categories</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold font-mono" data-testid="text-total-items">
-              {filteredItems?.length || 0}
+            <div className="text-2xl font-semibold font-mono" data-testid="text-total-categories">
+              {filteredCategories?.length || 0}
             </div>
           </CardContent>
         </Card>
@@ -321,7 +267,7 @@ export default function ItemsReport() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Item Sales Details</CardTitle>
+          <CardTitle>Category Sales Details</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -330,15 +276,12 @@ export default function ItemsReport() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : filteredItems && filteredItems.length > 0 ? (
+          ) : filteredCategories && filteredCategories.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Item Name</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>HSN</TableHead>
-                  <TableHead className="text-right">Tax%</TableHead>
+                  <TableHead className="text-right">Items</TableHead>
                   <TableHead className="text-right">Bills</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
                   <TableHead className="text-right">Sale Value</TableHead>
@@ -347,29 +290,22 @@ export default function ItemsReport() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.map((item) => (
-                  <TableRow key={item.itemId} data-testid={`row-item-${item.itemId}`}>
-                    <TableCell className="font-medium font-mono">{item.itemCode}</TableCell>
-                    <TableCell>{item.itemName}</TableCell>
-                    <TableCell className="text-muted-foreground">{item.category || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground font-mono">
-                      {item.hsnCode || "—"}
+                {filteredCategories.map((cat, idx) => (
+                  <TableRow key={idx} data-testid={`row-category-${idx}`}>
+                    <TableCell className="font-medium">{cat.category || "Uncategorized"}</TableCell>
+                    <TableCell className="text-right font-mono">{cat.itemCount}</TableCell>
+                    <TableCell className="text-right font-mono">{cat.invoiceCount}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {parseFloat(cat.totalQty).toFixed(3)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {item.tax ? `${parseFloat(item.tax).toFixed(1)}%` : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">{item.invoiceCount}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      {parseFloat(item.totalQty).toFixed(3)}
+                      ₹{parseFloat(cat.totalSaleValue).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      ₹{parseFloat(item.totalSaleValue).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₹{parseFloat(item.totalTaxValue).toFixed(2)}
+                      ₹{parseFloat(cat.totalTaxValue).toFixed(2)}
                     </TableCell>
                     <TableCell className="text-right font-mono font-medium">
-                      ₹{parseFloat(item.totalAmount).toFixed(2)}
+                      ₹{parseFloat(cat.totalAmount).toFixed(2)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -377,9 +313,9 @@ export default function ItemsReport() {
             </Table>
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <Archive className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <p className="text-sm text-muted-foreground">
-                {searchQuery ? "No items found" : "No sales data for selected period"}
+                {searchQuery ? "No categories found" : "No sales data for selected period"}
               </p>
             </div>
           )}
@@ -389,8 +325,8 @@ export default function ItemsReport() {
       {/* Hidden print container */}
       <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
         <div ref={printRef}>
-          <ItemsReportPrint
-            items={filteredItems || []}
+          <CategoriesReportPrint
+            categories={filteredCategories || []}
             totals={totals}
             companyName={currentCompany?.name || "Company"}
             dateRange={dateRange}

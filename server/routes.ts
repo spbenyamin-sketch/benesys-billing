@@ -751,18 +751,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const { startDate, endDate, saleType, itemId } = req.query;
+      const { startDate, endDate, saleType, itemId, category } = req.query;
       const items = await storage.getItemsReport(
         req.companyId, 
         startDate as string, 
         endDate as string,
         saleType as string,
-        itemId as string
+        itemId as string,
+        category as string
       );
       res.json(items);
     } catch (error) {
       console.error("Error fetching items report:", error);
       res.status(500).json({ message: "Failed to fetch items report" });
+    }
+  });
+
+  app.get("/api/reports/categories", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { startDate, endDate, saleType } = req.query;
+      const categories = await storage.getCategoriesReport(
+        req.companyId, 
+        startDate as string, 
+        endDate as string,
+        saleType as string
+      );
+      res.json(categories);
+    } catch (error) {
+      console.error("Error fetching categories report:", error);
+      res.status(500).json({ message: "Failed to fetch categories report" });
     }
   });
 
