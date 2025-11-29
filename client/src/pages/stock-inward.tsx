@@ -45,7 +45,7 @@ const purchaseItemSchema = z.object({
   expensePercent: z.number().min(0).optional(),
   expenseAmount: z.number().min(0).optional(),
   profitPercent: z.number().min(0).optional(),
-  mrpPercent: z.number().min(0).optional(),
+  mrpPercent: z.union([z.number().min(0), z.literal("")]).optional().transform(v => v === "" ? 0 : v ?? 0),
   mrp: z.number().min(0).optional(),
 });
 
@@ -801,17 +801,17 @@ export default function StockInward() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="mrpPercent">MRP %</Label>
+                    <Label htmlFor="mrpPercent">MRP % (Optional)</Label>
                     <Input
                       id="mrpPercent"
                       type="number"
                       step="0.01"
                       {...form.register("mrpPercent", { valueAsNumber: true })}
-                      placeholder="0"
+                      placeholder="Leave blank to use rate"
                       data-testid="input-mrp-percent"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      MRP = Rate + (Rate × MRP%)
+                      MRP = Rate + (Rate × MRP%) or enter MRP manually
                     </p>
                   </div>
                   <div>
