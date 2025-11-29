@@ -719,12 +719,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const { startDate, endDate, saleType } = req.query;
+      const { startDate, endDate, saleType, itemId } = req.query;
       const salesData = await storage.getSalesReport(
         req.companyId,
         startDate as string,
         endDate as string,
-        saleType as string
+        saleType as string,
+        itemId as string
       );
       res.json(salesData);
     } catch (error) {

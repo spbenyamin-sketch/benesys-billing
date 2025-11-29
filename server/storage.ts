@@ -1063,11 +1063,37 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getSalesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
+  async getSalesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string): Promise<any[]> {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (saleType && saleType !== 'all') conditions.push(eq(sales.saleType, saleType));
+
+    if (itemId) {
+      // If filtering by item, join with saleItems
+      const itemIdNum = parseInt(itemId);
+      const salesWithItem = await db
+        .selectDistinct({
+          id: sales.id,
+          invoiceNo: sales.invoiceNo,
+          billType: sales.billType,
+          saleType: sales.saleType,
+          date: sales.date,
+          partyName: sales.partyName,
+          partyCity: sales.partyCity,
+          saleValue: sales.saleValue,
+          taxValue: sales.taxValue,
+          cgstTotal: sales.cgstTotal,
+          sgstTotal: sales.sgstTotal,
+          grandTotal: sales.grandTotal,
+          totalQty: sales.totalQty,
+        })
+        .from(sales)
+        .innerJoin(saleItems, eq(saleItems.saleId, sales.id))
+        .where(and(and(...conditions), eq(saleItems.itemId, itemIdNum)))
+        .orderBy(desc(sales.date), desc(sales.id));
+      return salesWithItem;
+    }
 
     return await db
       .select()
