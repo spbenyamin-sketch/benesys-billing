@@ -630,6 +630,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/payments/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const validated = insertPaymentSchema.parse(req.body);
+      const payment = await storage.updatePayment(id, validated, req.companyId);
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating payment:", error);
+      res.status(500).json({ message: "Failed to update payment" });
+    }
+  });
+
+  app.delete("/api/payments/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deletePayment(id, req.companyId);
+      res.json({ message: "Payment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      res.status(500).json({ message: "Failed to delete payment" });
+    }
+  });
+
   // ==================== STOCK ROUTES ====================
   app.get("/api/stock", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {

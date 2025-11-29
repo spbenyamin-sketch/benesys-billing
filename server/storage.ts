@@ -100,6 +100,8 @@ export interface IStorage {
   // Payment operations
   getPayments(companyId: number): Promise<Payment[]>;
   createPayment(payment: InsertPayment, userId: string, companyId: number): Promise<Payment>;
+  updatePayment(id: number, payment: Partial<InsertPayment>, companyId: number): Promise<Payment>;
+  deletePayment(id: number, companyId: number): Promise<void>;
 
   // Stock operations
   getStock(companyId: number): Promise<any[]>;
@@ -822,6 +824,24 @@ export class DatabaseStorage implements IStorage {
       .values({ ...payment, createdBy: userId, companyId })
       .returning();
     return newPayment;
+  }
+
+  async updatePayment(id: number, payment: Partial<InsertPayment>, companyId: number): Promise<Payment> {
+    const [updatedPayment] = await db
+      .update(payments)
+      .set(payment)
+      .where(and(eq(payments.id, id), eq(payments.companyId, companyId)))
+      .returning();
+    if (!updatedPayment) {
+      throw new Error("Payment not found or access denied");
+    }
+    return updatedPayment;
+  }
+
+  async deletePayment(id: number, companyId: number): Promise<void> {
+    await db
+      .delete(payments)
+      .where(and(eq(payments.id, id), eq(payments.companyId, companyId)));
   }
 
   // ==================== STOCK OPERATIONS ====================
