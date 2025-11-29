@@ -46,6 +46,7 @@ interface SaleLineItem {
   tempId: string;
   itemId: number | null;
   purchaseItemId: number | null;
+  stockInwardId?: number | null;
   barcode: string;
   itemCode: string;
   itemName: string;
@@ -237,6 +238,7 @@ export default function SalesEstimate() {
         items: lineItems.map((item) => ({
           itemId: item.itemId,
           purchaseItemId: item.purchaseItemId,
+          stockInwardId: item.stockInwardId,
           barcode: item.barcode,
           itemCode: item.itemCode,
           itemName: item.itemName,

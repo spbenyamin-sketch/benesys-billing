@@ -348,6 +348,7 @@ export default function SalesB2B() {
         items: lineItems.map((item) => ({
           itemId: item.itemId,
           purchaseItemId: item.purchaseItemId,
+          stockInwardId: item.stockInwardId,
           barcode: item.barcode,
           itemCode: item.itemCode,
           itemName: item.itemName,

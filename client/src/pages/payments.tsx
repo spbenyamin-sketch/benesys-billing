@@ -244,6 +244,7 @@ export default function Payments() {
       const amount = parseFloat(data.amount) || 0;
       return apiRequest("POST", "/api/payments", {
         date: data.date,
+        partyId: data.partyId || null,
         partyName: selectedParty?.name || data.partyName,
         credit: data.type === "credit" ? amount.toString() : "0",
         debit: data.type === "debit" ? amount.toString() : "0",
@@ -275,6 +276,7 @@ export default function Payments() {
       const amount = parseFloat(data.amount) || 0;
       return apiRequest("PUT", `/api/payments/${editingPaymentId}`, {
         date: data.date,
+        partyId: data.partyId || null,
         partyName: selectedParty?.name || data.partyName,
         credit: data.type === "credit" ? amount.toString() : "0",
         debit: data.type === "debit" ? amount.toString() : "0",
