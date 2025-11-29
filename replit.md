@@ -122,3 +122,38 @@ Templates can be assigned to specific transaction types:
 - `POST /api/bill-templates` - Create new template
 - `PUT /api/bill-templates/:id` - Update template
 - `DELETE /api/bill-templates/:id` - Delete template
+
+## Invoice Management
+
+### Invoice Numbering
+- Separate counters for B2B, B2C, and ESTIMATE sale types
+- Format: `{TYPE}-{YYYY}-{SEQUENCE}` (e.g., B2B-2025-001)
+- Auto-increments within each sale type independently
+
+### Invoice Editing
+- Route: `/sales/edit/:id`
+- API: `PUT /api/sales/:id` with validation for:
+  - Items array must have at least one item
+  - Each item requires itemName, quantity (positive), and rate (non-negative)
+- Updates merge with existing sale data to prevent field loss
+
+## Payment Management
+
+### Payment Receipt Printing
+- Thermal format receipt with 80mm width
+- Includes company name from current company context
+- Number-to-words conversion for amount display
+- useReactToPrint with proper useEffect trigger pattern
+
+## Reports & Printing
+
+### Available Reports (all with print functionality)
+- **Sales Report:** Filter by date range and sale type (B2B/B2C/Estimate)
+- **Outstanding Report:** Party-wise outstanding balances
+- **Purchase Report:** Purchase history with item details
+- **Party Ledger:** Transaction history with opening balance calculation for filtered date range
+
+### Printing Implementation
+- Uses react-to-print v3.x with contentRef pattern
+- Print components use useReactToPrint hook with contentRef
+- Hidden print containers positioned off-screen for rendering
