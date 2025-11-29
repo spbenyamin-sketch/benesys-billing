@@ -450,6 +450,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Item movement history (purchase and sales history)
+  app.get("/api/items/:id/history", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const history = await storage.getItemMovementHistory(id, req.companyId);
+      res.json(history);
+    } catch (error: any) {
+      if (error.message === "Item not found") {
+        return res.status(404).json({ message: "Item not found" });
+      }
+      console.error("Error fetching item history:", error);
+      res.status(500).json({ message: "Failed to fetch item history" });
+    }
+  });
+
   // ==================== SALES ROUTES ====================
   app.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {

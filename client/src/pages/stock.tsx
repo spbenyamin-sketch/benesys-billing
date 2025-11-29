@@ -19,7 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Package, AlertCircle, Printer, Eye, BarChart2, Grid, List } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Search, Package, AlertCircle, Printer, Eye, BarChart2, Grid, List, ArrowUpRight, ArrowDownLeft, History } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +42,258 @@ interface StockItem {
   packType: string;
   quantity: string;
   cost: string;
+}
+
+interface ItemHistory {
+  item: {
+    id: number;
+    code: string;
+    name: string;
+    hsnCode: string | null;
+    category: string | null;
+    packType: string;
+    cost: string;
+    cgstRate: string | null;
+    sgstRate: string | null;
+  };
+  stock: { currentQty: number; avgCost: number; valuation: number };
+  purchases: Array<{
+    purchaseId: number;
+    purchaseNo: string;
+    date: string;
+    partyName: string | null;
+    quantity: string;
+    rate: string;
+    mrp: string | null;
+    amount: string;
+    barcode: string | null;
+  }>;
+  sales: Array<{
+    saleId: number;
+    invoiceNo: number;
+    billType: string;
+    date: string;
+    partyName: string | null;
+    quantity: string;
+    rate: string;
+    amount: string;
+    barcode: string | null;
+  }>;
+  movement: { totalPurchasedQty: number; totalSoldQty: number; balanceQty: number };
+}
+
+function ItemHistoryDialog({ 
+  itemId, 
+  isOpen, 
+  onClose 
+}: { 
+  itemId: number | null; 
+  isOpen: boolean; 
+  onClose: () => void;
+}) {
+  const { data: history, isLoading } = useQuery<ItemHistory>({
+    queryKey: [`/api/items/${itemId}/history`],
+    enabled: !!itemId && isOpen,
+  });
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Item Movement History
+          </DialogTitle>
+        </DialogHeader>
+        
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-24 w-full" />
+            <Skeleton className="h-48 w-full" />
+          </div>
+        ) : history ? (
+          <div className="space-y-6">
+            <Card>
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Code</p>
+                    <p className="font-mono font-medium">{history.item.code}</p>
+                  </div>
+                  <div className="col-span-2 md:col-span-1">
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{history.item.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">HSN Code</p>
+                    <p className="font-mono">{history.item.hsnCode || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Category</p>
+                    <p>{history.item.category || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Pack Type</p>
+                    <p>{history.item.packType}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Rate</p>
+                    <p className="font-mono">₹{parseFloat(history.item.cost).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tax</p>
+                    <p className="font-mono text-sm">
+                      {history.item.cgstRate && history.item.sgstRate 
+                        ? `${parseFloat(history.item.cgstRate) + parseFloat(history.item.sgstRate)}%`
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Card className="border-green-200 dark:border-green-900">
+                <CardContent className="pt-4 text-center">
+                  <ArrowDownLeft className="h-5 w-5 mx-auto mb-1 text-green-600" />
+                  <p className="text-sm text-muted-foreground">Purchased</p>
+                  <p className="text-xl font-mono font-bold text-green-600">
+                    {history.movement.totalPurchasedQty.toFixed(2)}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="border-red-200 dark:border-red-900">
+                <CardContent className="pt-4 text-center">
+                  <ArrowUpRight className="h-5 w-5 mx-auto mb-1 text-red-600" />
+                  <p className="text-sm text-muted-foreground">Sold</p>
+                  <p className="text-xl font-mono font-bold text-red-600">
+                    {history.movement.totalSoldQty.toFixed(2)}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 text-center">
+                  <Package className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Current Stock</p>
+                  <p className="text-xl font-mono font-bold">{history.stock.currentQty.toFixed(2)}</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-4 text-center">
+                  <BarChart2 className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">Valuation</p>
+                  <p className="text-xl font-mono font-bold">₹{history.stock.valuation.toFixed(2)}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Tabs defaultValue="purchases" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="purchases" data-testid="tab-purchases">
+                  Purchases ({history.purchases.length})
+                </TabsTrigger>
+                <TabsTrigger value="sales" data-testid="tab-sales">
+                  Sales ({history.sales.length})
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="purchases" className="mt-4">
+                {history.purchases.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Purchase No</TableHead>
+                        <TableHead>Party</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {history.purchases.map((purchase, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-mono text-sm">
+                            {format(new Date(purchase.date), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell className="font-mono">{purchase.purchaseNo}</TableCell>
+                          <TableCell>{purchase.partyName || "—"}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {parseFloat(purchase.quantity).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            ₹{parseFloat(purchase.rate || "0").toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            ₹{parseFloat(purchase.amount || "0").toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No purchase history found
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="sales" className="mt-4">
+                {history.sales.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Party</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {history.sales.map((sale, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-mono text-sm">
+                            {format(new Date(sale.date), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell className="font-mono">{sale.billType}-{sale.invoiceNo}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {sale.billType}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{sale.partyName || "Cash"}</TableCell>
+                          <TableCell className="text-right font-mono">
+                            {parseFloat(sale.quantity).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            ₹{parseFloat(sale.rate || "0").toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right font-mono">
+                            ₹{parseFloat(sale.amount || "0").toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No sales history found
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            Failed to load item history
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function StockReportPrint({ 
@@ -118,6 +376,8 @@ export default function Stock() {
   const [packTypeFilter, setPackTypeFilter] = useState("all");
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { currentCompany } = useCompany();
 
@@ -343,6 +603,7 @@ export default function Stock() {
                     <TableHead className="text-right">Quantity</TableHead>
                     <TableHead className="text-right">Value</TableHead>
                     <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -376,6 +637,19 @@ export default function Stock() {
                             <Badge variant="default" className="text-xs">In Stock</Badge>
                           )}
                         </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedItemId(item.itemId);
+                              setHistoryDialogOpen(true);
+                            }}
+                            data-testid={`button-view-history-${item.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
@@ -408,13 +682,26 @@ export default function Stock() {
                           <p className="font-mono text-xs text-muted-foreground">{item.itemCode}</p>
                           <h3 className="font-medium">{item.itemName}</h3>
                         </div>
-                        {isOut ? (
-                          <Badge variant="destructive" className="text-xs">Out</Badge>
-                        ) : isLow ? (
-                          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">Low</Badge>
-                        ) : (
-                          <Badge variant="default" className="text-xs">OK</Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {isOut ? (
+                            <Badge variant="destructive" className="text-xs">Out</Badge>
+                          ) : isLow ? (
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">Low</Badge>
+                          ) : (
+                            <Badge variant="default" className="text-xs">OK</Badge>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedItemId(item.itemId);
+                              setHistoryDialogOpen(true);
+                            }}
+                            data-testid={`button-view-history-grid-${item.id}`}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
@@ -454,6 +741,16 @@ export default function Stock() {
           />
         </div>
       </div>
+
+      {/* Item History Dialog */}
+      <ItemHistoryDialog
+        itemId={selectedItemId}
+        isOpen={historyDialogOpen}
+        onClose={() => {
+          setHistoryDialogOpen(false);
+          setSelectedItemId(null);
+        }}
+      />
     </div>
   );
 }

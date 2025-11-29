@@ -159,6 +159,15 @@ export interface IStorage {
   createBarcodeLabelTemplate(template: any, userId: string, companyId: number): Promise<any>;
   updateBarcodeLabelTemplate(id: number, template: any, companyId: number): Promise<any>;
   deleteBarcodeLabelTemplate(id: number, companyId: number): Promise<void>;
+  
+  // Item Movement History
+  getItemMovementHistory(itemId: number, companyId: number): Promise<{
+    item: any;
+    stock: { currentQty: number; avgCost: number; valuation: number };
+    purchases: any[];
+    sales: any[];
+    movement: { totalPurchasedQty: number; totalSoldQty: number; balanceQty: number };
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1810,6 +1819,91 @@ export class DatabaseStorage implements IStorage {
         eq(barcodeLabelTemplates.id, id),
         eq(barcodeLabelTemplates.companyId, companyId)
       ));
+  }
+
+  async getItemMovementHistory(itemId: number, companyId: number): Promise<{
+    item: any;
+    stock: { currentQty: number; avgCost: number; valuation: number };
+    purchases: any[];
+    sales: any[];
+    movement: { totalPurchasedQty: number; totalSoldQty: number; balanceQty: number };
+  }> {
+    // Get item details
+    const [item] = await db
+      .select()
+      .from(items)
+      .where(and(eq(items.id, itemId), eq(items.companyId, companyId)));
+
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    // Get current stock
+    const [currentStock] = await db
+      .select()
+      .from(stock)
+      .where(and(eq(stock.itemId, itemId), eq(stock.companyId, companyId)));
+
+    const currentQty = currentStock ? parseFloat(currentStock.quantity) : 0;
+    const avgCost = parseFloat(item.cost);
+    const valuation = currentQty * avgCost;
+
+    // Get purchase history for this item
+    const purchaseHistory = await db
+      .select({
+        purchaseId: purchases.id,
+        purchaseNo: purchases.purchaseNo,
+        date: purchases.date,
+        partyName: parties.name,
+        quantity: purchaseItems.quantity,
+        rate: purchaseItems.rate,
+        mrp: purchaseItems.mrp,
+        amount: purchaseItems.amount,
+        barcode: purchaseItems.barcode,
+      })
+      .from(purchaseItems)
+      .innerJoin(purchases, eq(purchaseItems.purchaseId, purchases.id))
+      .leftJoin(parties, eq(purchases.partyId, parties.id))
+      .where(and(
+        eq(purchaseItems.itemId, itemId),
+        eq(purchases.companyId, companyId)
+      ))
+      .orderBy(desc(purchases.date));
+
+    // Get sales history for this item
+    const salesHistory = await db
+      .select({
+        saleId: sales.id,
+        invoiceNo: sales.invoiceNo,
+        billType: sales.billType,
+        date: sales.date,
+        partyName: parties.name,
+        quantity: saleItems.quantity,
+        rate: saleItems.rate,
+        amount: saleItems.amount,
+        barcode: saleItems.barcode,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .leftJoin(parties, eq(sales.partyId, parties.id))
+      .where(and(
+        eq(saleItems.itemId, itemId),
+        eq(sales.companyId, companyId)
+      ))
+      .orderBy(desc(sales.date));
+
+    // Calculate totals
+    const totalPurchasedQty = purchaseHistory.reduce((sum, p) => sum + parseFloat(p.quantity || "0"), 0);
+    const totalSoldQty = salesHistory.reduce((sum, s) => sum + parseFloat(s.quantity || "0"), 0);
+    const balanceQty = totalPurchasedQty - totalSoldQty;
+
+    return {
+      item,
+      stock: { currentQty, avgCost, valuation },
+      purchases: purchaseHistory,
+      sales: salesHistory,
+      movement: { totalPurchasedQty, totalSoldQty, balanceQty },
+    };
   }
 }
 
