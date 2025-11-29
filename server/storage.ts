@@ -542,19 +542,20 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
     
-    return await db
+    const items = await db
       .select()
       .from(saleItems)
       .where(eq(saleItems.saleId, saleId));
+    return items as SaleItem[];
   }
 
   async getNextInvoiceNumber(saleType: string, companyId: number): Promise<number> {
     // Separate invoice numbering for B2B, B2C, and ESTIMATE
-    const [result] = await db
+    const result = await db
       .select({ maxNo: sql<number>`COALESCE(MAX(${sales.invoiceNo}), 0)` })
       .from(sales)
       .where(and(eq(sales.saleType, saleType), eq(sales.companyId, companyId)));
-    return (result?.maxNo || 0) + 1;
+    return ((result[0]?.maxNo as any) || 0) + 1;
   }
 
   async createSale(saleData: InsertSale, saleItemsData: InsertSaleItem[], userId: string, companyId: number): Promise<Sale> {
@@ -564,7 +565,7 @@ export class DatabaseStorage implements IStorage {
     // SECURITY: Validate all items belong to this company before creating sale
     for (const item of saleItemsData) {
       if (item.itemId) {
-        const dbItem = await this.getItem(item.itemId, companyId);
+        const dbItem = await this.getItem(item.itemId as number, companyId);
         if (!dbItem) {
           throw new Error(`Item ${item.itemId} not found or does not belong to this company`);
         }
