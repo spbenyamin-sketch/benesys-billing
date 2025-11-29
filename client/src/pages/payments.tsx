@@ -345,7 +345,7 @@ export default function Payments() {
             Record payment receipts and transactions
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => !open ? handleCloseDialog() : setIsDialogOpen(true)}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-payment">
               <Plus className="mr-2 h-4 w-4" />
