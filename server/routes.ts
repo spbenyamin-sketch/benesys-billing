@@ -659,7 +659,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== STOCK ROUTES ====================
   app.get("/api/stock", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const stock = await storage.getStock(req.companyId);
+      const { partyId, itemId } = req.query;
+      const stock = await storage.getStock(
+        req.companyId, 
+        partyId ? parseInt(partyId) : undefined,
+        itemId ? parseInt(itemId) : undefined
+      );
       res.json(stock);
     } catch (error) {
       console.error("Error fetching stock:", error);

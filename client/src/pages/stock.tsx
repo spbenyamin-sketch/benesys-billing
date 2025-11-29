@@ -35,13 +35,28 @@ import { format } from "date-fns";
 
 interface StockItem {
   id: number;
+  stockInwardId: number;
   itemId: number;
   itemCode: string;
   itemName: string;
   category: string | null;
   packType: string;
+  brandName: string | null;
+  quality: string | null;
+  size: string | null;
+  partyId: number | null;
+  partyName: string | null;
   quantity: string;
   cost: string;
+  ncost: string | null;
+  rate: string | null;
+  status: string;
+}
+
+interface Party {
+  id: number;
+  code: string;
+  name: string;
 }
 
 interface ItemHistory {
@@ -375,14 +390,34 @@ export default function Stock() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [packTypeFilter, setPackTypeFilter] = useState("all");
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
+  const [partyFilter, setPartyFilter] = useState("all");
+  const [itemFilter, setItemFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { currentCompany } = useCompany();
 
+  // Fetch parties list
+  const { data: parties } = useQuery<Party[]>({
+    queryKey: ["/api/parties"],
+  });
+
+  // Build query params
+  const queryParams = new URLSearchParams();
+  if (partyFilter !== "all") queryParams.set("partyId", partyFilter);
+  if (itemFilter !== "all") queryParams.set("itemId", itemFilter);
+  
+  const queryString = queryParams.toString();
+  const apiUrl = queryString ? `/api/stock?${queryString}` : "/api/stock";
+
   const { data: stock, isLoading } = useQuery<StockItem[]>({
-    queryKey: ["/api/stock"],
+    queryKey: ["/api/stock", partyFilter, itemFilter],
+    queryFn: async () => {
+      const res = await fetch(apiUrl, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
+      if (!res.ok) throw new Error("Failed to fetch stock");
+      return res.json();
+    },
   });
 
   const handlePrint = useReactToPrint({
@@ -390,16 +425,21 @@ export default function Stock() {
     documentTitle: `Stock-Report-${format(new Date(), "yyyy-MM-dd")}`,
   });
 
-  // Get unique categories and pack types for filters
+  // Get unique values for filters from fetched data
   const categories = Array.from(new Set(stock?.map(item => item.category).filter(Boolean))).sort();
   const packTypes = Array.from(new Set(stock?.map(item => item.packType))).sort();
+  const items = Array.from(new Set(stock?.map(item => item.itemId))).map(itemId => {
+    const item = stock?.find(s => s.itemId === itemId);
+    return item ? { id: item.itemId, code: item.itemCode, name: item.itemName } : null;
+  }).filter(Boolean).sort((a, b) => (a?.code || "").localeCompare(b?.code || ""));
 
   const filteredStock = stock?.filter((item) => {
     // Text search
     const matchesSearch = 
       item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.category?.toLowerCase().includes(searchQuery.toLowerCase());
+      item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.partyName?.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Category filter
     const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
@@ -427,6 +467,8 @@ export default function Stock() {
   };
 
   const activeFilters = [
+    partyFilter !== "all" ? `Party: ${parties?.find(p => p.id.toString() === partyFilter)?.name}` : null,
+    itemFilter !== "all" ? `Item: ${items.find(i => i?.id.toString() === itemFilter)?.name}` : null,
     categoryFilter !== "all" ? `Category: ${categoryFilter}` : null,
     packTypeFilter !== "all" ? `Pack: ${packTypeFilter}` : null,
     stockStatusFilter !== "all" ? `Status: ${stockStatusFilter}` : null,
@@ -510,20 +552,52 @@ export default function Stock() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-5">
+          <div className="grid gap-4 sm:grid-cols-6">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search by name, code, or category..."
+                  placeholder="Search by name, code, party..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
                   data-testid="input-search-stock"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="party">Supplier</Label>
+              <Select value={partyFilter} onValueChange={setPartyFilter}>
+                <SelectTrigger id="party" data-testid="select-party">
+                  <SelectValue placeholder="All Suppliers" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Suppliers</SelectItem>
+                  {parties?.map((party) => (
+                    <SelectItem key={party.id} value={party.id.toString()}>
+                      {party.code} - {party.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="item">Item</Label>
+              <Select value={itemFilter} onValueChange={setItemFilter}>
+                <SelectTrigger id="item" data-testid="select-item">
+                  <SelectValue placeholder="All Items" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Items</SelectItem>
+                  {items.map((item) => (
+                    item && <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.code} - {item.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
@@ -597,6 +671,7 @@ export default function Stock() {
                   <TableRow>
                     <TableHead>Code</TableHead>
                     <TableHead>Item Name</TableHead>
+                    <TableHead>Supplier</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead>Pack Type</TableHead>
                     <TableHead className="text-right">Rate</TableHead>
@@ -614,9 +689,10 @@ export default function Stock() {
                     const value = qty * parseFloat(item.cost);
 
                     return (
-                      <TableRow key={item.id} data-testid={`row-stock-${item.id}`}>
+                      <TableRow key={item.stockInwardId} data-testid={`row-stock-${item.stockInwardId}`}>
                         <TableCell className="font-medium font-mono">{item.itemCode}</TableCell>
                         <TableCell>{item.itemName}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.partyName || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">{item.category || "—"}</TableCell>
                         <TableCell className="font-mono">{item.packType}</TableCell>
                         <TableCell className="text-right font-mono">
@@ -645,7 +721,7 @@ export default function Stock() {
                               setSelectedItemId(item.itemId);
                               setHistoryDialogOpen(true);
                             }}
-                            data-testid={`button-view-history-${item.id}`}
+                            data-testid={`button-view-history-${item.stockInwardId}`}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -675,12 +751,13 @@ export default function Stock() {
                 const value = qty * parseFloat(item.cost);
 
                 return (
-                  <Card key={item.id} className={`${isOut ? 'border-red-200' : isLow ? 'border-orange-200' : ''}`}>
+                  <Card key={item.stockInwardId} className={`${isOut ? 'border-red-200' : isLow ? 'border-orange-200' : ''}`}>
                     <CardContent className="pt-4">
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="font-mono text-xs text-muted-foreground">{item.itemCode}</p>
                           <h3 className="font-medium">{item.itemName}</h3>
+                          <p className="text-xs text-muted-foreground">{item.partyName || "—"}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           {isOut ? (
@@ -697,7 +774,7 @@ export default function Stock() {
                               setSelectedItemId(item.itemId);
                               setHistoryDialogOpen(true);
                             }}
-                            data-testid={`button-view-history-grid-${item.id}`}
+                            data-testid={`button-view-history-grid-${item.stockInwardId}`}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
