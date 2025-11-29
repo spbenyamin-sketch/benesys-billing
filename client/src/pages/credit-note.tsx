@@ -206,7 +206,6 @@ export default function CreditNote() {
       item.cgst = taxValue;
       item.sgst = 0;
     }
-    }
   };
 
   const addLineItem = () => {
