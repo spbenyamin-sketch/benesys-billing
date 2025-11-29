@@ -71,155 +71,170 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
   ({ invoice, template, companyName, companyAddress, companyGst, companyPhone }, ref) => {
     const isB4 = template.formatType === "B4";
     const pageWidth = isB4 ? "250mm" : "210mm";
+    const pageHeight = isB4 ? "353mm" : "297mm";
     
     return (
       <div
         ref={ref}
-        className="bg-white text-black p-8"
+        className="bg-white text-black"
         style={{
           width: pageWidth,
-          minHeight: isB4 ? "353mm" : "297mm",
+          minHeight: pageHeight,
+          padding: isB4 ? "15mm" : "10mm",
           fontSize: `${template.fontSize}px`,
           fontFamily: "Arial, sans-serif",
+          boxSizing: "border-box",
         }}
       >
-        <div className="flex justify-between items-start mb-6">
+        <style>
+          {`
+            @media print {
+              @page {
+                size: ${isB4 ? "B4 portrait" : "A4 portrait"};
+                margin: ${isB4 ? "10mm" : "8mm"};
+              }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          `}
+        </style>
+
+        <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             {template.logoUrl && (
               <img
                 src={template.logoUrl}
                 alt="Company Logo"
-                className="max-h-20 mb-3 object-contain"
+                style={{ maxHeight: "60px", marginBottom: "8px", objectFit: "contain" }}
               />
             )}
             {template.headerText ? (
-              <div className="whitespace-pre-line font-semibold text-lg">
+              <div style={{ whiteSpace: "pre-line", fontWeight: 600, fontSize: "14px" }}>
                 {template.headerText}
               </div>
             ) : (
               <>
-                <div className="text-xl font-bold">{companyName}</div>
-                {companyAddress && <div>{companyAddress}</div>}
-                {companyGst && <div>GSTIN: {companyGst}</div>}
-                {companyPhone && <div>Phone: {companyPhone}</div>}
+                <div style={{ fontSize: "18px", fontWeight: 700 }}>{companyName}</div>
+                {companyAddress && <div style={{ fontSize: "11px" }}>{companyAddress}</div>}
+                {companyGst && <div style={{ fontSize: "11px" }}>GSTIN: {companyGst}</div>}
+                {companyPhone && <div style={{ fontSize: "11px" }}>Phone: {companyPhone}</div>}
               </>
             )}
           </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold mb-2">TAX INVOICE</div>
-            <div className="space-y-1">
-              <div><span className="font-medium">Invoice No:</span> {invoice.invoiceNo}</div>
-              <div><span className="font-medium">Date:</span> {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>TAX INVOICE</div>
+            <div style={{ fontSize: "11px" }}>
+              <div><span style={{ fontWeight: 500 }}>Invoice No:</span> {invoice.invoiceNo}</div>
+              <div><span style={{ fontWeight: 500 }}>Date:</span> {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
             </div>
           </div>
         </div>
 
-        <div className="border border-black p-4 mb-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div style={{ border: "1px solid black", padding: "10px", marginBottom: "10px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
             <div>
-              <div className="font-bold mb-1">Bill To:</div>
-              <div className="font-medium">{invoice.partyName || "Cash Customer"}</div>
-              {invoice.partyAddress && <div>{invoice.partyAddress}</div>}
-              {invoice.partyCity && <div>{invoice.partyCity}{invoice.partyState ? `, ${invoice.partyState}` : ""}</div>}
-              {invoice.partyGstNo && <div>GSTIN: {invoice.partyGstNo}</div>}
-              {invoice.partyPhone && <div>Phone: {invoice.partyPhone}</div>}
+              <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "11px" }}>Bill To:</div>
+              <div style={{ fontWeight: 600, fontSize: "12px" }}>{invoice.partyName || "Cash Customer"}</div>
+              {invoice.partyAddress && <div style={{ fontSize: "10px" }}>{invoice.partyAddress}</div>}
+              {invoice.partyCity && <div style={{ fontSize: "10px" }}>{invoice.partyCity}{invoice.partyState ? `, ${invoice.partyState}` : ""}</div>}
+              {invoice.partyGstNo && <div style={{ fontSize: "10px" }}>GSTIN: {invoice.partyGstNo}</div>}
+              {invoice.partyPhone && <div style={{ fontSize: "10px" }}>Phone: {invoice.partyPhone}</div>}
             </div>
-            <div className="text-right">
+            <div style={{ textAlign: "right", fontSize: "10px" }}>
               {invoice.isInterState ? (
-                <div className="text-sm">Inter-State Supply (IGST)</div>
+                <div>Inter-State Supply (IGST)</div>
               ) : (
-                <div className="text-sm">Intra-State Supply (CGST + SGST)</div>
+                <div>Intra-State Supply (CGST + SGST)</div>
               )}
             </div>
           </div>
         </div>
 
-        <table className="w-full border-collapse mb-4">
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "10px", fontSize: `${Math.max(template.fontSize - 1, 8)}px` }}>
           <thead>
-            <tr className="bg-gray-100">
-              <th className="border border-black p-2 text-left w-10">#</th>
-              <th className="border border-black p-2 text-left">Item Description</th>
-              {template.showHsnCode && <th className="border border-black p-2 text-left w-20">HSN</th>}
-              <th className="border border-black p-2 text-right w-16">Qty</th>
-              <th className="border border-black p-2 text-right w-20">Rate</th>
+            <tr style={{ backgroundColor: "#f0f0f0" }}>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left", width: "30px" }}>#</th>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left" }}>Item Description</th>
+              {template.showHsnCode && <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left", width: "70px" }}>HSN</th>}
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>Qty</th>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "70px" }}>Rate</th>
               {template.showTaxBreakup && (
                 <>
-                  <th className="border border-black p-2 text-right w-16">Disc%</th>
-                  <th className="border border-black p-2 text-right w-16">Tax%</th>
+                  <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>Disc%</th>
+                  <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>Tax%</th>
                 </>
               )}
-              <th className="border border-black p-2 text-right w-24">Amount</th>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "85px" }}>Amount</th>
             </tr>
           </thead>
           <tbody>
             {invoice.items.map((item, index) => (
               <tr key={item.id || index}>
-                <td className="border border-black p-2">{index + 1}</td>
-                <td className="border border-black p-2">
-                  <div className="font-medium">{item.itemName}</div>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}>{index + 1}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}>
+                  <div style={{ fontWeight: 500 }}>{item.itemName}</div>
                   {template.showItemCode && item.itemCode && (
-                    <div className="text-xs text-gray-600">Code: {item.itemCode}</div>
+                    <div style={{ fontSize: "9px", color: "#666" }}>Code: {item.itemCode}</div>
                   )}
                   {item.barcode && (
-                    <div className="text-xs text-gray-600">BC: {item.barcode}</div>
+                    <div style={{ fontSize: "9px", color: "#666" }}>BC: {item.barcode}</div>
                   )}
                 </td>
                 {template.showHsnCode && (
-                  <td className="border border-black p-2">{item.hsnCode}</td>
+                  <td style={{ border: "1px solid black", padding: "3px 6px" }}>{item.hsnCode}</td>
                 )}
-                <td className="border border-black p-2 text-right">{item.quantity}</td>
-                <td className="border border-black p-2 text-right">₹{item.rate.toFixed(2)}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{item.quantity}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>₹{item.rate.toFixed(2)}</td>
                 {template.showTaxBreakup && (
                   <>
-                    <td className="border border-black p-2 text-right">{item.discountPercent || 0}%</td>
-                    <td className="border border-black p-2 text-right">{item.taxPercent || 0}%</td>
+                    <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{item.discountPercent || 0}%</td>
+                    <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{item.taxPercent || 0}%</td>
                   </>
                 )}
-                <td className="border border-black p-2 text-right font-medium">₹{item.amount.toFixed(2)}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right", fontWeight: 500 }}>₹{item.amount.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        <div className="flex justify-between">
-          <div className="flex-1">
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <div style={{ flex: 1, paddingRight: "15px" }}>
             {template.showBankDetails && template.bankDetails && (
-              <div className="mb-4">
-                <div className="font-bold mb-1">Bank Details:</div>
-                <div className="whitespace-pre-line text-sm">{template.bankDetails}</div>
+              <div style={{ marginBottom: "10px" }}>
+                <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "10px" }}>Bank Details:</div>
+                <div style={{ whiteSpace: "pre-line", fontSize: "9px" }}>{template.bankDetails}</div>
               </div>
             )}
             {template.termsAndConditions && (
-              <div className="text-xs">
-                <div className="font-bold mb-1">Terms & Conditions:</div>
-                <div className="whitespace-pre-line">{template.termsAndConditions}</div>
+              <div style={{ fontSize: "8px" }}>
+                <div style={{ fontWeight: 700, marginBottom: "2px" }}>Terms & Conditions:</div>
+                <div style={{ whiteSpace: "pre-line" }}>{template.termsAndConditions}</div>
               </div>
             )}
           </div>
-          <div className="w-72 border border-black">
-            <div className="flex justify-between p-2 border-b border-black">
+          <div style={{ width: "220px", border: "1px solid black", fontSize: "11px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
               <span>Subtotal:</span>
               <span>₹{invoice.subtotal.toFixed(2)}</span>
             </div>
             {invoice.totalDiscount > 0 && (
-              <div className="flex justify-between p-2 border-b border-black">
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
                 <span>Discount:</span>
                 <span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
               </div>
             )}
             {template.showTaxBreakup && (
               invoice.isInterState ? (
-                <div className="flex justify-between p-2 border-b border-black">
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
                   <span>IGST:</span>
                   <span>₹{invoice.totalIgst.toFixed(2)}</span>
                 </div>
               ) : (
                 <>
-                  <div className="flex justify-between p-2 border-b border-black">
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
                     <span>CGST:</span>
                     <span>₹{invoice.totalCgst.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between p-2 border-b border-black">
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
                     <span>SGST:</span>
                     <span>₹{invoice.totalSgst.toFixed(2)}</span>
                   </div>
@@ -227,12 +242,12 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
               )
             )}
             {invoice.roundOff !== 0 && (
-              <div className="flex justify-between p-2 border-b border-black">
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
                 <span>Round Off:</span>
                 <span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between p-2 font-bold text-lg bg-gray-100">
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", fontWeight: 700, fontSize: "14px", backgroundColor: "#f0f0f0" }}>
               <span>Grand Total:</span>
               <span>₹{invoice.grandTotal.toFixed(2)}</span>
             </div>
@@ -240,17 +255,17 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
         </div>
 
         {template.showPartyBalance && invoice.currentBalance !== undefined && (
-          <div className="mt-4 border border-black p-3">
-            <div className="font-bold mb-1">Account Summary:</div>
-            <div className="flex justify-between">
+          <div style={{ marginTop: "12px", border: "1px solid black", padding: "8px" }}>
+            <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "10px" }}>Account Summary:</div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px" }}>
               <span>Previous Balance:</span>
               <span>₹{(invoice.previousBalance || 0).toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px" }}>
               <span>Current Bill:</span>
               <span>₹{invoice.grandTotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between font-bold border-t border-black pt-1 mt-1">
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: "1px solid black", paddingTop: "4px", marginTop: "4px", fontSize: "11px" }}>
               <span>Outstanding Balance:</span>
               <span>₹{invoice.currentBalance.toFixed(2)}</span>
             </div>
@@ -258,17 +273,17 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
         )}
 
         {template.footerText && (
-          <div className="mt-6 text-center border-t border-black pt-4">
-            <div className="whitespace-pre-line">{template.footerText}</div>
+          <div style={{ marginTop: "15px", textAlign: "center", borderTop: "1px solid black", paddingTop: "10px" }}>
+            <div style={{ whiteSpace: "pre-line", fontSize: "10px" }}>{template.footerText}</div>
           </div>
         )}
 
-        <div className="mt-8 flex justify-between">
-          <div className="text-center">
-            <div className="border-t border-black w-40 pt-1">Customer Signature</div>
+        <div style={{ marginTop: "25px", display: "flex", justifyContent: "space-between" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ borderTop: "1px solid black", width: "120px", paddingTop: "4px", fontSize: "9px" }}>Customer Signature</div>
           </div>
-          <div className="text-center">
-            <div className="border-t border-black w-40 pt-1">Authorized Signatory</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ borderTop: "1px solid black", width: "120px", paddingTop: "4px", fontSize: "9px" }}>Authorized Signatory</div>
           </div>
         </div>
       </div>
@@ -277,6 +292,140 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
 );
 
 InvoiceA4Print.displayName = "InvoiceA4Print";
+
+export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintProps>(
+  ({ invoice, template, companyName, companyAddress, companyGst, companyPhone }, ref) => {
+    return (
+      <div
+        ref={ref}
+        className="bg-white text-black"
+        style={{
+          width: "210mm",
+          minHeight: "297mm",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          paddingTop: "10mm",
+          boxSizing: "border-box",
+        }}
+      >
+        <style>
+          {`
+            @media print {
+              @page { size: A4 portrait; margin: 5mm; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          `}
+        </style>
+        <div style={{ 
+          width: "190mm", 
+          padding: "8mm",
+          fontSize: `${template.fontSize}px`,
+          fontFamily: "Arial, sans-serif",
+          border: "1px solid #ccc"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
+            <div>
+              {template.logoUrl && (
+                <img src={template.logoUrl} alt="Logo" style={{ maxHeight: "50px", marginBottom: "6px" }} />
+              )}
+              {template.headerText ? (
+                <div style={{ whiteSpace: "pre-line", fontWeight: 600, fontSize: "13px" }}>{template.headerText}</div>
+              ) : (
+                <>
+                  <div style={{ fontSize: "16px", fontWeight: 700 }}>{companyName}</div>
+                  {companyAddress && <div style={{ fontSize: "10px" }}>{companyAddress}</div>}
+                  {companyGst && <div style={{ fontSize: "10px" }}>GSTIN: {companyGst}</div>}
+                </>
+              )}
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>TAX INVOICE</div>
+              <div style={{ fontSize: "10px" }}>
+                <div>Invoice: {invoice.invoiceNo}</div>
+                <div>Date: {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ border: "1px solid black", padding: "8px", marginBottom: "8px" }}>
+            <div style={{ fontWeight: 700, fontSize: "10px", marginBottom: "3px" }}>Bill To:</div>
+            <div style={{ fontSize: "11px", fontWeight: 600 }}>{invoice.partyName || "Cash Customer"}</div>
+            {invoice.partyAddress && <div style={{ fontSize: "9px" }}>{invoice.partyAddress}</div>}
+            {invoice.partyGstNo && <div style={{ fontSize: "9px" }}>GSTIN: {invoice.partyGstNo}</div>}
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px", fontSize: "9px" }}>
+            <thead>
+              <tr style={{ backgroundColor: "#f0f0f0" }}>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "left", width: "25px" }}>#</th>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "left" }}>Description</th>
+                {template.showHsnCode && <th style={{ border: "1px solid black", padding: "3px", width: "55px" }}>HSN</th>}
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "40px" }}>Qty</th>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "55px" }}>Rate</th>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "70px" }}>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {invoice.items.map((item, index) => (
+                <tr key={item.id || index}>
+                  <td style={{ border: "1px solid black", padding: "2px 3px" }}>{index + 1}</td>
+                  <td style={{ border: "1px solid black", padding: "2px 3px" }}>{item.itemName}</td>
+                  {template.showHsnCode && <td style={{ border: "1px solid black", padding: "2px 3px" }}>{item.hsnCode}</td>}
+                  <td style={{ border: "1px solid black", padding: "2px 3px", textAlign: "right" }}>{item.quantity}</td>
+                  <td style={{ border: "1px solid black", padding: "2px 3px", textAlign: "right" }}>₹{item.rate.toFixed(2)}</td>
+                  <td style={{ border: "1px solid black", padding: "2px 3px", textAlign: "right", fontWeight: 500 }}>₹{item.amount.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ width: "180px", border: "1px solid black", fontSize: "10px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
+                <span>Subtotal:</span><span>₹{invoice.subtotal.toFixed(2)}</span>
+              </div>
+              {invoice.totalDiscount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
+                  <span>Discount:</span><span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
+                </div>
+              )}
+              {template.showTaxBreakup && !invoice.isInterState && (
+                <>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
+                    <span>CGST:</span><span>₹{invoice.totalCgst.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
+                    <span>SGST:</span><span>₹{invoice.totalSgst.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              {invoice.roundOff !== 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
+                  <span>Round Off:</span><span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 6px", fontWeight: 700, fontSize: "12px", backgroundColor: "#f0f0f0" }}>
+                <span>Total:</span><span>₹{invoice.grandTotal.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+
+          {template.footerText && (
+            <div style={{ marginTop: "12px", textAlign: "center", fontSize: "9px" }}>{template.footerText}</div>
+          )}
+
+          <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
+            <div style={{ borderTop: "1px solid black", width: "100px", paddingTop: "3px", textAlign: "center", fontSize: "8px" }}>Customer Sign</div>
+            <div style={{ borderTop: "1px solid black", width: "100px", paddingTop: "3px", textAlign: "center", fontSize: "8px" }}>Auth. Signatory</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+);
+
+InvoiceB4CenteredPrint.displayName = "InvoiceB4CenteredPrint";
 
 export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>(
   ({ invoice, template, companyName }, ref) => {
@@ -293,6 +442,15 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
           fontFamily: "monospace",
         }}
       >
+        <style>
+          {`
+            @media print {
+              @page { size: ${width} auto; margin: 2mm; }
+              body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            }
+          `}
+        </style>
+        
         {template.logoUrl && (
           <div className="text-center mb-2">
             <img

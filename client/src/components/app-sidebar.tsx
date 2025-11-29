@@ -132,6 +132,11 @@ export function AppSidebar() {
       icon: Package,
     },
     {
+      title: "Payment Report",
+      url: "/reports/payments",
+      icon: Wallet,
+    },
+    {
       title: "Stock",
       url: "/stock",
       icon: Package,

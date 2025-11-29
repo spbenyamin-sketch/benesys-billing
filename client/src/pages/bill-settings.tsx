@@ -70,6 +70,7 @@ const ASSIGNMENT_OPTIONS = [
   { value: "b2b", label: "B2B Credit Sale" },
   { value: "b2c", label: "B2C Retail Sale" },
   { value: "estimate", label: "Estimate/Quotation" },
+  { value: "credit_note", label: "Credit Note" },
 ];
 
 const defaultFormData = {

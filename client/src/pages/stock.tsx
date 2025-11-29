@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -10,9 +12,20 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Package, AlertCircle } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Search, Package, AlertCircle, Printer, Eye, BarChart2, Grid, List } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useReactToPrint } from "react-to-print";
+import { useCompany } from "@/contexts/CompanyContext";
+import { format } from "date-fns";
 
 interface StockItem {
   id: number;
@@ -25,60 +38,289 @@ interface StockItem {
   cost: string;
 }
 
+function StockReportPrint({ 
+  items, 
+  totals, 
+  companyName,
+  filters
+}: { 
+  items: StockItem[]; 
+  totals: { totalItems: number; totalQty: number; totalValue: number };
+  companyName: string;
+  filters: string;
+}) {
+  return (
+    <div className="p-8 bg-white text-black">
+      <div className="text-center mb-6">
+        <h1 className="text-xl font-bold">{companyName}</h1>
+        <h2 className="text-lg font-semibold">Stock Inventory Report</h2>
+        <p className="text-sm text-gray-600">Generated: {format(new Date(), "dd/MM/yyyy HH:mm")}</p>
+        {filters && <p className="text-sm text-gray-600">{filters}</p>}
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-6 text-center">
+        <div className="border p-2">
+          <p className="text-sm text-gray-600">Total Items</p>
+          <p className="text-lg font-bold">{totals.totalItems}</p>
+        </div>
+        <div className="border p-2">
+          <p className="text-sm text-gray-600">Total Quantity</p>
+          <p className="text-lg font-bold">{totals.totalQty.toFixed(3)}</p>
+        </div>
+        <div className="border p-2">
+          <p className="text-sm text-gray-600">Total Value</p>
+          <p className="text-lg font-bold">₹{totals.totalValue.toFixed(2)}</p>
+        </div>
+      </div>
+
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b-2 border-black">
+            <th className="text-left py-1 px-1">Code</th>
+            <th className="text-left py-1 px-1">Item Name</th>
+            <th className="text-left py-1 px-1">Category</th>
+            <th className="text-left py-1 px-1">Pack</th>
+            <th className="text-right py-1 px-1">Rate</th>
+            <th className="text-right py-1 px-1">Qty</th>
+            <th className="text-right py-1 px-1">Value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((item, idx) => (
+            <tr key={idx} className="border-b border-gray-200">
+              <td className="py-1 px-1 font-mono text-xs">{item.itemCode}</td>
+              <td className="py-1 px-1">{item.itemName}</td>
+              <td className="py-1 px-1">{item.category || "—"}</td>
+              <td className="py-1 px-1">{item.packType}</td>
+              <td className="text-right py-1 px-1">{parseFloat(item.cost).toFixed(2)}</td>
+              <td className="text-right py-1 px-1">{parseFloat(item.quantity).toFixed(3)}</td>
+              <td className="text-right py-1 px-1">
+                {(parseFloat(item.quantity) * parseFloat(item.cost)).toFixed(2)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+        <tfoot>
+          <tr className="border-t-2 border-black font-bold">
+            <td colSpan={5} className="py-2 px-1">Total</td>
+            <td className="text-right py-2 px-1">{totals.totalQty.toFixed(3)}</td>
+            <td className="text-right py-2 px-1">₹{totals.totalValue.toFixed(2)}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  );
+}
+
 export default function Stock() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [packTypeFilter, setPackTypeFilter] = useState("all");
+  const [stockStatusFilter, setStockStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+  const printRef = useRef<HTMLDivElement>(null);
+  const { currentCompany } = useCompany();
 
   const { data: stock, isLoading } = useQuery<StockItem[]>({
     queryKey: ["/api/stock"],
   });
 
-  const filteredStock = stock?.filter((item) =>
-    item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Stock-Report-${format(new Date(), "yyyy-MM-dd")}`,
+  });
 
-  const lowStockItems = filteredStock?.filter(item => parseFloat(item.quantity) < 10) || [];
+  // Get unique categories and pack types for filters
+  const categories = Array.from(new Set(stock?.map(item => item.category).filter(Boolean))).sort();
+  const packTypes = Array.from(new Set(stock?.map(item => item.packType))).sort();
+
+  const filteredStock = stock?.filter((item) => {
+    // Text search
+    const matchesSearch = 
+      item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.category?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    // Category filter
+    const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
+
+    // Pack type filter
+    const matchesPackType = packTypeFilter === "all" || item.packType === packTypeFilter;
+
+    // Stock status filter
+    const qty = parseFloat(item.quantity);
+    let matchesStatus = true;
+    if (stockStatusFilter === "instock") matchesStatus = qty > 10;
+    else if (stockStatusFilter === "low") matchesStatus = qty > 0 && qty <= 10;
+    else if (stockStatusFilter === "out") matchesStatus = qty === 0;
+
+    return matchesSearch && matchesCategory && matchesPackType && matchesStatus;
+  });
+
+  const lowStockItems = filteredStock?.filter(item => parseFloat(item.quantity) < 10 && parseFloat(item.quantity) > 0) || [];
+  const outOfStockItems = filteredStock?.filter(item => parseFloat(item.quantity) === 0) || [];
+
+  const totals = {
+    totalItems: filteredStock?.length || 0,
+    totalQty: filteredStock?.reduce((sum, item) => sum + parseFloat(item.quantity), 0) || 0,
+    totalValue: filteredStock?.reduce((sum, item) => sum + (parseFloat(item.quantity) * parseFloat(item.cost)), 0) || 0,
+  };
+
+  const activeFilters = [
+    categoryFilter !== "all" ? `Category: ${categoryFilter}` : null,
+    packTypeFilter !== "all" ? `Pack: ${packTypeFilter}` : null,
+    stockStatusFilter !== "all" ? `Status: ${stockStatusFilter}` : null,
+  ].filter(Boolean).join(", ");
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Stock Inventory</h1>
-        <p className="text-muted-foreground mt-2">
-          View current stock levels and inventory status
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Stock Inventory</h1>
+          <p className="text-muted-foreground mt-2">
+            View and analyze current stock levels
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="icon" onClick={() => setViewMode(viewMode === "list" ? "grid" : "list")}>
+            {viewMode === "list" ? <Grid className="h-4 w-4" /> : <List className="h-4 w-4" />}
+          </Button>
+          <Button onClick={() => handlePrint()} disabled={!filteredStock?.length} data-testid="button-print-stock">
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+        </div>
       </div>
 
-      {lowStockItems.length > 0 && (
-        <Card className="border-orange-200 bg-orange-50/50 dark:border-orange-900 dark:bg-orange-950/20">
-          <CardHeader className="flex flex-row items-center gap-2 space-y-0">
-            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            <CardTitle className="text-base text-orange-900 dark:text-orange-100">
-              Low Stock Alert
-            </CardTitle>
+      {/* Summary Cards */}
+      <div className="grid gap-6 sm:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-orange-800 dark:text-orange-200">
-              {lowStockItems.length} item{lowStockItems.length !== 1 ? "s" : ""} {lowStockItems.length !== 1 ? "are" : "is"} running low on stock (below 10 units)
-            </p>
+            <div className="text-2xl font-semibold font-mono" data-testid="text-total-items">
+              {totals.totalItems}
+            </div>
           </CardContent>
         </Card>
-      )}
 
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
+            <BarChart2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold font-mono" data-testid="text-total-qty">
+              {totals.totalQty.toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Stock Value</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold font-mono" data-testid="text-stock-value">
+              ₹{totals.totalValue.toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={lowStockItems.length + outOfStockItems.length > 0 ? "border-orange-200 dark:border-orange-900" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Alerts</CardTitle>
+            <AlertCircle className="h-4 w-4 text-orange-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm">
+              <span className="text-orange-600 font-medium">{lowStockItems.length}</span> Low Stock
+              <span className="mx-2">|</span>
+              <span className="text-red-600 font-medium">{outOfStockItems.length}</span> Out of Stock
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-5">
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="search">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  id="search"
+                  placeholder="Search by name, code, or category..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-search-stock"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger id="category" data-testid="select-category">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat} value={cat!}>{cat}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="packType">Pack Type</Label>
+              <Select value={packTypeFilter} onValueChange={setPackTypeFilter}>
+                <SelectTrigger id="packType" data-testid="select-pack-type">
+                  <SelectValue placeholder="All Pack Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pack Types</SelectItem>
+                  {packTypes.map((pt) => (
+                    <SelectItem key={pt} value={pt}>{pt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="status">Stock Status</Label>
+              <Select value={stockStatusFilter} onValueChange={setStockStatusFilter}>
+                <SelectTrigger id="status" data-testid="select-status">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="instock">In Stock (&gt;10)</SelectItem>
+                  <SelectItem value="low">Low Stock (1-10)</SelectItem>
+                  <SelectItem value="out">Out of Stock</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stock List */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Stock List</CardTitle>
-            <div className="relative w-full max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search by item name, code, or category..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                data-testid="input-search-stock"
-              />
-            </div>
+            {activeFilters && (
+              <Badge variant="outline" className="text-xs">
+                {activeFilters}
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -88,66 +330,130 @@ export default function Stock() {
                 <Skeleton key={i} className="h-12 w-full" />
               ))}
             </div>
-          ) : filteredStock && filteredStock.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Pack Type</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                  <TableHead className="text-right">Quantity</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredStock.map((item) => {
-                  const qty = parseFloat(item.quantity);
-                  const isLow = qty < 10;
-                  const isOut = qty === 0;
+          ) : viewMode === "list" ? (
+            filteredStock && filteredStock.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Item Name</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Pack Type</TableHead>
+                    <TableHead className="text-right">Rate</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Value</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredStock.map((item) => {
+                    const qty = parseFloat(item.quantity);
+                    const isLow = qty < 10 && qty > 0;
+                    const isOut = qty === 0;
+                    const value = qty * parseFloat(item.cost);
 
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium font-mono">{item.itemCode}</TableCell>
-                      <TableCell>{item.itemName}</TableCell>
-                      <TableCell className="text-muted-foreground">{item.category || "—"}</TableCell>
-                      <TableCell className="font-mono">{item.packType}</TableCell>
-                      <TableCell className="text-right font-mono">
-                        ₹{parseFloat(item.cost).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono font-medium">
-                        {qty.toFixed(3)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {isOut ? (
-                          <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
-                        ) : isLow ? (
-                          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200">Low Stock</Badge>
-                        ) : (
-                          <Badge variant="default" className="text-xs">In Stock</Badge>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-sm text-muted-foreground mb-1">
-                {searchQuery ? "No items found" : "No stock data available"}
-              </p>
-              {!searchQuery && (
-                <p className="text-xs text-muted-foreground">
-                  Stock levels will update as you make sales and purchases
+                    return (
+                      <TableRow key={item.id} data-testid={`row-stock-${item.id}`}>
+                        <TableCell className="font-medium font-mono">{item.itemCode}</TableCell>
+                        <TableCell>{item.itemName}</TableCell>
+                        <TableCell className="text-muted-foreground">{item.category || "—"}</TableCell>
+                        <TableCell className="font-mono">{item.packType}</TableCell>
+                        <TableCell className="text-right font-mono">
+                          ₹{parseFloat(item.cost).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-medium">
+                          {qty.toFixed(3)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          ₹{value.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {isOut ? (
+                            <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
+                          ) : isLow ? (
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200">Low Stock</Badge>
+                          ) : (
+                            <Badge variant="default" className="text-xs">In Stock</Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  {searchQuery || categoryFilter !== "all" || packTypeFilter !== "all" || stockStatusFilter !== "all" 
+                    ? "No items found matching filters" 
+                    : "No stock data available"}
                 </p>
-              )}
+              </div>
+            )
+          ) : (
+            // Grid view
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredStock?.map((item) => {
+                const qty = parseFloat(item.quantity);
+                const isLow = qty < 10 && qty > 0;
+                const isOut = qty === 0;
+                const value = qty * parseFloat(item.cost);
+
+                return (
+                  <Card key={item.id} className={`${isOut ? 'border-red-200' : isLow ? 'border-orange-200' : ''}`}>
+                    <CardContent className="pt-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="font-mono text-xs text-muted-foreground">{item.itemCode}</p>
+                          <h3 className="font-medium">{item.itemName}</h3>
+                        </div>
+                        {isOut ? (
+                          <Badge variant="destructive" className="text-xs">Out</Badge>
+                        ) : isLow ? (
+                          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">Low</Badge>
+                        ) : (
+                          <Badge variant="default" className="text-xs">OK</Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <p className="text-muted-foreground text-xs">Category</p>
+                          <p>{item.category || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Pack</p>
+                          <p>{item.packType}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Quantity</p>
+                          <p className="font-mono font-medium">{qty.toFixed(3)}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">Value</p>
+                          <p className="font-mono">₹{value.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Hidden print container */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
+        <div ref={printRef}>
+          <StockReportPrint
+            items={filteredStock || []}
+            totals={totals}
+            companyName={currentCompany?.name || "Company"}
+            filters={activeFilters}
+          />
+        </div>
+      </div>
     </div>
   );
 }

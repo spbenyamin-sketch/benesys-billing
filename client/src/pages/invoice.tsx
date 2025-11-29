@@ -87,6 +87,7 @@ export default function Invoice() {
   const params = useParams();
   const saleId = params.id;
   const [hasPrinted, setHasPrinted] = useState(false);
+  const [templateReady, setTemplateReady] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   const { data: sale, isLoading: saleLoading } = useQuery<Sale>({
@@ -97,16 +98,54 @@ export default function Invoice() {
     queryKey: ["/api/sales", saleId, "items"],
   });
 
-  const getBillAssignmentType = () => {
-    if (sale?.billType === "EST") return "estimate";
-    if (sale?.saleType === "B2B") return "b2b";
+  const getAssignmentType = useCallback((saleData: Sale | undefined): string => {
+    if (!saleData) return "b2c";
+    if (saleData.billType === "EST") return "estimate";
+    if (saleData.billType === "CN" || saleData.saleType === "CREDIT_NOTE") return "credit_note";
+    if (saleData.saleType === "B2B") return "b2b";
     return "b2c";
-  };
+  }, []);
 
-  const { data: template } = useQuery<BillTemplate | null>({
-    queryKey: ["/api/bill-templates/assigned", getBillAssignmentType()],
+  const assignmentType = getAssignmentType(sale);
+
+  const { data: template, isLoading: templateLoading } = useQuery<BillTemplate | null>({
+    queryKey: ["/api/bill-templates/assigned", assignmentType],
     enabled: !!sale,
   });
+
+  useEffect(() => {
+    if (sale && !templateLoading && template !== undefined) {
+      setTemplateReady(true);
+    }
+  }, [sale, template, templateLoading]);
+
+  const getPageStyle = useCallback((format: string) => {
+    if (format === "B4") {
+      return `
+        @page { size: B4 portrait; margin: 10mm; }
+        @media print {
+          body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+      `;
+    } else if (format.includes("thermal") || format.includes("inch")) {
+      const width = format === "thermal_3inch" || format === "3inch" ? "80mm" : "112mm";
+      return `
+        @page { size: ${width} auto; margin: 2mm; }
+        @media print {
+          body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+      `;
+    }
+    
+    return `
+      @page { size: A4 portrait; margin: 8mm; }
+      @media print {
+        body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      }
+    `;
+  }, []);
+
+  const currentFormat = template?.formatType || "A4";
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -114,30 +153,19 @@ export default function Invoice() {
     onAfterPrint: () => {
       console.log("Print completed");
     },
-    pageStyle: `
-      @page {
-        size: auto;
-        margin: 10mm;
-      }
-      @media print {
-        body {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-      }
-    `,
+    pageStyle: getPageStyle(currentFormat),
   });
 
-  const isLoading = saleLoading || itemsLoading;
+  const isLoading = saleLoading || itemsLoading || !templateReady;
 
   useEffect(() => {
-    if (sale && items && !hasPrinted && !isLoading) {
+    if (sale && items && templateReady && !hasPrinted && !saleLoading && !itemsLoading) {
       setHasPrinted(true);
       setTimeout(() => {
         handlePrint();
-      }, 800);
+      }, 1000);
     }
-  }, [sale, items, hasPrinted, isLoading, handlePrint]);
+  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint]);
 
   if (isLoading) {
     return (

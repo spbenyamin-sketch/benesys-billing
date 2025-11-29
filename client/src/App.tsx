@@ -37,6 +37,7 @@ import SalesReport from "@/pages/reports/sales-report";
 import ItemsReport from "@/pages/reports/items-report";
 import PurchaseReport from "@/pages/reports/purchase-report";
 import Ledger from "@/pages/reports/ledger";
+import PaymentsReport from "@/pages/reports/payments-report";
 import Invoice from "@/pages/invoice";
 import EditSale from "@/pages/edit-sale";
 import UserManagement from "@/pages/user-management";
@@ -79,6 +80,7 @@ function Router() {
       <Route path="/reports/sales" component={SalesReport} />
       <Route path="/reports/purchases" component={PurchaseReport} />
       <Route path="/reports/items" component={ItemsReport} />
+      <Route path="/reports/payments" component={PaymentsReport} />
       <Route path="/reports/ledger/:id" component={Ledger} />
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}
       {isSuperAdmin && <Route path="/companies" component={Companies} />}

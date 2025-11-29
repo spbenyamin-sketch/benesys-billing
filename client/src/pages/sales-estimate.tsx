@@ -62,6 +62,8 @@ export default function SalesEstimate() {
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [isWalkIn, setIsWalkIn] = useState(false);
+  const [walkInName, setWalkInName] = useState("");
   const [lineItems, setLineItems] = useState<SaleLineItem[]>([]);
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [barcodeInput, setBarcodeInput] = useState("");
@@ -209,9 +211,9 @@ export default function SalesEstimate() {
         paymentMode: "CASH",
         inclusiveTax: false,
         date: invoiceDate,
-        partyId: selectedPartyId,
-        partyName: selectedParty?.name || "",
-        partyCity: selectedParty?.city || "",
+        partyId: isWalkIn ? null : selectedPartyId,
+        partyName: isWalkIn ? (walkInName || "Walk-in Customer") : (selectedParty?.name || ""),
+        partyCity: isWalkIn ? "" : (selectedParty?.city || ""),
         partyAddress: "",
         partyGstNo: "",
         gstType: 0,
@@ -268,6 +270,8 @@ export default function SalesEstimate() {
       
       setLineItems([]);
       setSelectedPartyId(null);
+      setIsWalkIn(false);
+      setWalkInName("");
       setAmountGiven(0);
       setMobile("");
     },
@@ -325,15 +329,25 @@ export default function SalesEstimate() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="party">Customer (Optional)</Label>
+                <Label htmlFor="party">Customer</Label>
                 <Select
-                  value={selectedPartyId?.toString() || ""}
-                  onValueChange={(v) => setSelectedPartyId(v ? parseInt(v) : null)}
+                  value={isWalkIn ? "walkin" : (selectedPartyId?.toString() || "")}
+                  onValueChange={(v) => {
+                    if (v === "walkin") {
+                      setIsWalkIn(true);
+                      setSelectedPartyId(null);
+                    } else {
+                      setIsWalkIn(false);
+                      setWalkInName("");
+                      setSelectedPartyId(v ? parseInt(v) : null);
+                    }
+                  }}
                 >
                   <SelectTrigger id="party" data-testid="select-party">
                     <SelectValue placeholder="Select customer" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="walkin">Walk-in Customer</SelectItem>
                     {parties?.map((party) => (
                       <SelectItem key={party.id} value={party.id.toString()}>
                         {party.name} - {party.city}
@@ -343,6 +357,31 @@ export default function SalesEstimate() {
                 </Select>
               </div>
             </div>
+            {isWalkIn && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="walkInName">Customer Name (Optional)</Label>
+                  <Input
+                    id="walkInName"
+                    placeholder="Enter customer name"
+                    value={walkInName}
+                    onChange={(e) => setWalkInName(e.target.value)}
+                    data-testid="input-walkin-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mobile">Mobile (Optional)</Label>
+                  <Input
+                    id="mobile"
+                    type="tel"
+                    placeholder="Enter mobile number"
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    data-testid="input-mobile"
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 p-3 border rounded-md">
               <div className="flex gap-2">
