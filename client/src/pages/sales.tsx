@@ -195,6 +195,15 @@ export default function Sales() {
                             <Button
                               size="icon"
                               variant="ghost"
+                              onClick={() => setLocation(`/sales/edit/${sale.id}`)}
+                              title="Edit Invoice"
+                              data-testid={`button-edit-invoice-${sale.id}`}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
                               onClick={() => openInvoice(sale.id)}
                               title="Reprint Invoice"
                               data-testid={`button-reprint-invoice-${sale.id}`}

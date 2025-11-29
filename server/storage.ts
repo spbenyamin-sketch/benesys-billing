@@ -88,6 +88,7 @@ export interface IStorage {
   getSaleItems(saleId: number, companyId: number): Promise<SaleItem[]>;
   getNextInvoiceNumber(billType: string, companyId: number): Promise<number>;
   createSale(sale: InsertSale, items: InsertSaleItem[], userId: string, companyId: number): Promise<Sale>;
+  updateSale(id: number, sale: Partial<InsertSale>, items: InsertSaleItem[], companyId: number): Promise<Sale>;
 
   // Purchase operations
   getPurchases(companyId: number): Promise<Purchase[]>;
@@ -583,6 +584,87 @@ export class DatabaseStorage implements IStorage {
     }
 
     return newSale;
+  }
+
+  async updateSale(id: number, saleData: Partial<InsertSale>, saleItemsData: InsertSaleItem[], companyId: number): Promise<Sale> {
+    // Get existing sale and items for stock adjustment
+    const existingSale = await this.getSale(id, companyId);
+    if (!existingSale) {
+      throw new Error("Sale not found");
+    }
+    const existingItems = await this.getSaleItems(id, companyId);
+
+    // SECURITY: Validate all new items belong to this company
+    for (const item of saleItemsData) {
+      if (item.itemId) {
+        const dbItem = await this.getItem(item.itemId, companyId);
+        if (!dbItem) {
+          throw new Error(`Item ${item.itemId} not found or does not belong to this company`);
+        }
+      }
+    }
+
+    // Restore stock for existing items
+    for (const item of existingItems) {
+      if (item.itemId) {
+        await this.updateStock(item.itemId, parseFloat(item.quantity.toString()), companyId);
+      }
+    }
+
+    // Delete existing sale items
+    await db.delete(saleItems).where(eq(saleItems.saleId, id));
+
+    // Merge existing sale data with new data to preserve unchanged fields
+    const mergedSaleData = {
+      billType: saleData.billType ?? existingSale.billType,
+      saleType: saleData.saleType ?? existingSale.saleType,
+      date: saleData.date ?? existingSale.date,
+      partyId: saleData.partyId !== undefined ? saleData.partyId : existingSale.partyId,
+      partyName: saleData.partyName ?? existingSale.partyName,
+      partyCity: saleData.partyCity ?? existingSale.partyCity,
+      partyAddress: saleData.partyAddress ?? existingSale.partyAddress,
+      partyGstNo: saleData.partyGstNo ?? existingSale.partyGstNo,
+      gstType: saleData.gstType ?? existingSale.gstType,
+      saleValue: saleData.saleValue ?? existingSale.saleValue,
+      taxValue: saleData.taxValue ?? existingSale.taxValue,
+      cgstTotal: saleData.cgstTotal ?? existingSale.cgstTotal,
+      sgstTotal: saleData.sgstTotal ?? existingSale.sgstTotal,
+      discountTotal: saleData.discountTotal ?? existingSale.discountTotal,
+      roundOff: saleData.roundOff ?? existingSale.roundOff,
+      grandTotal: saleData.grandTotal ?? existingSale.grandTotal,
+      totalQty: saleData.totalQty ?? existingSale.totalQty,
+      mobile: saleData.mobile ?? existingSale.mobile,
+      paymentMode: saleData.paymentMode ?? existingSale.paymentMode,
+      amountGiven: saleData.amountGiven ?? existingSale.amountGiven,
+      amountReturn: saleData.amountReturn ?? existingSale.amountReturn,
+      byCash: saleData.byCash ?? existingSale.byCash,
+      byCard: saleData.byCard ?? existingSale.byCard,
+    };
+
+    // Update sale (keep same invoice number and creation metadata)
+    const [updatedSale] = await db
+      .update(sales)
+      .set({
+        ...mergedSaleData,
+        invoiceNo: existingSale.invoiceNo,
+      })
+      .where(and(eq(sales.id, id), eq(sales.companyId, companyId)))
+      .returning();
+
+    // Insert new sale items
+    for (const item of saleItemsData) {
+      await db.insert(saleItems).values({
+        ...item,
+        saleId: id,
+      });
+
+      // Update stock (decrease)
+      if (item.itemId) {
+        await this.updateStock(item.itemId, -parseFloat(item.quantity.toString()), companyId);
+      }
+    }
+
+    return updatedSale;
   }
 
   // ==================== PURCHASE OPERATIONS ====================

@@ -503,6 +503,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update sale
+  app.put("/api/sales/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { items: saleItems, ...saleData } = req.body;
+      
+      if (!saleItems || !Array.isArray(saleItems) || saleItems.length === 0) {
+        return res.status(400).json({ message: "At least one item is required" });
+      }
+
+      // Validate each item has required fields
+      for (const item of saleItems) {
+        if (!item.itemName || item.quantity === undefined || item.rate === undefined) {
+          return res.status(400).json({ message: "Each item must have itemName, quantity, and rate" });
+        }
+        if (typeof item.quantity !== 'number' || item.quantity <= 0) {
+          return res.status(400).json({ message: "Quantity must be a positive number" });
+        }
+        if (typeof item.rate !== 'number' || item.rate < 0) {
+          return res.status(400).json({ message: "Rate must be a non-negative number" });
+        }
+      }
+
+      const sale = await storage.updateSale(parseInt(req.params.id), saleData, saleItems, req.companyId);
+      res.json(sale);
+    } catch (error) {
+      console.error("Error updating sale:", error);
+      res.status(500).json({ message: "Failed to update sale" });
+    }
+  });
+
   // ==================== PURCHASE ROUTES ====================
   app.get("/api/purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {

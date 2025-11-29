@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Wallet, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Plus, Wallet, ArrowDownCircle, ArrowUpCircle, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,6 +38,8 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useReactToPrint } from "react-to-print";
+import { useCompany } from "@/contexts/CompanyContext";
 
 const paymentFormSchema = z.object({
   date: z.string().min(1, "Date is required"),
@@ -65,9 +67,104 @@ interface Party {
   name: string;
 }
 
+interface PaymentReceipt {
+  payment: Payment;
+  companyName: string;
+}
+
+function PaymentReceiptPrint({ payment, companyName }: PaymentReceipt) {
+  const isCredit = parseFloat(payment.credit) > 0;
+  const amount = isCredit ? parseFloat(payment.credit) : parseFloat(payment.debit);
+  
+  return (
+    <div className="p-8 bg-white text-black max-w-md mx-auto" style={{ fontFamily: "Inter, sans-serif" }}>
+      <div className="text-center border-b-2 border-black pb-4 mb-4">
+        <h1 className="text-xl font-bold">{companyName}</h1>
+        <p className="text-lg font-semibold mt-2">
+          {isCredit ? "PAYMENT RECEIPT" : "PAYMENT VOUCHER"}
+        </p>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+        <div>
+          <span className="text-gray-600">Receipt No:</span>
+          <span className="font-medium ml-2">#{payment.id}</span>
+        </div>
+        <div className="text-right">
+          <span className="text-gray-600">Date:</span>
+          <span className="font-medium ml-2">{format(new Date(payment.date), "dd MMM yyyy")}</span>
+        </div>
+      </div>
+      
+      <div className="border rounded-lg p-4 mb-6 bg-gray-50">
+        <div className="mb-3">
+          <span className="text-gray-600 text-sm">Received From / Paid To:</span>
+          <p className="font-semibold text-lg">{payment.partyName || "Cash"}</p>
+        </div>
+        
+        <div className="mb-3">
+          <span className="text-gray-600 text-sm">Amount:</span>
+          <p className="font-bold text-2xl text-green-700">₹{amount.toFixed(2)}</p>
+        </div>
+        
+        <div className="mb-3">
+          <span className="text-gray-600 text-sm">Amount in Words:</span>
+          <p className="font-medium">{numberToWords(amount)} Rupees Only</p>
+        </div>
+        
+        {payment.details && (
+          <div>
+            <span className="text-gray-600 text-sm">Details:</span>
+            <p className="font-medium">{payment.details}</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t">
+        <div className="text-center">
+          <div className="border-t border-gray-400 pt-2 mt-8">
+            <p className="text-sm text-gray-600">Receiver's Signature</p>
+          </div>
+        </div>
+        <div className="text-center">
+          <div className="border-t border-gray-400 pt-2 mt-8">
+            <p className="text-sm text-gray-600">Authorized Signature</p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="text-center mt-8 text-xs text-gray-500">
+        This is a computer generated receipt
+      </div>
+    </div>
+  );
+}
+
+function numberToWords(num: number): string {
+  const ones = ["", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
+    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen"];
+  const tens = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+  
+  const numToWord = (n: number): string => {
+    if (n < 20) return ones[n];
+    if (n < 100) return tens[Math.floor(n / 10)] + (n % 10 ? " " + ones[n % 10] : "");
+    if (n < 1000) return ones[Math.floor(n / 100)] + " Hundred" + (n % 100 ? " " + numToWord(n % 100) : "");
+    if (n < 100000) return numToWord(Math.floor(n / 1000)) + " Thousand" + (n % 1000 ? " " + numToWord(n % 1000) : "");
+    if (n < 10000000) return numToWord(Math.floor(n / 100000)) + " Lakh" + (n % 100000 ? " " + numToWord(n % 100000) : "");
+    return numToWord(Math.floor(n / 10000000)) + " Crore" + (n % 10000000 ? " " + numToWord(n % 10000000) : "");
+  };
+  
+  const intPart = Math.floor(num);
+  return intPart === 0 ? "Zero" : numToWord(intPart);
+}
+
 export default function Payments() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isPrintReady, setIsPrintReady] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { currentCompany } = useCompany();
 
   const { data: payments, isLoading } = useQuery<Payment[]>({
     queryKey: ["/api/payments"],
@@ -76,6 +173,31 @@ export default function Payments() {
   const { data: parties } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
   });
+
+  const handlePrintReceipt = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Payment-Receipt-${selectedPayment?.id}`,
+    onAfterPrint: () => {
+      setSelectedPayment(null);
+      setIsPrintReady(false);
+    },
+  });
+
+  const printReceipt = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsPrintReady(true);
+  };
+
+  // Trigger print when ready using useEffect
+  useEffect(() => {
+    if (isPrintReady && selectedPayment) {
+      const timer = setTimeout(() => {
+        handlePrintReceipt();
+        setIsPrintReady(false);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrintReady, selectedPayment, handlePrintReceipt]);
 
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
@@ -336,6 +458,7 @@ export default function Payments() {
                   <TableHead>Details</TableHead>
                   <TableHead className="text-right">Credit</TableHead>
                   <TableHead className="text-right">Debit</TableHead>
+                  <TableHead className="w-16">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -352,6 +475,17 @@ export default function Payments() {
                     <TableCell className="text-right font-mono text-red-600">
                       {parseFloat(payment.debit) > 0 ? `₹${parseFloat(payment.debit).toFixed(2)}` : "—"}
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => printReceipt(payment)}
+                        title="Print Receipt"
+                        data-testid={`button-print-receipt-${payment.id}`}
+                      >
+                        <Printer className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -367,6 +501,17 @@ export default function Payments() {
           )}
         </CardContent>
       </Card>
+
+      {selectedPayment && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
+          <div ref={printRef}>
+            <PaymentReceiptPrint 
+              payment={selectedPayment} 
+              companyName={currentCompany?.name || "Your Company"} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -38,6 +38,7 @@ import ItemsReport from "@/pages/reports/items-report";
 import PurchaseReport from "@/pages/reports/purchase-report";
 import Ledger from "@/pages/reports/ledger";
 import Invoice from "@/pages/invoice";
+import EditSale from "@/pages/edit-sale";
 import UserManagement from "@/pages/user-management";
 import BillSettings from "@/pages/bill-settings";
 import Companies from "@/pages/companies";
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/sales/credit-note" component={CreditNote} />
       <Route path="/sales/new" component={SalesBilling} />
       <Route path="/sales" component={Sales} />
+      <Route path="/sales/edit/:id" component={EditSale} />
       <Route path="/invoice/:id" component={Invoice} />
       <Route path="/purchases/new" component={PurchaseEntry} />
       <Route path="/purchase-entry" component={PurchaseEntry} />
