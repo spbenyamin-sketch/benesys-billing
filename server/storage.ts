@@ -583,12 +583,20 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
 
-    // Insert sale items
+    // Insert sale items and mark barcodes as sold
     for (const item of saleItemsData) {
-      await db.insert(saleItems).values({
+      const saleItem = await db.insert(saleItems).values({
         ...item,
         saleId: newSale.id,
-      });
+      }).returning();
+
+      // Mark barcode as sold if this item came from stock inward
+      if (item.stockInwardId) {
+        await db
+          .update(stockInwardItems)
+          .set({ status: "sold" })
+          .where(eq(stockInwardItems.id, item.stockInwardId));
+      }
 
       // Update stock (decrease)
       if (item.itemId) {
@@ -617,8 +625,15 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Restore stock for existing items
+    // Restore stock for existing items and mark barcodes as available again
     for (const item of existingItems) {
+      // Restore barcode status to available if it was sold
+      if (item.stockInwardId) {
+        await db
+          .update(stockInwardItems)
+          .set({ status: "available" })
+          .where(eq(stockInwardItems.id, item.stockInwardId));
+      }
       if (item.itemId) {
         await this.updateStock(item.itemId, parseFloat(item.quantity.toString()), companyId);
       }
@@ -664,12 +679,20 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(sales.id, id), eq(sales.companyId, companyId)))
       .returning();
 
-    // Insert new sale items
+    // Insert new sale items and mark barcodes as sold
     for (const item of saleItemsData) {
       await db.insert(saleItems).values({
         ...item,
         saleId: id,
       });
+
+      // Mark barcode as sold if this item came from stock inward
+      if (item.stockInwardId) {
+        await db
+          .update(stockInwardItems)
+          .set({ status: "sold" })
+          .where(eq(stockInwardItems.id, item.stockInwardId));
+      }
 
       // Update stock (decrease)
       if (item.itemId) {
@@ -848,8 +871,11 @@ export class DatabaseStorage implements IStorage {
   // ==================== STOCK OPERATIONS ====================
   async getStock(companyId: number, partyId?: number, itemId?: number): Promise<any[]> {
     // Get stock from stockInwardItems with party information
-    // Each record = 1 unit, so COUNT gives total quantity
-    const conditions = [eq(stockInwardItems.companyId, companyId)];
+    // CRITICAL: Only include items with status = 'available' (exclude 'sold' and 'in_stock')
+    const conditions = [
+      eq(stockInwardItems.companyId, companyId),
+      eq(stockInwardItems.status, "available") // Only show available stock
+    ];
     if (partyId) conditions.push(eq(purchases.partyId, partyId));
     if (itemId) conditions.push(eq(stockInwardItems.itemId, itemId));
 

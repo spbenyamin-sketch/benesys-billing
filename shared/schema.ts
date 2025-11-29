@@ -283,6 +283,7 @@ export const saleItems = pgTable("sale_items", {
   saleId: integer("sale_id").references(() => sales.id).notNull(),
   itemId: integer("item_id").references(() => items.id),
   purchaseItemId: integer("purchase_item_id").references(() => purchaseItems.id), // Link to inventory for barcode scanned items
+  stockInwardId: integer("stock_inward_id").references(() => stockInwardItems.id), // Track which barcode was sold
   itemCode: varchar("item_code", { length: 50 }),
   barcode: varchar("barcode", { length: 100 }), // Barcode if scanned from inventory
   itemName: varchar("item_name", { length: 300 }).notNull(),
