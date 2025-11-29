@@ -1196,22 +1196,33 @@ export class DatabaseStorage implements IStorage {
     const conditions = [eq(payments.companyId, companyId)];
     if (startDate) conditions.push(gte(payments.date, startDate));
     if (endDate) conditions.push(lte(payments.date, endDate));
-    if (type) conditions.push(eq(payments.type, type));
 
-    return await db
+    let data = await db
       .select({
         id: payments.id,
         date: payments.date,
-        type: payments.type,
         partyId: payments.partyId,
-        partyName: parties.name,
-        amount: payments.amount,
+        partyName: payments.partyName,
+        credit: payments.credit,
+        debit: payments.debit,
         details: payments.details,
       })
       .from(payments)
-      .leftJoin(parties, eq(payments.partyId, parties.id))
       .where(and(...conditions))
       .orderBy(desc(payments.date), desc(payments.id));
+
+    // Transform credit/debit to type format and filter by type if specified
+    const transformed = data.map((row: any) => ({
+      ...row,
+      type: parseFloat(row.credit) > 0 ? "RECEIVED" : "PAID",
+      amount: parseFloat(row.credit) > 0 ? row.credit : row.debit,
+    }));
+
+    if (type) {
+      return transformed.filter((row: any) => row.type === type);
+    }
+
+    return transformed;
   }
 
   // ==================== BILL TEMPLATE OPERATIONS ====================
