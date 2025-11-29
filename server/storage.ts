@@ -871,10 +871,13 @@ export class DatabaseStorage implements IStorage {
   // ==================== STOCK OPERATIONS ====================
   async getStock(companyId: number, partyId?: number, itemId?: number): Promise<any[]> {
     // Get stock from stockInwardItems with party information
-    // CRITICAL: Only include items with status = 'available' (exclude 'sold' and 'in_stock')
+    // CRITICAL: Only include items with status = 'available' or 'in_stock' (exclude 'sold')
     const conditions = [
       eq(stockInwardItems.companyId, companyId),
-      eq(stockInwardItems.status, "available") // Only show available stock
+      or(
+        eq(stockInwardItems.status, "available"),
+        eq(stockInwardItems.status, "in_stock")
+      ) // Show all unsold stock
     ];
     if (partyId) conditions.push(eq(purchases.partyId, partyId));
     if (itemId) conditions.push(eq(stockInwardItems.itemId, itemId));
