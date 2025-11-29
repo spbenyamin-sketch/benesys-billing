@@ -592,10 +592,31 @@ export class DatabaseStorage implements IStorage {
 
       // Mark barcode as sold if this item came from stock inward
       if (item.stockInwardId) {
-        await db
-          .update(stockInwardItems)
-          .set({ status: "sold" })
+        // Get current barcode qty
+        const [barcode] = await db
+          .select()
+          .from(stockInwardItems)
           .where(eq(stockInwardItems.id, item.stockInwardId));
+        
+        if (barcode) {
+          const currentQty = parseFloat(barcode.qty?.toString() || "1");
+          const soldQty = parseFloat(item.quantity.toString());
+          const remainingQty = currentQty - soldQty;
+          
+          if (remainingQty > 0) {
+            // Bulk barcode: reduce qty but keep as available
+            await db
+              .update(stockInwardItems)
+              .set({ qty: remainingQty.toString() })
+              .where(eq(stockInwardItems.id, item.stockInwardId));
+          } else {
+            // Last unit sold: mark as sold
+            await db
+              .update(stockInwardItems)
+              .set({ status: "sold", qty: "0" })
+              .where(eq(stockInwardItems.id, item.stockInwardId));
+          }
+        }
       }
 
       // Update stock (decrease)
@@ -627,12 +648,24 @@ export class DatabaseStorage implements IStorage {
 
     // Restore stock for existing items and mark barcodes as available again
     for (const item of existingItems) {
-      // Restore barcode status to available if it was sold
+      // Restore barcode qty if it was sold
       if (item.stockInwardId) {
-        await db
-          .update(stockInwardItems)
-          .set({ status: "available" })
+        const [barcode] = await db
+          .select()
+          .from(stockInwardItems)
           .where(eq(stockInwardItems.id, item.stockInwardId));
+        
+        if (barcode) {
+          const currentQty = parseFloat(barcode.qty?.toString() || "0");
+          const itemQty = parseFloat(item.quantity.toString());
+          const restoredQty = currentQty + itemQty;
+          
+          // Always restore to available with restored qty
+          await db
+            .update(stockInwardItems)
+            .set({ qty: restoredQty.toString(), status: "available" })
+            .where(eq(stockInwardItems.id, item.stockInwardId));
+        }
       }
       if (item.itemId) {
         await this.updateStock(item.itemId, parseFloat(item.quantity.toString()), companyId);
@@ -688,10 +721,31 @@ export class DatabaseStorage implements IStorage {
 
       // Mark barcode as sold if this item came from stock inward
       if (item.stockInwardId) {
-        await db
-          .update(stockInwardItems)
-          .set({ status: "sold" })
+        // Get current barcode qty
+        const [barcode] = await db
+          .select()
+          .from(stockInwardItems)
           .where(eq(stockInwardItems.id, item.stockInwardId));
+        
+        if (barcode) {
+          const currentQty = parseFloat(barcode.qty?.toString() || "1");
+          const soldQty = parseFloat(item.quantity.toString());
+          const remainingQty = currentQty - soldQty;
+          
+          if (remainingQty > 0) {
+            // Bulk barcode: reduce qty but keep as available
+            await db
+              .update(stockInwardItems)
+              .set({ qty: remainingQty.toString() })
+              .where(eq(stockInwardItems.id, item.stockInwardId));
+          } else {
+            // Last unit sold: mark as sold
+            await db
+              .update(stockInwardItems)
+              .set({ status: "sold", qty: "0" })
+              .where(eq(stockInwardItems.id, item.stockInwardId));
+          }
+        }
       }
 
       // Update stock (decrease)
