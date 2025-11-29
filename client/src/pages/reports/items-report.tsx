@@ -121,8 +121,23 @@ export default function ItemsReport() {
     queryKey: ["/api/items"],
   });
 
+  // Build query params as URL search params
+  const queryParams = new URLSearchParams();
+  if (startDate) queryParams.set("startDate", startDate);
+  if (endDate) queryParams.set("endDate", endDate);
+  if (saleType !== "all") queryParams.set("saleType", saleType);
+  if (selectedItemId) queryParams.set("itemId", selectedItemId);
+
+  const queryString = queryParams.toString();
+  const apiUrl = queryString ? `/api/reports/items?${queryString}` : "/api/reports/items";
+
   const { data: items, isLoading } = useQuery<ItemReport[]>({
-    queryKey: ["/api/reports/items", { startDate, endDate, saleType: saleType === "all" ? "" : saleType, itemId: selectedItemId }],
+    queryKey: ["/api/reports/items", startDate, endDate, saleType, selectedItemId],
+    queryFn: async () => {
+      const res = await fetch(apiUrl, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
+      if (!res.ok) throw new Error("Failed to fetch items report");
+      return res.json();
+    },
   });
 
   const handlePrint = useReactToPrint({
