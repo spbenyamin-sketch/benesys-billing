@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Wallet, ArrowDownCircle, ArrowUpCircle, Printer } from "lucide-react";
+import { Plus, Wallet, ArrowDownCircle, ArrowUpCircle, Printer, Pencil, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -160,6 +160,7 @@ function numberToWords(num: number): string {
 
 export default function Payments() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isPrintReady, setIsPrintReady] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
@@ -267,8 +268,64 @@ export default function Payments() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async (data: PaymentFormValues) => {
+      if (!editingPaymentId) throw new Error("No payment selected");
+      const selectedParty = parties?.find(p => p.id === data.partyId);
+      return apiRequest("PUT", `/api/payments/${editingPaymentId}`, {
+        date: data.date,
+        partyId: data.partyId,
+        partyName: selectedParty?.name || data.partyName,
+        credit: data.type === "credit" ? data.amount : "0",
+        debit: data.type === "debit" ? data.amount : "0",
+        details: data.details,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+      toast({
+        title: "Success",
+        description: "Payment entry updated successfully",
+      });
+      setIsDialogOpen(false);
+      setEditingPaymentId(null);
+      form.reset();
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (data: PaymentFormValues) => {
-    createMutation.mutate(data);
+    if (editingPaymentId) {
+      updateMutation.mutate(data);
+    } else {
+      createMutation.mutate(data);
+    }
+  };
+
+  const handleEditPayment = (payment: Payment) => {
+    setEditingPaymentId(payment.id);
+    const type = parseFloat(payment.credit) > 0 ? "credit" : "debit";
+    const amount = type === "credit" ? payment.credit : payment.debit;
+    form.reset({
+      date: payment.date,
+      partyName: payment.partyName || "",
+      type,
+      amount,
+      details: payment.details || "",
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setEditingPaymentId(null);
+    form.reset();
   };
 
   const totalCredit = payments?.reduce((sum, p) => sum + parseFloat(p.credit), 0) || 0;
@@ -283,7 +340,7 @@ export default function Payments() {
             Record payment receipts and transactions
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-payment">
               <Plus className="mr-2 h-4 w-4" />
@@ -292,9 +349,9 @@ export default function Payments() {
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Add Payment Entry</DialogTitle>
+              <DialogTitle>{editingPaymentId ? "Edit Payment Entry" : "Add Payment Entry"}</DialogTitle>
               <DialogDescription>
-                Record a payment or receipt transaction
+                {editingPaymentId ? "Update payment details" : "Record a payment or receipt transaction"}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -404,20 +461,19 @@ export default function Payments() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => {
-                      setIsDialogOpen(false);
-                      form.reset();
-                    }}
+                    onClick={handleCloseDialog}
                     data-testid="button-cancel"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
-                    disabled={createMutation.isPending}
+                    disabled={editingPaymentId ? updateMutation.isPending : createMutation.isPending}
                     data-testid="button-save-payment"
                   >
-                    {createMutation.isPending ? "Saving..." : "Save"}
+                    {editingPaymentId
+                      ? updateMutation.isPending ? "Updating..." : "Update"
+                      : createMutation.isPending ? "Saving..." : "Save"}
                   </Button>
                 </div>
               </form>
@@ -502,15 +558,35 @@ export default function Payments() {
                       {parseFloat(payment.debit) > 0 ? `₹${parseFloat(payment.debit).toFixed(2)}` : "—"}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => printReceipt(payment)}
-                        title="Print Receipt"
-                        data-testid={`button-print-receipt-${payment.id}`}
-                      >
-                        <Printer className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleEditPayment(payment)}
+                          title="Edit Payment"
+                          data-testid={`button-edit-payment-${payment.id}`}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => printReceipt(payment)}
+                          title="Print Receipt"
+                          data-testid={`button-print-receipt-${payment.id}`}
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => handleDelete(payment.id)}
+                          title="Delete Payment"
+                          data-testid={`button-delete-payment-${payment.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
