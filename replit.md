@@ -87,3 +87,38 @@ Preferred communication style: Simple, everyday language.
 
 **Styling:**
 - **Tailwind CSS:** Utility-first CSS framework.
+
+**Printing:**
+- **react-to-print:** Print library for thermal and document printing.
+
+## Bill Template System
+
+### Template Types
+- **A4 Format:** Standard A4 paper (210 × 297 mm) for traditional invoices
+- **B4 Format:** B4 paper (250 × 353 mm) for Tally-style invoices
+- **Thermal 3 Inch:** 80mm thermal paper for POS receipts
+- **Thermal 4 Inch:** 112mm thermal paper for wider POS receipts
+
+### Template Assignment
+Templates can be assigned to specific transaction types:
+- **B2B Credit Sale:** For business-to-business transactions
+- **B2C Retail Sale:** For retail/consumer transactions
+- **Estimate/Quotation:** For quotes and estimates
+
+### Template Features
+- Customizable header text and logo
+- Customizable footer text
+- Toggle for tax breakup display
+- Toggle for HSN codes
+- Toggle for item codes
+- Party balance display option
+- Bank details section
+- Terms and conditions
+- Configurable font size
+
+### API Endpoints
+- `GET /api/bill-templates` - List all templates
+- `GET /api/bill-templates/assigned/:type` - Get template by assignment (b2b, b2c, estimate)
+- `POST /api/bill-templates` - Create new template
+- `PUT /api/bill-templates/:id` - Update template
+- `DELETE /api/bill-templates/:id` - Delete template
