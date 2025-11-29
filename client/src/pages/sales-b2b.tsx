@@ -604,7 +604,7 @@ export default function SalesB2B() {
                                 <SelectContent>
                                   {items?.map((i) => (
                                     <SelectItem key={i.id} value={i.id.toString()}>
-                                      {i.name} ({i.code})
+                                      {i.name}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
