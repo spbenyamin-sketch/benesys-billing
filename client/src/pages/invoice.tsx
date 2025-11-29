@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -15,6 +15,8 @@ import { Printer, ArrowLeft } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { format } from "date-fns";
+import { useReactToPrint } from "react-to-print";
+import { InvoiceA4Print, InvoiceThermalPrint } from "@/components/InvoicePrint";
 
 interface SaleItem {
   id: number;
@@ -29,6 +31,7 @@ interface SaleItem {
   tax: string | null;
   cgst: string | null;
   sgst: string | null;
+  barcode?: string | null;
 }
 
 interface Sale {
@@ -60,10 +63,31 @@ interface Sale {
   partyOutstanding: string | null;
 }
 
+interface BillTemplate {
+  id: number;
+  name: string;
+  formatType: string;
+  assignedTo: string | null;
+  headerText: string | null;
+  footerText: string | null;
+  showTaxBreakup: boolean;
+  showHsnCode: boolean;
+  showItemCode: boolean;
+  showPartyBalance: boolean;
+  showBankDetails: boolean;
+  showCashReturn: boolean;
+  bankDetails: string | null;
+  termsAndConditions: string | null;
+  fontSize: number;
+  logoUrl: string | null;
+  isDefault: boolean;
+}
+
 export default function Invoice() {
   const params = useParams();
   const saleId = params.id;
   const [hasPrinted, setHasPrinted] = useState(false);
+  const printRef = useRef<HTMLDivElement>(null);
 
   const { data: sale, isLoading: saleLoading } = useQuery<Sale>({
     queryKey: ["/api/sales", saleId],
@@ -73,9 +97,24 @@ export default function Invoice() {
     queryKey: ["/api/sales", saleId, "items"],
   });
 
-  const handlePrint = () => {
-    window.print();
+  const getBillAssignmentType = () => {
+    if (sale?.billType === "EST") return "estimate";
+    if (sale?.saleType === "B2B") return "b2b";
+    return "b2c";
   };
+
+  const { data: template } = useQuery<BillTemplate | null>({
+    queryKey: ["/api/bill-templates/assigned", getBillAssignmentType()],
+    enabled: !!sale,
+  });
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Invoice-${sale?.billType}-${sale?.invoiceNo}`,
+    onAfterPrint: () => {
+      console.log("Print completed");
+    },
+  });
 
   const isLoading = saleLoading || itemsLoading;
 
@@ -83,10 +122,14 @@ export default function Invoice() {
     if (sale && items && !hasPrinted && !isLoading) {
       setHasPrinted(true);
       setTimeout(() => {
-        window.print();
-      }, 500);
+        if (template && (template.formatType.includes("thermal") || template.formatType.includes("inch"))) {
+          handlePrint();
+        } else {
+          window.print();
+        }
+      }, 800);
     }
-  }, [sale, items, hasPrinted, isLoading]);
+  }, [sale, items, hasPrinted, isLoading, template, handlePrint]);
 
   if (isLoading) {
     return (
@@ -116,6 +159,70 @@ export default function Invoice() {
     return sale.billType === "GST" ? "TAX INVOICE" : "INVOICE";
   };
 
+  const prepareInvoiceData = () => {
+    const invoiceItems = items?.map(item => ({
+      id: item.id,
+      itemName: item.itemName,
+      itemCode: item.itemCode,
+      hsnCode: item.hsnCode || undefined,
+      barcode: item.barcode || undefined,
+      quantity: parseFloat(item.quantity),
+      rate: parseFloat(item.rate),
+      discount: item.discount ? parseFloat(item.discount) : 0,
+      discountPercent: item.discountPercent ? parseFloat(item.discountPercent) : 0,
+      taxPercent: item.tax ? parseFloat(item.tax) : 0,
+      cgst: item.cgst ? parseFloat(item.cgst) : 0,
+      sgst: item.sgst ? parseFloat(item.sgst) : 0,
+      amount: parseFloat(item.amount),
+    })) || [];
+
+    return {
+      invoiceNo: `${sale.billType}-${sale.invoiceNo}`,
+      date: sale.date,
+      partyName: sale.partyName || undefined,
+      partyAddress: sale.partyAddress || undefined,
+      partyCity: sale.partyCity || undefined,
+      partyGstNo: sale.partyGstNo || undefined,
+      partyPhone: sale.mobile || undefined,
+      items: invoiceItems,
+      subtotal: parseFloat(sale.saleValue),
+      totalDiscount: sale.discountTotal ? parseFloat(sale.discountTotal) : 0,
+      totalCgst: sale.cgstTotal ? parseFloat(sale.cgstTotal) : 0,
+      totalSgst: sale.sgstTotal ? parseFloat(sale.sgstTotal) : 0,
+      totalIgst: sale.taxValue ? parseFloat(sale.taxValue) : 0,
+      roundOff: sale.roundOff ? parseFloat(sale.roundOff) : 0,
+      grandTotal: parseFloat(sale.grandTotal),
+      cashGiven: sale.amountGiven ? parseFloat(sale.amountGiven) : 0,
+      cashReturn: sale.amountReturn ? parseFloat(sale.amountReturn) : 0,
+      previousBalance: sale.partyOutstanding ? parseFloat(sale.partyOutstanding) : undefined,
+      currentBalance: sale.partyOutstanding ? parseFloat(sale.partyOutstanding) + parseFloat(sale.grandTotal) : undefined,
+      isInterState: sale.gstType === 1,
+    };
+  };
+
+  const defaultTemplate: BillTemplate = {
+    id: 0,
+    name: "Default",
+    formatType: "A4",
+    assignedTo: null,
+    headerText: null,
+    footerText: "Thank you for your business!",
+    showTaxBreakup: true,
+    showHsnCode: true,
+    showItemCode: true,
+    showPartyBalance: false,
+    showBankDetails: false,
+    showCashReturn: true,
+    bankDetails: null,
+    termsAndConditions: null,
+    fontSize: 12,
+    logoUrl: null,
+    isDefault: true,
+  };
+
+  const activeTemplate = template || defaultTemplate;
+  const isThermal = activeTemplate.formatType.includes("thermal") || activeTemplate.formatType.includes("inch");
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6 print:hidden">
@@ -125,11 +232,31 @@ export default function Invoice() {
             Back to Sales
           </Link>
         </Button>
-        <Button onClick={handlePrint} data-testid="button-print">
+        <Button onClick={() => handlePrint()} data-testid="button-print">
           <Printer className="mr-2 h-4 w-4" />
           Print Invoice
         </Button>
       </div>
+
+      {isThermal ? (
+        <div className="hidden">
+          <InvoiceThermalPrint
+            ref={printRef}
+            invoice={prepareInvoiceData()}
+            template={activeTemplate}
+            companyName="Your Company Name"
+          />
+        </div>
+      ) : (
+        <div className="hidden print:block">
+          <InvoiceA4Print
+            ref={printRef}
+            invoice={prepareInvoiceData()}
+            template={activeTemplate}
+            companyName="Your Company Name"
+          />
+        </div>
+      )}
 
       <Card className="max-w-4xl mx-auto print:shadow-none print:border-none">
         <CardHeader className="border-b pb-4">
@@ -296,6 +423,13 @@ export default function Invoice() {
           }
           .print\\:hidden {
             display: none !important;
+          }
+          .print\\:block {
+            display: block !important;
+            visibility: visible !important;
+          }
+          .print\\:block * {
+            visibility: visible;
           }
           .max-w-4xl,
           .max-w-4xl * {
