@@ -45,19 +45,26 @@ export default function SalesReport() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
+  const [selectedItemId, setSelectedItemId] = useState("");
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Fetch master items for the filter
+  const { data: masterItems } = useQuery({
+    queryKey: ["/api/items"],
+  });
 
   // Build query params as URL search params
   const queryParams = new URLSearchParams();
   if (startDate) queryParams.set("startDate", startDate);
   if (endDate) queryParams.set("endDate", endDate);
   if (saleTypeFilter !== "all") queryParams.set("saleType", saleTypeFilter);
+  if (selectedItemId) queryParams.set("itemId", selectedItemId);
 
   const queryString = queryParams.toString();
   const apiUrl = queryString ? `/api/reports/sales?${queryString}` : "/api/reports/sales";
 
   const { data: sales, isLoading } = useQuery<SaleReport[]>({
-    queryKey: ["/api/reports/sales", startDate, endDate, saleTypeFilter],
+    queryKey: ["/api/reports/sales", startDate, endDate, saleTypeFilter, selectedItemId],
     queryFn: async () => {
       const res = await fetch(apiUrl, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
       if (!res.ok) throw new Error("Failed to fetch sales report");
@@ -107,7 +114,7 @@ export default function SalesReport() {
           <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-4">
             <div className="space-y-2">
               <Label htmlFor="startDate">Start Date</Label>
               <Input
@@ -139,6 +146,21 @@ export default function SalesReport() {
                   <SelectItem value="B2B">B2B (Credit)</SelectItem>
                   <SelectItem value="B2C">B2C (Cash/Retail)</SelectItem>
                   <SelectItem value="ESTIMATE">Estimate</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="itemId">Item Master</Label>
+              <Select value={selectedItemId} onValueChange={setSelectedItemId} data-testid="select-item-master">
+                <SelectTrigger id="itemId">
+                  <SelectValue placeholder="All Items" />
+                </SelectTrigger>
+                <SelectContent>
+                  {masterItems?.map((item) => (
+                    <SelectItem key={item.id} value={item.id.toString()}>
+                      {item.code} - {item.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
