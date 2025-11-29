@@ -170,23 +170,29 @@ export default function SalesB2C() {
     const taxRate = parseFloat(item.taxRate.toString()) || 0;
     const discountPercent = parseFloat(item.discountPercent.toString()) || 0;
 
-    let baseAmount = qty * rate;
-    const discountAmount = baseAmount * (discountPercent / 100);
-    baseAmount = baseAmount - discountAmount;
+    let amount = qty * rate;
+    const discountAmount = amount * (discountPercent / 100);
+    amount = amount - discountAmount;
     item.discount = discountAmount;
 
     let saleValue: number;
     let taxValue: number;
 
     if (inclusiveTax) {
-      saleValue = baseAmount / (1 + taxRate / 100);
-      taxValue = baseAmount - saleValue;
+      // When tax inclusive: given amount INCLUDES tax
+      // saleValue = amount / (1 + taxRate/100)
+      // taxValue = amount - saleValue
+      saleValue = amount / (1 + taxRate / 100);
+      taxValue = amount - saleValue;
     } else {
-      saleValue = baseAmount;
+      // When tax exclusive: given amount is BEFORE tax
+      // saleValue = amount (no tax included)
+      // taxValue = saleValue * (taxRate/100)
+      saleValue = amount;
       taxValue = saleValue * (taxRate / 100);
     }
 
-    item.amount = baseAmount;
+    item.amount = inclusiveTax ? amount : saleValue;
     item.saleValue = saleValue;
     item.taxValue = taxValue;
 
