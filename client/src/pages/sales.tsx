@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,16 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, FileText, Filter } from "lucide-react";
+import { Plus, Search, FileText, Filter, Printer, Eye, Edit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useReactToPrint } from "react-to-print";
 
 interface Sale {
   id: number;
   invoiceNo: number;
   billType: string;
+  saleType: string;
   date: string;
   partyName: string | null;
   partyCity: string | null;
@@ -39,53 +41,66 @@ interface Sale {
 export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
-  const [billTypeFilter, setBillTypeFilter] = useState<string>("all");
+  const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
+  const [, setLocation] = useLocation();
+  const printRef = useRef<HTMLDivElement>(null);
 
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["/api/sales"],
   });
 
-  // Map bill types for filtering
-  const getBillTypeCategory = (billType: string): string => {
-    const type = billType.toUpperCase();
-    if (type === "B2B" || type === "GST") return "B2B";
-    if (type === "B2C" || type === "CASH") return "B2C";
-    if (type === "EST" || type === "ESTIMATE") return "ESTIMATE";
-    if (type === "CN" || type === "CREDIT" || type === "CREDIT NOTE") return "CREDIT_NOTE";
-    return type;
-  };
-
   const filteredSales = sales?.filter((sale) => {
     const matchesSearch = 
       sale.invoiceNo.toString().includes(searchQuery) ||
       sale.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sale.billType.toLowerCase().includes(searchQuery.toLowerCase());
+      sale.saleType?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesDate = !dateFilter || sale.date === dateFilter;
     
-    const matchesBillType = billTypeFilter === "all" || 
-      getBillTypeCategory(sale.billType) === billTypeFilter;
+    const matchesSaleType = saleTypeFilter === "all" || sale.saleType === saleTypeFilter;
     
-    return matchesSearch && matchesDate && matchesBillType;
+    return matchesSearch && matchesDate && matchesSaleType;
   });
 
   const totalAmount = filteredSales?.reduce((sum, sale) => sum + parseFloat(sale.grandTotal), 0) || 0;
+  const totalQty = filteredSales?.reduce((sum, sale) => sum + parseFloat(sale.totalQty), 0) || 0;
+
+  const getSaleTypeBadgeVariant = (saleType: string): "default" | "secondary" | "outline" => {
+    if (saleType === "B2B") return "default";
+    if (saleType === "B2C") return "secondary";
+    return "outline";
+  };
+
+  const handlePrintList = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Sales-List-${format(new Date(), "yyyy-MM-dd")}`,
+  });
+
+  const openInvoice = (saleId: number) => {
+    window.open(`/invoice/${saleId}`, '_blank');
+  };
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Sales Invoices</h1>
           <p className="text-muted-foreground mt-2">
             View and manage all sales transactions
           </p>
         </div>
-        <Button asChild data-testid="button-new-sale">
-          <Link href="/sales/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Sale
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => handlePrintList()} data-testid="button-print-list">
+            <Printer className="mr-2 h-4 w-4" />
+            Print List
+          </Button>
+          <Button asChild data-testid="button-new-sale">
+            <Link href="/sales/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Sale
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -93,17 +108,16 @@ export default function Sales() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle>Invoice List</CardTitle>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <Select value={billTypeFilter} onValueChange={setBillTypeFilter}>
-                <SelectTrigger className="w-full sm:w-40" data-testid="select-bill-type-filter">
+              <Select value={saleTypeFilter} onValueChange={setSaleTypeFilter}>
+                <SelectTrigger className="w-full sm:w-40" data-testid="select-sale-type-filter">
                   <Filter className="mr-2 h-4 w-4" />
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="B2B">B2B (Credit)</SelectItem>
-                  <SelectItem value="B2C">B2C (Cash)</SelectItem>
+                  <SelectItem value="B2C">B2C (Cash/Retail)</SelectItem>
                   <SelectItem value="ESTIMATE">Estimate</SelectItem>
-                  <SelectItem value="CREDIT_NOTE">Credit Note</SelectItem>
                 </SelectContent>
               </Select>
               <div className="relative w-full sm:w-64">
@@ -135,49 +149,75 @@ export default function Sales() {
             </div>
           ) : filteredSales && filteredSales.length > 0 ? (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Invoice No</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>City</TableHead>
-                    <TableHead className="text-right">Qty</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredSales.map((sale) => (
-                    <TableRow key={sale.id}>
-                      <TableCell className="font-medium font-mono">
-                        {sale.billType}-{sale.invoiceNo}
-                      </TableCell>
-                      <TableCell>{format(new Date(sale.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell>
-                        <Badge variant={sale.billType === "GST" ? "default" : "secondary"}>
-                          {sale.billType}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{sale.partyName || "Cash Sale"}</TableCell>
-                      <TableCell className="text-muted-foreground">{sale.partyCity || "—"}</TableCell>
-                      <TableCell className="text-right font-mono">{parseFloat(sale.totalQty).toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono font-medium">
-                        ₹{parseFloat(sale.grandTotal).toFixed(2)}
-                      </TableCell>
+              <div ref={printRef}>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice No</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="print:hidden">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              <div className="mt-4 flex justify-between items-center border-t pt-4">
-                <p className="text-sm text-muted-foreground">
-                  Showing {filteredSales.length} invoice{filteredSales.length !== 1 ? "s" : ""}
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Total:</span>
-                  <span className="text-lg font-semibold font-mono" data-testid="text-total-amount">
-                    ₹{totalAmount.toFixed(2)}
-                  </span>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredSales.map((sale) => (
+                      <TableRow key={sale.id}>
+                        <TableCell className="font-medium font-mono">
+                          {sale.saleType}-{sale.invoiceNo}
+                        </TableCell>
+                        <TableCell>{format(new Date(sale.date), "dd MMM yyyy")}</TableCell>
+                        <TableCell>
+                          <Badge variant={getSaleTypeBadgeVariant(sale.saleType)}>
+                            {sale.saleType}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{sale.partyName || "Cash Sale"}</TableCell>
+                        <TableCell className="text-muted-foreground">{sale.partyCity || "—"}</TableCell>
+                        <TableCell className="text-right font-mono">{parseFloat(sale.totalQty).toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono font-medium">
+                          ₹{parseFloat(sale.grandTotal).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="print:hidden">
+                          <div className="flex gap-1">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openInvoice(sale.id)}
+                              title="View & Print Invoice"
+                              data-testid={`button-view-invoice-${sale.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => openInvoice(sale.id)}
+                              title="Reprint Invoice"
+                              data-testid={`button-reprint-invoice-${sale.id}`}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="mt-4 flex justify-between items-center border-t pt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {filteredSales.length} invoice{filteredSales.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-muted-foreground">Total Qty: <span className="font-mono font-medium">{totalQty.toFixed(2)}</span></span>
+                    <span className="text-sm text-muted-foreground">Total:</span>
+                    <span className="text-lg font-semibold font-mono" data-testid="text-total-amount">
+                      ₹{totalAmount.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </>

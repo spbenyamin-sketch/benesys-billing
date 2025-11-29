@@ -45,7 +45,7 @@ import {
   type InsertAgent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, sql, or } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql, or } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -109,9 +109,10 @@ export interface IStorage {
   // Report operations
   getDashboardMetrics(companyId: number): Promise<any>;
   getOutstanding(companyId: number): Promise<any[]>;
-  getSalesReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any[]>;
+  getSalesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
+  getPurchasesReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]>;
   getItemsReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]>;
-  getPartyLedger(partyId: number, companyId: number): Promise<any>;
+  getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any>;
 
   // Bill Template operations
   getBillTemplates(companyId: number): Promise<BillTemplate[]>;
@@ -533,17 +534,18 @@ export class DatabaseStorage implements IStorage {
       .where(eq(saleItems.saleId, saleId));
   }
 
-  async getNextInvoiceNumber(billType: string, companyId: number): Promise<number> {
+  async getNextInvoiceNumber(saleType: string, companyId: number): Promise<number> {
+    // Separate invoice numbering for B2B, B2C, and ESTIMATE
     const [result] = await db
       .select({ maxNo: sql<number>`COALESCE(MAX(${sales.invoiceNo}), 0)` })
       .from(sales)
-      .where(and(eq(sales.billType, billType), eq(sales.companyId, companyId)));
+      .where(and(eq(sales.saleType, saleType), eq(sales.companyId, companyId)));
     return (result?.maxNo || 0) + 1;
   }
 
   async createSale(saleData: InsertSale, saleItemsData: InsertSaleItem[], userId: string, companyId: number): Promise<Sale> {
-    // Get next invoice number
-    const invoiceNo = await this.getNextInvoiceNumber(saleData.billType, companyId);
+    // Get next invoice number based on sale type (B2B, B2C, ESTIMATE)
+    const invoiceNo = await this.getNextInvoiceNumber(saleData.saleType, companyId);
 
     // SECURITY: Validate all items belong to this company before creating sale
     for (const item of saleItemsData) {
@@ -949,17 +951,51 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  async getSalesReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any[]> {
+  async getSalesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
-    if (billType && billType !== 'all') conditions.push(eq(sales.billType, billType));
+    if (saleType && saleType !== 'all') conditions.push(eq(sales.saleType, saleType));
 
     return await db
       .select()
       .from(sales)
       .where(and(...conditions))
       .orderBy(desc(sales.date), desc(sales.id));
+  }
+
+  async getPurchasesReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]> {
+    const conditions = [eq(purchases.companyId, companyId)];
+    if (startDate) conditions.push(gte(purchases.date, startDate));
+    if (endDate) conditions.push(lte(purchases.date, endDate));
+
+    const purchasesList = await db
+      .select()
+      .from(purchases)
+      .where(and(...conditions))
+      .orderBy(desc(purchases.date), desc(purchases.id));
+
+    const result = await Promise.all(purchasesList.map(async (purchase) => {
+      const items = await db
+        .select()
+        .from(purchaseItems)
+        .where(eq(purchaseItems.purchaseId, purchase.id));
+      
+      const party = purchase.partyId ? await db
+        .select()
+        .from(parties)
+        .where(eq(parties.id, purchase.partyId))
+        .limit(1) : null;
+      
+      return {
+        ...purchase,
+        items,
+        partyName: party?.[0]?.name || null,
+        city: party?.[0]?.city || null,
+      };
+    }));
+
+    return result;
   }
 
   async getItemsReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]> {
@@ -1050,11 +1086,53 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(billTemplates.id, id), eq(billTemplates.companyId, companyId)));
   }
 
-  async getPartyLedger(partyId: number, companyId: number): Promise<any> {
+  async getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any> {
     const party = await this.getParty(partyId, companyId);
     if (!party) return null;
 
-    const openingBalance = parseFloat(party.openingDebit) - parseFloat(party.openingCredit);
+    let openingBalance = parseFloat(party.openingDebit) - parseFloat(party.openingCredit);
+
+    // If startDate is specified, calculate opening balance by including transactions before startDate
+    if (startDate) {
+      const priorSales = await db
+        .select({ total: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+        .from(sales)
+        .where(and(eq(sales.partyId, partyId), eq(sales.companyId, companyId), lt(sales.date, startDate)));
+      
+      const priorPurchases = await db
+        .select({ total: sql<string>`COALESCE(SUM(${purchases.amount}), 0)` })
+        .from(purchases)
+        .where(and(eq(purchases.partyId, partyId), eq(purchases.companyId, companyId), lt(purchases.date, startDate)));
+      
+      const priorPayments = await db
+        .select({ 
+          totalDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
+          totalCredit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`
+        })
+        .from(payments)
+        .where(and(eq(payments.partyId, partyId), eq(payments.companyId, companyId), lt(payments.date, startDate)));
+
+      openingBalance += parseFloat(priorSales[0]?.total || "0");
+      openingBalance -= parseFloat(priorPurchases[0]?.total || "0");
+      openingBalance += parseFloat(priorPayments[0]?.totalCredit || "0");
+      openingBalance -= parseFloat(priorPayments[0]?.totalDebit || "0");
+    }
+
+    // Build date conditions for the transactions to display
+    const salesConditions = [eq(sales.partyId, partyId), eq(sales.companyId, companyId)];
+    const purchasesConditions = [eq(purchases.partyId, partyId), eq(purchases.companyId, companyId)];
+    const paymentsConditions = [eq(payments.partyId, partyId), eq(payments.companyId, companyId)];
+    
+    if (startDate) {
+      salesConditions.push(gte(sales.date, startDate));
+      purchasesConditions.push(gte(purchases.date, startDate));
+      paymentsConditions.push(gte(payments.date, startDate));
+    }
+    if (endDate) {
+      salesConditions.push(lte(sales.date, endDate));
+      purchasesConditions.push(lte(purchases.date, endDate));
+      paymentsConditions.push(lte(payments.date, endDate));
+    }
 
     // Get all transactions
     const salesData = await db
@@ -1062,13 +1140,13 @@ export class DatabaseStorage implements IStorage {
         id: sales.id,
         date: sales.date,
         type: sql<string>`'sale'`,
-        reference: sql<string>`CONCAT(${sales.billType}, '-', ${sales.invoiceNo})`,
+        reference: sql<string>`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`,
         details: sql<string>`NULL`,
         debit: sql<string>`0`,
         credit: sales.grandTotal,
       })
       .from(sales)
-      .where(and(eq(sales.partyId, partyId), eq(sales.companyId, companyId)));
+      .where(and(...salesConditions));
 
     const purchasesData = await db
       .select({
@@ -1081,7 +1159,7 @@ export class DatabaseStorage implements IStorage {
         credit: sql<string>`CONCAT('-', ${purchases.amount})`,
       })
       .from(purchases)
-      .where(and(eq(purchases.partyId, partyId), eq(purchases.companyId, companyId)));
+      .where(and(...purchasesConditions));
 
     const paymentsData = await db
       .select({
@@ -1094,7 +1172,7 @@ export class DatabaseStorage implements IStorage {
         credit: payments.credit,
       })
       .from(payments)
-      .where(and(eq(payments.partyId, partyId), eq(payments.companyId, companyId)));
+      .where(and(...paymentsConditions));
 
     // Combine and sort
     const allTransactions = [

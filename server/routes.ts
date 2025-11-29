@@ -648,17 +648,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const { startDate, endDate, billType } = req.query;
-      const sales = await storage.getSalesReport(
+      const { startDate, endDate, saleType } = req.query;
+      const salesData = await storage.getSalesReport(
         req.companyId,
         startDate as string,
         endDate as string,
-        billType as string
+        saleType as string
       );
-      res.json(sales);
+      res.json(salesData);
     } catch (error) {
       console.error("Error fetching sales report:", error);
       res.status(500).json({ message: "Failed to fetch sales report" });
+    }
+  });
+
+  app.get("/api/reports/purchases", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const purchasesData = await storage.getPurchasesReport(
+        req.companyId,
+        startDate as string,
+        endDate as string
+      );
+      res.json(purchasesData);
+    } catch (error) {
+      console.error("Error fetching purchases report:", error);
+      res.status(500).json({ message: "Failed to fetch purchases report" });
     }
   });
 
@@ -676,7 +691,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const partyId = parseInt(req.params.partyId);
-      const ledger = await storage.getPartyLedger(partyId, req.companyId);
+      const { startDate, endDate } = req.query;
+      const ledger = await storage.getPartyLedger(
+        partyId, 
+        req.companyId,
+        startDate as string,
+        endDate as string
+      );
       
       if (!ledger) {
         return res.status(404).json({ message: "Party ledger not found" });

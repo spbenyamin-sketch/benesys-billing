@@ -9,11 +9,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useReactToPrint } from "react-to-print";
+import { format } from "date-fns";
 
 interface OutstandingParty {
   partyId: number;
@@ -31,6 +33,7 @@ interface OutstandingParty {
 
 export default function Outstanding() {
   const [searchQuery, setSearchQuery] = useState("");
+  const printRef = useRef<HTMLDivElement>(null);
 
   const { data: outstanding, isLoading } = useQuery<OutstandingParty[]>({
     queryKey: ["/api/reports/outstanding"],
@@ -46,13 +49,24 @@ export default function Outstanding() {
   const receivableParties = filteredParties?.filter(p => p.balance > 0) || [];
   const payableParties = filteredParties?.filter(p => p.balance < 0) || [];
 
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Outstanding-Report-${format(new Date(), "yyyy-MM-dd")}`,
+  });
+
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Outstanding Report</h1>
-        <p className="text-muted-foreground mt-2">
-          Party-wise balance and outstanding amounts
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Outstanding Report</h1>
+          <p className="text-muted-foreground mt-2">
+            Party-wise balance and outstanding amounts
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-outstanding">
+          <Printer className="mr-2 h-4 w-4" />
+          Print Report
+        </Button>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-3">
@@ -98,7 +112,7 @@ export default function Outstanding() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="print:hidden">
           <div className="flex items-center justify-between gap-4">
             <CardTitle>Party Outstanding</CardTitle>
             <div className="relative w-full max-w-sm">
@@ -114,74 +128,87 @@ export default function Outstanding() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-3">
-              {[...Array(5)].map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : filteredParties && filteredParties.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Party Name</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Purchases</TableHead>
-                  <TableHead className="text-right">Received</TableHead>
-                  <TableHead className="text-right">Paid</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredParties.map((party) => (
-                  <TableRow key={party.partyId}>
-                    <TableCell className="font-medium font-mono">{party.partyCode}</TableCell>
-                    <TableCell>{party.partyName}</TableCell>
-                    <TableCell className="text-muted-foreground">{party.partyCity || "—"}</TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₹{parseFloat(party.totalSales).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₹{parseFloat(party.totalPurchases).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₹{parseFloat(party.totalPaymentsCredit).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      ₹{parseFloat(party.totalPaymentsDebit).toFixed(2)}
-                    </TableCell>
-                    <TableCell className={`text-right font-mono font-medium ${
-                      party.balance > 0 ? "text-green-600" : party.balance < 0 ? "text-red-600" : ""
-                    }`}>
-                      ₹{party.balance.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        data-testid={`button-ledger-${party.partyId}`}
-                      >
-                        <Link href={`/reports/ledger/${party.partyId}`}>
-                          View Ledger
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <div ref={printRef}>
+            <div className="hidden print:block mb-4">
+              <h2 className="text-xl font-bold">Outstanding Report</h2>
               <p className="text-sm text-muted-foreground">
-                {searchQuery ? "No parties found" : "No outstanding data available"}
+                As of {format(new Date(), "dd MMM yyyy")}
               </p>
+              <div className="flex gap-8 mt-2 text-sm">
+                <span>To Receive: <strong className="text-green-600">₹{receivableParties.reduce((sum, p) => sum + p.balance, 0).toFixed(2)}</strong></span>
+                <span>To Pay: <strong className="text-red-600">₹{Math.abs(payableParties.reduce((sum, p) => sum + p.balance, 0)).toFixed(2)}</strong></span>
+                <span>Net: <strong>₹{totalOutstanding.toFixed(2)}</strong></span>
+              </div>
             </div>
-          )}
+            {isLoading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : filteredParties && filteredParties.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Party Name</TableHead>
+                    <TableHead>City</TableHead>
+                    <TableHead className="text-right">Sales</TableHead>
+                    <TableHead className="text-right">Purchases</TableHead>
+                    <TableHead className="text-right">Received</TableHead>
+                    <TableHead className="text-right">Paid</TableHead>
+                    <TableHead className="text-right">Balance</TableHead>
+                    <TableHead className="text-right print:hidden">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredParties.map((party) => (
+                    <TableRow key={party.partyId}>
+                      <TableCell className="font-medium font-mono">{party.partyCode}</TableCell>
+                      <TableCell>{party.partyName}</TableCell>
+                      <TableCell className="text-muted-foreground">{party.partyCity || "—"}</TableCell>
+                      <TableCell className="text-right font-mono">
+                        ₹{parseFloat(party.totalSales).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        ₹{parseFloat(party.totalPurchases).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        ₹{parseFloat(party.totalPaymentsCredit).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        ₹{parseFloat(party.totalPaymentsDebit).toFixed(2)}
+                      </TableCell>
+                      <TableCell className={`text-right font-mono font-medium ${
+                        party.balance > 0 ? "text-green-600" : party.balance < 0 ? "text-red-600" : ""
+                      }`}>
+                        ₹{party.balance.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right print:hidden">
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="sm"
+                          data-testid={`button-ledger-${party.partyId}`}
+                        >
+                          <Link href={`/reports/ledger/${party.partyId}`}>
+                            View Ledger
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  {searchQuery ? "No parties found" : "No outstanding data available"}
+                </p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

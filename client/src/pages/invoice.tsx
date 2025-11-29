@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Printer, ArrowLeft } from "lucide-react";
+import { Printer, ArrowLeft, Edit } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { format } from "date-fns";
@@ -114,6 +114,18 @@ export default function Invoice() {
     onAfterPrint: () => {
       console.log("Print completed");
     },
+    pageStyle: `
+      @page {
+        size: auto;
+        margin: 10mm;
+      }
+      @media print {
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      }
+    `,
   });
 
   const isLoading = saleLoading || itemsLoading;
@@ -122,14 +134,10 @@ export default function Invoice() {
     if (sale && items && !hasPrinted && !isLoading) {
       setHasPrinted(true);
       setTimeout(() => {
-        if (template && (template.formatType.includes("thermal") || template.formatType.includes("inch"))) {
-          handlePrint();
-        } else {
-          window.print();
-        }
+        handlePrint();
       }, 800);
     }
-  }, [sale, items, hasPrinted, isLoading, template, handlePrint]);
+  }, [sale, items, hasPrinted, isLoading, handlePrint]);
 
   if (isLoading) {
     return (
@@ -238,25 +246,23 @@ export default function Invoice() {
         </Button>
       </div>
 
-      {isThermal ? (
-        <div className="hidden">
+      <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
+        {isThermal ? (
           <InvoiceThermalPrint
             ref={printRef}
             invoice={prepareInvoiceData()}
             template={activeTemplate}
             companyName="Your Company Name"
           />
-        </div>
-      ) : (
-        <div className="hidden print:block">
+        ) : (
           <InvoiceA4Print
             ref={printRef}
             invoice={prepareInvoiceData()}
             template={activeTemplate}
             companyName="Your Company Name"
           />
-        </div>
-      )}
+        )}
+      </div>
 
       <Card className="max-w-4xl mx-auto print:shadow-none print:border-none">
         <CardHeader className="border-b pb-4">
@@ -416,33 +422,6 @@ export default function Invoice() {
         </CardContent>
       </Card>
 
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-          .print\\:block {
-            display: block !important;
-            visibility: visible !important;
-          }
-          .print\\:block * {
-            visibility: visible;
-          }
-          .max-w-4xl,
-          .max-w-4xl * {
-            visibility: visible;
-          }
-          .max-w-4xl {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `}</style>
     </div>
   );
 }
