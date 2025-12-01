@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { format } from "date-fns";
+import { numberToWords } from "@/lib/number-to-words";
 
 interface InvoiceItem {
   id?: number;
@@ -40,6 +41,8 @@ interface InvoiceData {
   previousBalance?: number;
   currentBalance?: number;
   isInterState?: boolean;
+  totalTax?: number;
+  gstType?: number;
 }
 
 interface BillTemplate {
@@ -65,6 +68,8 @@ interface InvoicePrintProps {
   companyAddress?: string;
   companyGst?: string;
   companyPhone?: string;
+  companyState?: string;
+  companyPincode?: string;
 }
 
 export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(

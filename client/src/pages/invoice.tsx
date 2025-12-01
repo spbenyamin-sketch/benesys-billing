@@ -17,6 +17,7 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
 import { InvoiceA4Print, InvoiceThermalPrint } from "@/components/InvoicePrint";
+import { TallyB2BInvoice } from "@/components/TallyB2BInvoice";
 import { usePrintSettings } from "@/hooks/use-print-settings";
 
 interface SaleItem {
