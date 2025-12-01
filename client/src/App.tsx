@@ -45,6 +45,7 @@ import UserManagement from "@/pages/user-management";
 import BillSettings from "@/pages/bill-settings";
 import Companies from "@/pages/companies";
 import SelectCompany from "@/pages/select-company";
+import BarcodeLookup from "@/pages/barcode-lookup";
 
 function Router() {
   const { isAuthenticated, user } = useAuth();
@@ -72,6 +73,7 @@ function Router() {
       <Route path="/purchase-entry" component={PurchaseEntry} />
       <Route path="/stock-inward" component={StockInward} />
       <Route path="/barcode-management" component={BarcodeManagement} />
+      <Route path="/barcode-lookup" component={BarcodeLookup} />
       <Route path="/purchases/:id" component={PurchaseDetail} />
       <Route path="/purchases" component={Purchases} />
       <Route path="/payments" component={Payments} />
