@@ -29,6 +29,7 @@ import {
   CreditCard,
   PackagePlus,
   Barcode,
+  Scroll,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,11 @@ export function AppSidebar() {
       title: "Payment Report",
       url: "/reports/payments",
       icon: Wallet,
+    },
+    {
+      title: "Party Ledger",
+      url: "/reports/party-ledger",
+      icon: Scroll,
     },
     {
       title: "Stock",

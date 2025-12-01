@@ -45,6 +45,7 @@ import UserManagement from "@/pages/user-management";
 import BillSettings from "@/pages/bill-settings";
 import Companies from "@/pages/companies";
 import SelectCompany from "@/pages/select-company";
+import PartyLedger from "@/pages/party-ledger";
 
 function Router() {
   const { isAuthenticated, user } = useAuth();
@@ -84,6 +85,7 @@ function Router() {
       <Route path="/reports/categories" component={CategoriesReport} />
       <Route path="/reports/payments" component={PaymentsReport} />
       <Route path="/reports/ledger/:id" component={Ledger} />
+      <Route path="/reports/party-ledger" component={PartyLedger} />
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}
       {isSuperAdmin && <Route path="/companies" component={Companies} />}
       {isSuperAdmin && <Route path="/bill-settings" component={BillSettings} />}
