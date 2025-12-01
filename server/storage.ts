@@ -608,13 +608,13 @@ export class DatabaseStorage implements IStorage {
             // Bulk barcode: reduce qty but keep as available
             await db
               .update(stockInwardItems)
-              .set({ qty: remainingQty.toString() })
+              .set({ qty: remainingQty.toString(), saleId: newSale.id, soldAt: new Date() })
               .where(eq(stockInwardItems.id, item.stockInwardId));
           } else {
             // Last unit sold: mark as sold
             await db
               .update(stockInwardItems)
-              .set({ status: "sold", qty: "0" })
+              .set({ status: "sold", qty: "0", saleId: newSale.id, soldAt: new Date() })
               .where(eq(stockInwardItems.id, item.stockInwardId));
           }
         }
@@ -737,13 +737,13 @@ export class DatabaseStorage implements IStorage {
             // Bulk barcode: reduce qty but keep as available
             await db
               .update(stockInwardItems)
-              .set({ qty: remainingQty.toString() })
+              .set({ qty: remainingQty.toString(), saleId: id, soldAt: new Date() })
               .where(eq(stockInwardItems.id, item.stockInwardId));
           } else {
             // Last unit sold: mark as sold
             await db
               .update(stockInwardItems)
-              .set({ status: "sold", qty: "0" })
+              .set({ status: "sold", qty: "0", saleId: id, soldAt: new Date() })
               .where(eq(stockInwardItems.id, item.stockInwardId));
           }
         }
