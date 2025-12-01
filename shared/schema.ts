@@ -183,6 +183,8 @@ export const items = pgTable("items", {
   packType: varchar("pack_type", { length: 20 }).default("PCS").notNull(), // PCS, KG, LTR, MTR, BOX, PKT, SET, DZ, GM, ML
   type: varchar("type", { length: 10 }).default("P").notNull(), // P=piece, M=measured
   cost: decimal("cost", { precision: 12, scale: 2 }).default("0").notNull(),
+  mrp: decimal("mrp", { precision: 12, scale: 2 }).default("0").notNull(), // MRP - rounded figure
+  sellingPrice: decimal("selling_price", { precision: 12, scale: 2 }).default("0").notNull(), // Selling price - rounded figure
   tax: decimal("tax", { precision: 5, scale: 2 }).default("0").notNull(), // Total tax percentage (mandatory)
   cgst: decimal("cgst", { precision: 5, scale: 3 }).default("0").notNull(), // CGST rate (half of tax)
   sgst: decimal("sgst", { precision: 5, scale: 3 }).default("0").notNull(), // SGST rate (half of tax)
@@ -200,6 +202,9 @@ export const insertItemSchema = createInsertSchema(items).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+}).extend({
+  mrp: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "MRP must be a valid number"),
+  sellingPrice: z.string().refine((val) => !isNaN(parseFloat(val)) && parseFloat(val) >= 0, "Selling Price must be a valid number"),
 });
 
 export type InsertItem = z.infer<typeof insertItemSchema>;

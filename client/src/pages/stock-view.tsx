@@ -23,9 +23,9 @@ export default function StockView() {
     queryKey: ["/api/purchases"],
   });
 
-  // Flatten all purchase items with their details
-  const allPurchaseItems = purchases?.flatMap(purchase => 
-    (purchase.items || []).map((item: any) => ({
+  // Flatten all stock inward items with their details
+  const allStockItems = purchases?.flatMap(purchase => 
+    (purchase.stockInwardItems || []).map((item: any) => ({
       ...item,
       purchaseDate: purchase.date,
       purchaseInvoice: purchase.invoiceNo,
@@ -34,7 +34,7 @@ export default function StockView() {
   ) || [];
 
   // Filter by barcode or search query
-  const filteredItems = allPurchaseItems.filter(item => {
+  const filteredItems = allStockItems.filter(item => {
     if (barcode && item.barcode) {
       return item.barcode.toLowerCase().includes(barcode.toLowerCase());
     }
@@ -42,7 +42,7 @@ export default function StockView() {
       const query = searchQuery.toLowerCase();
       return (
         item.itname?.toLowerCase().includes(query) ||
-        item.brandname?.toLowerCase().includes(query) ||
+        item.quality?.toLowerCase().includes(query) ||
         item.barcode?.toLowerCase().includes(query) ||
         item.serial?.toString().includes(query)
       );

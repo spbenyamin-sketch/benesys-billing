@@ -66,6 +66,8 @@ const itemFormSchema = z.object({
   packType: z.string().default("PCS"),
   type: z.enum(["P", "M"]).default("P"),
   cost: z.string().default("0"),
+  mrp: z.string().default("0"),
+  sellingPrice: z.string().default("0"),
   active: z.boolean().default(true),
   isShared: z.boolean().default(false),
 });
@@ -82,6 +84,8 @@ interface Item {
   packType: string;
   type: string;
   cost: string;
+  mrp: string;
+  sellingPrice: string;
   tax: string;
   cgst: string;
   sgst: string;
@@ -111,6 +115,8 @@ export default function Items() {
       packType: "PCS",
       type: "P",
       cost: "0",
+      mrp: "0",
+      sellingPrice: "0",
       active: true,
       isShared: false,
     },
@@ -180,6 +186,8 @@ export default function Items() {
       packType: item.packType || "PCS",
       type: item.type as "P" | "M",
       cost: item.cost || "0",
+      mrp: item.mrp || "0",
+      sellingPrice: item.sellingPrice || "0",
       active: item.active,
       isShared: item.isShared || false,
     });
@@ -335,9 +343,38 @@ export default function Items() {
                     name="cost"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Rate/Cost</FormLabel>
+                        <FormLabel>Cost</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} data-testid="input-item-cost" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <FormField
+                    control={form.control}
+                    name="mrp"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>MRP (Rounded)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="1" {...field} placeholder="Maximum Retail Price" data-testid="input-item-mrp" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sellingPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Selling Price (Rounded)</FormLabel>
+                        <FormControl>
+                          <Input type="number" step="1" {...field} placeholder="Sale price" data-testid="input-item-selling-price" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -426,7 +463,9 @@ export default function Items() {
                   <TableHead>HSN Code</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Pack</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">MRP</TableHead>
+                  <TableHead className="text-right">Selling</TableHead>
                   <TableHead className="text-right">Tax %</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -451,6 +490,12 @@ export default function Items() {
                     <TableCell className="font-mono">{item.packType}</TableCell>
                     <TableCell className="text-right font-mono">
                       ₹{parseFloat(item.cost).toFixed(2)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      ₹{Math.round(parseFloat(item.mrp))}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      ₹{Math.round(parseFloat(item.sellingPrice))}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {parseFloat(item.tax).toFixed(2)}%
