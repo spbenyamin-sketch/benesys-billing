@@ -107,6 +107,11 @@ export default function Invoice() {
     queryKey: ["/api/sales", saleId, "items"],
   });
 
+  const { data: party, isLoading: partyLoading } = useQuery<any>({
+    queryKey: ["/api/parties", sale?.partyId],
+    enabled: !!sale?.partyId,
+  });
+
   const getAssignmentType = useCallback((saleData: Sale | undefined): string => {
     if (!saleData) return "b2c";
     if (saleData.billType === "EST") return "estimate";
@@ -237,6 +242,11 @@ export default function Invoice() {
       partyCity: sale.partyCity || undefined,
       partyGstNo: sale.partyGstNo || undefined,
       partyPhone: sale.mobile || undefined,
+      shipName: party?.shipName || sale.partyName || undefined,
+      shipAddress: party?.shipAddress || sale.partyAddress || undefined,
+      shipCity: party?.shipCity || sale.partyCity || undefined,
+      shipState: party?.shipState || undefined,
+      shipPincode: party?.shipPincode || undefined,
       items: invoiceItems,
       subtotal: parseFloat(sale.saleValue),
       totalDiscount: sale.discountTotal ? parseFloat(sale.discountTotal) : 0,

@@ -28,6 +28,11 @@ interface InvoiceData {
   partyState?: string;
   partyGstNo?: string;
   partyPhone?: string;
+  shipName?: string;
+  shipAddress?: string;
+  shipCity?: string;
+  shipState?: string;
+  shipPincode?: string;
   items: InvoiceItem[];
   subtotal: number;
   totalDiscount: number;
@@ -168,18 +173,32 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                 <div style={{ marginBottom: "4px" }}>
                   <strong>Consignee (Ship to):</strong>
                 </div>
-                <div style={{ fontWeight: "600", marginBottom: "2px" }}>{invoice.partyName || "N/A"}</div>
-                <div style={{ fontSize: "8px" }}>{invoice.partyAddress || "N/A"}</div>
-                <div style={{ fontSize: "8px" }}>
-                  {invoice.partyCity || "N/A"}
-                  {invoice.partyState ? ` - ${invoice.partyState}` : ""}
+                <div style={{ fontWeight: "600", marginBottom: "2px" }}>
+                  {invoice.shipName || invoice.partyName || "N/A"}
                 </div>
+                <div style={{ fontSize: "8px" }}>
+                  {invoice.shipAddress || invoice.partyAddress || "N/A"}
+                </div>
+                <div style={{ fontSize: "8px" }}>
+                  {invoice.shipCity || invoice.partyCity || "N/A"}
+                  {invoice.shipState && ` - ${invoice.shipState}`}
+                </div>
+                {invoice.shipPincode && (
+                  <div style={{ fontSize: "8px" }}>
+                    Pin: {invoice.shipPincode}
+                  </div>
+                )}
               </td>
               <td style={{ width: "50%", verticalAlign: "top" }}>
                 <div style={{ marginBottom: "4px" }}>
                   <strong>Buyer (Bill to):</strong>
                 </div>
                 <div style={{ fontWeight: "600", marginBottom: "2px" }}>{invoice.partyName || "N/A"}</div>
+                <div style={{ fontSize: "8px" }}>{invoice.partyAddress || "N/A"}</div>
+                <div style={{ fontSize: "8px" }}>
+                  {invoice.partyCity || "N/A"}
+                  {invoice.partyState && ` - ${invoice.partyState}`}
+                </div>
                 <div style={{ fontSize: "8px" }}>
                   <strong>GSTIN/UIN:</strong> {invoice.partyGstNo || "N/A"}
                 </div>
