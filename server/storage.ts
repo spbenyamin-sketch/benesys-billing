@@ -1498,11 +1498,11 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: sales.id,
         date: sales.date,
-        type: sql`'sale'`,
-        reference: sql`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`,
-        details: null as any,
+        type: sql<string>`'sale'`.as('type'),
+        reference: sql<string>`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`.as('reference'),
+        details: sql<string>`NULL`.as('details'),
         debit: sales.grandTotal,
-        credit: sql`0`,
+        credit: sql<string>`'0'`.as('credit'),
       })
       .from(sales)
       .where(and(...salesConditions));
@@ -1511,10 +1511,10 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: purchases.id,
         date: purchases.date,
-        type: sql`'purchase'`,
-        reference: sql`CONCAT('P-', ${purchases.purchaseNo})`,
+        type: sql<string>`'purchase'`.as('type'),
+        reference: sql<string>`CONCAT('P-', ${purchases.purchaseNo})`.as('reference'),
         details: purchases.details,
-        debit: sql`0`,
+        debit: sql<string>`'0'`.as('debit'),
         credit: purchases.amount,
       })
       .from(purchases)
@@ -1524,8 +1524,8 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: payments.id,
         date: payments.date,
-        type: sql`'payment'`,
-        reference: sql`'PAYMENT'`,
+        type: sql<string>`'payment'`.as('type'),
+        reference: sql<string>`'PAYMENT'`.as('reference'),
         details: payments.details,
         debit: payments.debit,
         credit: payments.credit,
