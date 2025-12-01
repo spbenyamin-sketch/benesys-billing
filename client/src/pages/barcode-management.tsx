@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings, Trash2 } from "lucide-react";
+import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings, Trash2, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -43,6 +44,7 @@ interface StockInwardItem {
   soldAt: string | null;
   saleId: number | null;
   createdAt: string;
+  purchaseNo?: number;
 }
 
 interface Purchase {
@@ -483,6 +485,7 @@ export default function BarcodeManagement() {
                         data-testid="checkbox-select-all"
                       />
                     </TableHead>
+                    <TableHead>Purchase No</TableHead>
                     <TableHead>Barcode</TableHead>
                     <TableHead>Item Name</TableHead>
                     <TableHead>Brand</TableHead>
@@ -504,6 +507,19 @@ export default function BarcodeManagement() {
                           onCheckedChange={() => toggleSelectItem(item.id)}
                           data-testid={`checkbox-item-${item.id}`}
                         />
+                      </TableCell>
+                      <TableCell>
+                        <Link href={`/purchases/${item.purchaseId}`}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-auto p-0 text-blue-600 hover:text-blue-800 hover:bg-transparent font-mono font-bold flex items-center gap-1"
+                            data-testid={`link-purchase-${item.purchaseId}`}
+                          >
+                            #{item.purchaseNo || item.purchaseId}
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </Link>
                       </TableCell>
                       <TableCell className="font-mono font-medium" data-testid={`text-barcode-${item.id}`}>
                         {item.barcode}
