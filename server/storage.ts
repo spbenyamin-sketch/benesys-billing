@@ -1453,8 +1453,8 @@ export class DatabaseStorage implements IStorage {
         type: sql<string>`'sale'`,
         reference: sql<string>`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`,
         details: sql<string>`NULL`,
-        debit: sql<string>`0`,
-        credit: sales.grandTotal,
+        debit: sales.grandTotal,
+        credit: sql<number>`0`,
       })
       .from(sales)
       .where(and(...salesConditions));
@@ -1466,8 +1466,8 @@ export class DatabaseStorage implements IStorage {
         type: sql<string>`'purchase'`,
         reference: sql<string>`CONCAT('P-', ${purchases.purchaseNo})`,
         details: purchases.details,
-        debit: sql<string>`0`,
-        credit: sql<string>`CONCAT('-', ${purchases.amount})`,
+        debit: sql<number>`0`,
+        credit: purchases.amount,
       })
       .from(purchases)
       .where(and(...purchasesConditions));
