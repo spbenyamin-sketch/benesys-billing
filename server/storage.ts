@@ -996,12 +996,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getInventoryByBarcode(barcode: string, companyId: number): Promise<any | undefined> {
-    // Find stock inward item by barcode - check for both "available" and "in_stock" statuses
+    // Find stock inward item by barcode with all related details
     const [result] = await db
       .select({
+        // Barcode & Stock Inward Fields
         stockInwardId: stockInwardItems.id,
         barcode: stockInwardItems.barcode,
+        serial: stockInwardItems.serial,
         itemId: stockInwardItems.itemId,
+        purchaseItemId: stockInwardItems.purchaseItemId,
+        status: stockInwardItems.status,
+        createdAt: stockInwardItems.createdAt,
+        soldAt: stockInwardItems.soldAt,
+        // Item Details
         itemName: stockInwardItems.itname,
         brandName: stockInwardItems.brandname,
         quality: stockInwardItems.quality,
@@ -1009,34 +1016,75 @@ export class DatabaseStorage implements IStorage {
         pattern: stockInwardItems.pattern,
         sleeve: stockInwardItems.sleeve,
         size: stockInwardItems.size,
-        hsnCode: items.hsnCode,
-        tax: stockInwardItems.tax,
-        cgst: items.cgst,
-        sgst: items.sgst,
+        sizeCode: stockInwardItems.sizeCode,
+        qty: stockInwardItems.qty,
+        expDate: stockInwardItems.expdate,
+        // Pricing
         cost: stockInwardItems.cost,
         ncost: stockInwardItems.ncost,
         lcost: stockInwardItems.lcost,
-        rate: stockInwardItems.rate, // Sale rate
+        rate: stockInwardItems.rate,
         mrp: stockInwardItems.mrp,
-        expDate: stockInwardItems.expdate,
+        tax: stockInwardItems.tax,
+        // Item Master Fields
+        hsnCode: items.hsnCode,
+        cgst: items.cgst,
+        sgst: items.sgst,
         packType: items.packType,
-        status: stockInwardItems.status,
+        // Purchase (Stock Inward) Details
+        purchaseId: stockInwardItems.purchaseId,
+        purchaseNo: purchases.purchaseNo,
+        purchaseDate: purchases.date,
+        purchaseInvoice: purchases.invoiceNo,
+        supplierName: parties.name,
+        supplierCode: parties.code,
+        supplierCity: parties.city,
+        supplierPhone: parties.phone,
+        // Sale Details (if sold)
+        saleId: stockInwardItems.saleId,
+        saleItemId: stockInwardItems.saleItemId,
       })
       .from(stockInwardItems)
       .leftJoin(items, eq(stockInwardItems.itemId, items.id))
+      .leftJoin(purchases, eq(stockInwardItems.purchaseId, purchases.id))
+      .leftJoin(parties, eq(purchases.partyId, parties.id))
       .where(
         and(
           eq(stockInwardItems.barcode, barcode),
-          eq(stockInwardItems.companyId, companyId),
-          or(
-            eq(stockInwardItems.status, "available"),
-            eq(stockInwardItems.status, "in_stock")
-          )
+          eq(stockInwardItems.companyId, companyId)
         )
       )
       .limit(1);
 
-    return result;
+    if (!result) return undefined;
+
+    // Get sale details if barcode was sold
+    let saleDetails = null;
+    if (result.saleId) {
+      const [sale] = await db
+        .select({
+          saleId: sales.id,
+          invoiceNo: sales.invoiceNo,
+          saleType: sales.saleType,
+          date: sales.date,
+          customerName: sales.partyName,
+          customerCode: parties.code,
+          customerCity: sales.partyCity,
+          grandTotal: sales.grandTotal,
+          saleValue: sales.saleValue,
+          taxValue: sales.taxValue,
+          billType: sales.billType,
+        })
+        .from(sales)
+        .leftJoin(parties, eq(sales.partyId, parties.id))
+        .where(eq(sales.id, result.saleId));
+      saleDetails = sale;
+    }
+
+    return {
+      ...result,
+      sale: saleDetails,
+    };
   }
 
   async getPartyOutstanding(partyId: number, companyId: number): Promise<number> {

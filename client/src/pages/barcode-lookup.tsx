@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -13,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Barcode, AlertCircle, CheckCircle2, Clock } from "lucide-react";
+import { Search, Barcode, AlertCircle, CheckCircle2, Clock, TrendingUp, Package, Truck } from "lucide-react";
 import { format } from "date-fns";
 
 export default function BarcodeLookup() {
@@ -58,10 +59,10 @@ export default function BarcodeLookup() {
 
   return (
     <div className="h-full overflow-auto p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
         <div>
           <h1 className="text-3xl font-bold">Barcode Lookup</h1>
-          <p className="text-muted-foreground">Search for a barcode to view complete product history and details</p>
+          <p className="text-muted-foreground">Search for a barcode to view complete product history, details, and all related information</p>
         </div>
 
         {/* Search Section */}
@@ -117,16 +118,17 @@ export default function BarcodeLookup() {
 
             {barcodeData && (
               <>
-                {/* Barcode Details */}
+                {/* Barcode & Status Overview */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <span>Barcode Details</span>
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                    <CardTitle className="text-xl">Barcode Overview</CardTitle>
+                    <div className="flex gap-2">
                       {getStatusBadge(barcodeData.status)}
-                    </CardTitle>
+                      {barcodeData.status === "sold" && <Badge variant="default">Sold</Badge>}
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                       <div>
                         <p className="text-sm text-muted-foreground">Barcode</p>
                         <p className="font-mono font-bold text-lg">{barcodeData.barcode}</p>
@@ -136,114 +138,206 @@ export default function BarcodeLookup() {
                         <p className="font-mono font-bold text-lg">{barcodeData.serial}</p>
                       </div>
                       <div>
+                        <p className="text-sm text-muted-foreground">Entry Date</p>
+                        <p className="font-medium">{barcodeData.createdAt ? format(new Date(barcodeData.createdAt), "dd MMM yyyy HH:mm") : "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Status</p>
+                        <p className="font-medium capitalize">{barcodeData.status}</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Item Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Product Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div>
                         <p className="text-sm text-muted-foreground">Item Name</p>
-                        <p className="font-medium">{barcodeData.itemName}</p>
+                        <p className="font-medium text-lg">{barcodeData.itemName}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Brand</p>
                         <p className="font-medium">{barcodeData.brandName || "—"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Quality/Size</p>
-                        <p className="font-medium">{barcodeData.quality || "—"} {barcodeData.size ? `/ ${barcodeData.size}` : ""}</p>
+                        <p className="text-sm text-muted-foreground">Quality/Tag</p>
+                        <p className="font-medium">{barcodeData.quality || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Size</p>
+                        <p className="font-medium">{barcodeData.size || "—"} {barcodeData.sizeCode ? `(${barcodeData.sizeCode})` : ""}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Design No</p>
+                        <p className="font-medium">{barcodeData.dno1 || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Pattern</p>
+                        <p className="font-medium">{barcodeData.pattern || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Sleeve/Color</p>
+                        <p className="font-medium">{barcodeData.sleeve || "—"}</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Quantity</p>
                         <p className="font-bold text-lg">{Number(barcodeData.qty || 1).toFixed(0)} units</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Cost Price</p>
-                        <p className="font-mono font-bold">₹{Number(barcodeData.cost || 0).toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">HSN Code</p>
+                        <p className="font-mono">{barcodeData.hsnCode || "—"}</p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Selling Rate</p>
-                        <p className="font-mono font-bold">₹{Number(barcodeData.rate || 0).toFixed(2)}</p>
+                        <p className="text-sm text-muted-foreground">Pack Type</p>
+                        <p className="font-medium">{barcodeData.packType || "—"}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">MRP</p>
-                        <p className="font-mono font-bold">₹{Number(barcodeData.mrp || 0).toFixed(2)}</p>
-                      </div>
-                      {barcodeData.taxPercent && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Tax</p>
-                          <p className="font-bold">{Number(barcodeData.taxPercent).toFixed(1)}%</p>
-                        </div>
-                      )}
-                      {barcodeData.expdate && (
+                      {barcodeData.expDate && (
                         <div>
                           <p className="text-sm text-muted-foreground">Expiry Date</p>
-                          <p className="font-medium">{format(new Date(barcodeData.expdate), "dd MMM yyyy")}</p>
-                        </div>
-                      )}
-                      {barcodeData.createdAt && (
-                        <div>
-                          <p className="text-sm text-muted-foreground">Added to Stock</p>
-                          <p className="font-medium">{format(new Date(barcodeData.createdAt), "dd MMM yyyy HH:mm")}</p>
+                          <p className="font-medium">{format(new Date(barcodeData.expDate), "dd MMM yyyy")}</p>
                         </div>
                       )}
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Stock Inward Details */}
-                {barcodeData.purchaseInvoice && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-                      <CardTitle className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Stock Inward
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Purchase Invoice</p>
-                          <p className="font-mono font-bold">{barcodeData.purchaseInvoice}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Purchase Date</p>
-                          <p className="font-medium">{barcodeData.purchaseDate ? format(new Date(barcodeData.purchaseDate), "dd MMM yyyy") : "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Supplier</p>
-                          <p className="font-medium">{barcodeData.partyName || "—"}</p>
+                {/* Pricing Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Pricing Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Cost Price</p>
+                        <p className="font-mono font-bold text-lg">₹{Number(barcodeData.cost || 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Net Cost</p>
+                        <p className="font-mono font-bold text-lg">₹{Number(barcodeData.ncost || 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Landing Cost</p>
+                        <p className="font-mono font-bold text-lg">₹{Number(barcodeData.lcost || 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Selling Rate</p>
+                        <p className="font-mono font-bold text-lg text-green-600">₹{Number(barcodeData.rate || 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">MRP</p>
+                        <p className="font-mono font-bold text-lg">₹{Number(barcodeData.mrp || 0).toFixed(2)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Tax %</p>
+                        <p className="font-bold">{Number(barcodeData.tax || 0).toFixed(2)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">CGST</p>
+                        <p className="font-bold">{Number(barcodeData.cgst || 0).toFixed(2)}%</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">SGST</p>
+                        <p className="font-bold">{Number(barcodeData.sgst || 0).toFixed(2)}%</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Stock Inward (Supplier) Details */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Truck className="h-5 w-5" />
+                      Stock Inward Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Purchase No</p>
+                        <p className="font-mono font-bold text-lg">{barcodeData.purchaseNo}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Purchase Invoice</p>
+                        <p className="font-mono font-bold">{barcodeData.purchaseInvoice || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Entry Date</p>
+                        <p className="font-medium">{barcodeData.purchaseDate ? format(new Date(barcodeData.purchaseDate), "dd MMM yyyy") : "—"}</p>
+                      </div>
+                      <Separator className="md:col-span-2" />
+                      <div className="md:col-span-2">
+                        <p className="text-sm text-muted-foreground">Supplier/Party Details</p>
+                        <div className="mt-2 space-y-2">
+                          <p className="font-medium text-lg">{barcodeData.supplierName || "—"}</p>
+                          <p className="text-sm">Code: <span className="font-mono">{barcodeData.supplierCode || "—"}</span></p>
+                          <p className="text-sm">City: <span className="font-medium">{barcodeData.supplierCity || "—"}</span></p>
+                          <p className="text-sm">Phone: <span className="font-medium">{barcodeData.supplierPhone || "—"}</span></p>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                {/* Sales Details */}
-                {barcodeData.saleInvoice && (
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
+                {/* Sale Bill Details (if sold) */}
+                {barcodeData.sale && (
+                  <Card className="border-green-200 bg-green-50/50 dark:border-green-900 dark:bg-green-950/20">
+                    <CardHeader>
                       <CardTitle className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        Sale Details
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        Sale Bill Details
                       </CardTitle>
-                      <Badge variant="default">Sold</Badge>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                          <p className="text-sm text-muted-foreground">Sale Invoice</p>
-                          <p className="font-mono font-bold">{barcodeData.saleInvoice}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-muted-foreground">Sale Date</p>
-                          <p className="font-medium">{barcodeData.saleDate ? format(new Date(barcodeData.saleDate), "dd MMM yyyy") : "—"}</p>
+                          <p className="text-sm text-muted-foreground">Invoice No</p>
+                          <p className="font-mono font-bold text-lg">{barcodeData.sale.invoiceNo}</p>
                         </div>
                         <div>
                           <p className="text-sm text-muted-foreground">Sale Type</p>
-                          <p className="font-medium">{barcodeData.saleType || "—"}</p>
+                          <p className="font-bold text-lg">{barcodeData.sale.saleType}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Customer</p>
-                          <p className="font-medium">{barcodeData.salePartyName || "Cash Sale"}</p>
+                          <p className="text-sm text-muted-foreground">Sale Date</p>
+                          <p className="font-medium">{barcodeData.sale.date ? format(new Date(barcodeData.sale.date), "dd MMM yyyy") : "—"}</p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Sale Rate</p>
-                          <p className="font-mono font-bold">₹{Number(barcodeData.saleRate || 0).toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">Bill Type</p>
+                          <p className="font-bold">{barcodeData.sale.billType || "—"}</p>
+                        </div>
+                        <Separator className="md:col-span-2" />
+                        <div className="md:col-span-2">
+                          <p className="text-sm text-muted-foreground">Customer/Party Details</p>
+                          <div className="mt-2 space-y-2">
+                            <p className="font-medium text-lg">{barcodeData.sale.customerName || "Cash Sale"}</p>
+                            <p className="text-sm">Code: <span className="font-mono">{barcodeData.sale.customerCode || "—"}</span></p>
+                            <p className="text-sm">City: <span className="font-medium">{barcodeData.sale.customerCity || "—"}</span></p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Sale Value</p>
+                          <p className="font-mono font-bold text-lg">₹{Number(barcodeData.sale.saleValue || 0).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Tax Value</p>
+                          <p className="font-mono font-bold text-lg">₹{Number(barcodeData.sale.taxValue || 0).toFixed(2)}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Grand Total</p>
+                          <p className="font-mono font-bold text-lg text-green-600">₹{Number(barcodeData.sale.grandTotal || 0).toFixed(2)}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -260,30 +354,34 @@ export default function BarcodeLookup() {
                       <div className="flex gap-4">
                         <div className="flex flex-col items-center">
                           <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-950 flex items-center justify-center mb-2">
-                            <span className="text-sm font-bold">1</span>
+                            <span className="text-sm font-bold text-blue-700 dark:text-blue-300">1</span>
                           </div>
-                          <div className="h-12 w-1 bg-gray-200 dark:bg-gray-700"></div>
+                          <div className={`h-12 w-1 ${barcodeData.status === "sold" ? "bg-green-300" : "bg-gray-200 dark:bg-gray-700"}`}></div>
                         </div>
                         <div>
-                          <p className="font-medium">Stock Inward</p>
+                          <p className="font-bold">Stock Inward Entry</p>
                           <p className="text-sm text-muted-foreground">
                             {barcodeData.createdAt ? format(new Date(barcodeData.createdAt), "dd MMM yyyy HH:mm") : "—"}
                           </p>
+                          <p className="text-xs text-muted-foreground mt-1">Purchase No: {barcodeData.purchaseNo}</p>
+                          <p className="text-xs text-muted-foreground">From: {barcodeData.supplierName || "—"}</p>
                         </div>
                       </div>
 
-                      {barcodeData.status === "sold" && barcodeData.saleDate && (
+                      {barcodeData.status === "sold" && barcodeData.sale && (
                         <div className="flex gap-4">
                           <div className="flex flex-col items-center">
                             <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-950 flex items-center justify-center">
-                              <span className="text-sm font-bold">2</span>
+                              <span className="text-sm font-bold text-green-700 dark:text-green-300">2</span>
                             </div>
                           </div>
                           <div>
-                            <p className="font-medium">Sold</p>
+                            <p className="font-bold">Sold</p>
                             <p className="text-sm text-muted-foreground">
-                              {format(new Date(barcodeData.saleDate), "dd MMM yyyy HH:mm")}
+                              {barcodeData.soldAt ? format(new Date(barcodeData.soldAt), "dd MMM yyyy HH:mm") : "—"}
                             </p>
+                            <p className="text-xs text-muted-foreground mt-1">Invoice No: {barcodeData.sale.invoiceNo}</p>
+                            <p className="text-xs text-muted-foreground">To: {barcodeData.sale.customerName || "Cash Customer"}</p>
                           </div>
                         </div>
                       )}
@@ -292,11 +390,11 @@ export default function BarcodeLookup() {
                         <div className="flex gap-4">
                           <div className="flex flex-col items-center">
                             <div className="h-10 w-10 rounded-full bg-yellow-100 dark:bg-yellow-950 flex items-center justify-center">
-                              <span className="text-sm font-bold">2</span>
+                              <span className="text-sm font-bold text-yellow-700 dark:text-yellow-300">2</span>
                             </div>
                           </div>
                           <div>
-                            <p className="font-medium">Currently in Stock</p>
+                            <p className="font-bold">Currently in Stock</p>
                             <p className="text-sm text-muted-foreground">Available for sale</p>
                           </div>
                         </div>
