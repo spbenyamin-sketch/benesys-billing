@@ -1450,11 +1450,11 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: sales.id,
         date: sales.date,
-        type: sql<string>`'sale'`,
-        reference: sql<string>`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`,
-        details: sql<string>`NULL`,
+        type: sql`'sale'`,
+        reference: sql`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`,
+        details: null as any,
         debit: sales.grandTotal,
-        credit: sql<number>`0`,
+        credit: sql`0`,
       })
       .from(sales)
       .where(and(...salesConditions));
@@ -1463,10 +1463,10 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: purchases.id,
         date: purchases.date,
-        type: sql<string>`'purchase'`,
-        reference: sql<string>`CONCAT('P-', ${purchases.purchaseNo})`,
+        type: sql`'purchase'`,
+        reference: sql`CONCAT('P-', ${purchases.purchaseNo})`,
         details: purchases.details,
-        debit: sql<number>`0`,
+        debit: sql`0`,
         credit: purchases.amount,
       })
       .from(purchases)
@@ -1476,8 +1476,8 @@ export class DatabaseStorage implements IStorage {
       .select({
         id: payments.id,
         date: payments.date,
-        type: sql<string>`'payment'`,
-        reference: sql<string>`'PAYMENT'`,
+        type: sql`'payment'`,
+        reference: sql`'PAYMENT'`,
         details: payments.details,
         debit: payments.debit,
         credit: payments.credit,
@@ -2046,7 +2046,7 @@ export class DatabaseStorage implements IStorage {
         purchaseId: purchases.id,
         purchaseNo: purchases.purchaseNo,
         date: purchases.date,
-        partyName: sql`COALESCE(${parties.name}, 'Direct Purchase')`,
+        partyName: parties.name,
         quantity: purchaseItems.quantity,
         rate: purchaseItems.rate,
         mrp: purchaseItems.mrp,
@@ -2069,7 +2069,7 @@ export class DatabaseStorage implements IStorage {
         invoiceNo: sales.invoiceNo,
         billType: sales.billType,
         date: sales.date,
-        partyName: sql`COALESCE(${parties.name}, 'Cash Sale')`,
+        partyName: parties.name,
         quantity: saleItems.quantity,
         rate: saleItems.rate,
         amount: saleItems.amount,
