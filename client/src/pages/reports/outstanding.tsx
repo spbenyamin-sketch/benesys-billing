@@ -299,6 +299,20 @@ export default function Outstanding() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
+                      <TableRow className="bg-muted/50">
+                        <TableCell className="font-mono text-sm font-semibold">Opening Balance</TableCell>
+                        <TableCell></TableCell>
+                        <TableCell className="text-right font-mono">—</TableCell>
+                        <TableCell className="text-right font-mono">—</TableCell>
+                        <TableCell className="text-right font-mono font-semibold">
+                          <span className={(() => {
+                            const opening = ledger.length > 0 && ledger[0].type === "opening" ? ledger[0].balance : 0;
+                            return opening >= 0 ? "text-green-600" : "text-red-600";
+                          })()}>
+                            ₹{Math.abs(ledger.length > 0 && ledger[0].type === "opening" ? ledger[0].balance : 0).toFixed(2)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
                       {ledger.map((entry, index) => (
                         <TableRow key={index}>
                           <TableCell className="font-mono text-sm">
