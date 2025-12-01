@@ -76,9 +76,9 @@ export default function BillEntry() {
   const createSaleMutation = useMutation({
     mutationFn: async (saleData: any) => {
       const response = await apiRequest("POST", "/api/sales", saleData);
-      return response;
+      return response as any;
     },
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
       toast({ title: "Success", description: "Bill created successfully" });
       setLocation(`/invoice/${data.id}`);
@@ -106,79 +106,62 @@ export default function BillEntry() {
       if (e.key === "Enter") {
         e.preventDefault();
         handleEnterPress();
-      } else if (e.key === "Tab") {
-        e.preventDefault();
-        moveToNextField();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [focusedField, selectedParty, itemSearch, currentRowQty, currentRowRate, billItems]);
+  }, [focusedField, selectedParty, itemSearch, currentRowQty, currentRowRate, billItems, filteredParties, filteredItems]);
 
   const handleEnterPress = useCallback(() => {
-    if (focusedField === "partySearch" && filteredParties.length > 0) {
-      setSelectedParty(filteredParties[0]);
-      setPartySearch(filteredParties[0].name);
+    // Enter key moves to next field
+    if (focusedField === "partySearch") {
+      // Select first party if available, then move to item search
+      if (filteredParties.length > 0) {
+        setSelectedParty(filteredParties[0]);
+        setPartySearch(filteredParties[0].name);
+      }
       setFocusedField("itemSearch");
       setTimeout(() => itemSearchRef.current?.focus(), 0);
-    } else if (focusedField === "itemSearch" && filteredItems.length > 0) {
-      const selectedItem = filteredItems[0];
-      setCurrentRowQty("1");
-      setCurrentRowRate(selectedItem.sellingPrice);
+    } else if (focusedField === "itemSearch") {
+      // Select first item if available, then move to qty
+      if (filteredItems.length > 0) {
+        const selectedItem = filteredItems[0];
+        setCurrentRowRate(selectedItem.sellingPrice);
+        setItemSearch(selectedItem.name);
+      }
       setFocusedField("qty");
       setTimeout(() => qtyRef.current?.focus(), 0);
     } else if (focusedField === "qty") {
+      // Move from qty to rate
       setFocusedField("rate");
       setTimeout(() => rateRef.current?.focus(), 0);
     } else if (focusedField === "rate") {
-      handleAddItem();
+      // Add item and reset for next item entry
+      if (selectedParty && itemSearch && currentRowQty && currentRowRate) {
+        const selectedItem = filteredItems[0];
+        if (selectedItem) {
+          const newItem: BillItem = {
+            itemId: selectedItem.id,
+            itemCode: selectedItem.code,
+            itemName: selectedItem.name,
+            hsnCode: selectedItem.hsnCode,
+            quantity: parseFloat(currentRowQty),
+            rate: parseFloat(currentRowRate),
+            amount: parseFloat(currentRowQty) * parseFloat(currentRowRate),
+          };
+          setBillItems(prev => [...prev, newItem]);
+          setItemSearch("");
+          setCurrentRowQty("1");
+          setCurrentRowRate("");
+          setFocusedField("itemSearch");
+          setTimeout(() => itemSearchRef.current?.focus(), 0);
+        }
+      }
     }
-  }, [focusedField, filteredParties, filteredItems]);
+  }, [focusedField, selectedParty, itemSearch, currentRowQty, currentRowRate, billItems, filteredParties, filteredItems]);
 
-  const moveToNextField = useCallback(() => {
-    const fields = ["partySearch", "itemSearch", "qty", "rate"];
-    const currentIndex = fields.indexOf(focusedField);
-    const nextIndex = (currentIndex + 1) % fields.length;
-    setFocusedField(fields[nextIndex]);
 
-    setTimeout(() => {
-      if (fields[nextIndex] === "partySearch") partySearchRef.current?.focus();
-      if (fields[nextIndex] === "itemSearch") itemSearchRef.current?.focus();
-      if (fields[nextIndex] === "qty") qtyRef.current?.focus();
-      if (fields[nextIndex] === "rate") rateRef.current?.focus();
-    }, 0);
-  }, [focusedField]);
-
-  const handleAddItem = useCallback(() => {
-    if (!selectedParty || !itemSearch || !currentRowQty || !currentRowRate) {
-      toast({ title: "Error", description: "Please fill all fields" });
-      return;
-    }
-
-    const selectedItem = filteredItems[0];
-    if (!selectedItem) {
-      toast({ title: "Error", description: "Item not found" });
-      return;
-    }
-
-    const newItem: BillItem = {
-      itemId: selectedItem.id,
-      itemCode: selectedItem.code,
-      itemName: selectedItem.name,
-      hsnCode: selectedItem.hsnCode,
-      quantity: parseFloat(currentRowQty),
-      rate: parseFloat(currentRowRate),
-      amount: parseFloat(currentRowQty) * parseFloat(currentRowRate),
-    };
-
-    setBillItems([...billItems, newItem]);
-    setItemSearch("");
-    setCurrentRowQty("1");
-    setCurrentRowRate("");
-    setFocusedField("itemSearch");
-    setTimeout(() => itemSearchRef.current?.focus(), 0);
-  }, [selectedParty, itemSearch, currentRowQty, currentRowRate, filteredItems, billItems]);
 
   const handleSaveBill = async () => {
     if (!selectedParty || billItems.length === 0) {
