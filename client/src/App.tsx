@@ -19,6 +19,7 @@ import Parties from "@/pages/parties";
 import Items from "@/pages/items";
 import Agents from "@/pages/agents";
 import SalesBilling from "@/pages/sales-billing";
+import BillEntry from "@/pages/bill-entry";
 import SalesB2B from "@/pages/sales-b2b";
 import SalesB2C from "@/pages/sales-b2c";
 import SalesEstimate from "@/pages/sales-estimate";
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/sales/estimate" component={SalesEstimate} />
       <Route path="/sales/credit-note" component={CreditNote} />
       <Route path="/sales/new" component={SalesBilling} />
+      <Route path="/bill-entry" component={BillEntry} />
       <Route path="/sales" component={Sales} />
       <Route path="/sales/edit/:id" component={EditSale} />
       <Route path="/invoice/:id" component={Invoice} />
