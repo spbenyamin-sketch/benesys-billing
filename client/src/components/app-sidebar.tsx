@@ -104,6 +104,11 @@ export function AppSidebar() {
       icon: Barcode,
     },
     {
+      title: "Barcode Lookup",
+      url: "/barcode-lookup",
+      icon: Barcode,
+    },
+    {
       title: "Payments",
       url: "/payments",
       icon: Wallet,
