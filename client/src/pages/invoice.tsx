@@ -19,6 +19,7 @@ import { useReactToPrint } from "react-to-print";
 import { InvoiceA4Print, InvoiceThermalPrint } from "@/components/InvoicePrint";
 import { TallyB2BInvoice } from "@/components/TallyB2BInvoice";
 import { usePrintSettings } from "@/hooks/use-print-settings";
+import { useCompany } from "@/contexts/CompanyContext";
 
 interface SaleItem {
   id: number;
@@ -93,6 +94,7 @@ export default function Invoice() {
   const [templateReady, setTemplateReady] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { shouldAutoPrint } = usePrintSettings();
+  const { currentCompany } = useCompany();
   
   const searchParams = new URLSearchParams(searchString);
   const autoPrintRequested = searchParams.get("print") === "auto";
@@ -273,6 +275,8 @@ export default function Invoice() {
 
   const activeTemplate = template || defaultTemplate;
   const isThermal = activeTemplate.formatType.includes("thermal") || activeTemplate.formatType.includes("inch");
+  const isB2B = sale?.saleType === "B2B";
+  const isTallyTemplate = activeTemplate.assignedTo === "b2b" && isB2B;
 
   return (
     <div className="p-6">
@@ -290,19 +294,34 @@ export default function Invoice() {
       </div>
 
       <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
-        {isThermal ? (
+        {isTallyTemplate ? (
+          <TallyB2BInvoice
+            ref={printRef}
+            invoice={prepareInvoiceData()}
+            template={activeTemplate}
+            companyName={currentCompany?.name}
+            companyAddress={currentCompany?.address}
+            companyGst={currentCompany?.gstNo}
+            companyPhone={currentCompany?.phone}
+            companyState={currentCompany?.state}
+            companyPincode={currentCompany?.city}
+          />
+        ) : isThermal ? (
           <InvoiceThermalPrint
             ref={printRef}
             invoice={prepareInvoiceData()}
             template={activeTemplate}
-            companyName="Your Company Name"
+            companyName={currentCompany?.name || "Your Company Name"}
           />
         ) : (
           <InvoiceA4Print
             ref={printRef}
             invoice={prepareInvoiceData()}
             template={activeTemplate}
-            companyName="Your Company Name"
+            companyName={currentCompany?.name || "Your Company Name"}
+            companyAddress={currentCompany?.address}
+            companyGst={currentCompany?.gstNo}
+            companyPhone={currentCompany?.phone}
           />
         )}
       </div>
