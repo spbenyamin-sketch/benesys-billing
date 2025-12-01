@@ -907,12 +907,12 @@ export default function StockInward() {
               <Separator />
               <div className="flex justify-between text-lg font-bold">
                 <span>Selling Rate:</span>
-                <span className="font-mono text-primary">₹{calculatedRates.rate}</span>
+                <span className="font-mono text-primary">₹{Math.round(parseFloat(calculatedRates.rate))}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">+ MRP Margin ({form.watch("mrpPercent") || 0}%):</span>
                 <span className="font-mono text-blue-500">
-                  +₹{(parseFloat(calculatedRates.rate) * (form.watch("mrpPercent") || 0) / 100).toFixed(2)}
+                  +₹{Math.round(parseFloat(calculatedRates.rate) * (form.watch("mrpPercent") || 0) / 100)}
                 </span>
               </div>
               <Separator />
@@ -924,9 +924,9 @@ export default function StockInward() {
                     const mrpPercent = form.watch("mrpPercent") || 0;
                     const rate = parseFloat(calculatedRates.rate);
                     if (mrpOverride && mrpOverride > 0) {
-                      return mrpOverride.toFixed(2);
+                      return Math.round(mrpOverride);
                     }
-                    return (rate * (1 + mrpPercent / 100)).toFixed(2);
+                    return Math.round(rate * (1 + mrpPercent / 100));
                   })()}
                 </span>
               </div>
@@ -936,7 +936,7 @@ export default function StockInward() {
                   const mrpPercent = form.watch("mrpPercent") || 0;
                   const rate = parseFloat(calculatedRates.rate);
                   const mrp = (mrpOverride && mrpOverride > 0) ? mrpOverride : rate * (1 + mrpPercent / 100);
-                  return (mrp * (watchQty || 1)).toFixed(2);
+                  return Math.round(mrp * (watchQty || 1));
                 })()}
               </div>
             </CardContent>
@@ -1004,8 +1004,8 @@ export default function StockInward() {
                         <TableCell className="text-right font-mono">{parseFloat(item.qty).toFixed(0)}</TableCell>
                         <TableCell className="text-right font-mono">₹{parseFloat(item.cost).toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono">₹{parseFloat(item.lcost || "0").toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono font-semibold">₹{parseFloat(item.rrate || "0").toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-mono text-primary font-semibold">₹{parseFloat(item.mrp || item.rrate || "0").toFixed(2)}</TableCell>
+                        <TableCell className="text-right font-mono font-semibold">₹{Math.round(parseFloat(item.rrate || "0"))}</TableCell>
+                        <TableCell className="text-right font-mono text-primary font-semibold">₹{Math.round(parseFloat(item.mrp || item.rrate || "0"))}</TableCell>
                         <TableCell className="text-center">
                           {item.barcodeGenerated ? (
                             <Badge variant="default">
