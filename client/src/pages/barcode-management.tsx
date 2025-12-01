@@ -487,6 +487,7 @@ export default function BarcodeManagement() {
                     <TableHead>Item Name</TableHead>
                     <TableHead>Brand</TableHead>
                     <TableHead>Size</TableHead>
+                    <TableHead className="text-center">Qty</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Rate</TableHead>
                     <TableHead>MRP</TableHead>
@@ -511,6 +512,9 @@ export default function BarcodeManagement() {
                       <TableCell>{item.brandname || "-"}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{item.size || "-"}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-bold" data-testid={`text-qty-${item.id}`}>
+                        {item.qty || 1}
                       </TableCell>
                       <TableCell className="font-mono">{parseFloat(item.cost).toFixed(2)}</TableCell>
                       <TableCell className="font-mono">
