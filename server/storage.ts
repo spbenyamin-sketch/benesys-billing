@@ -1405,7 +1405,41 @@ export class DatabaseStorage implements IStorage {
       .from(billTemplates)
       .where(and(eq(billTemplates.assignedTo, assignedTo), eq(billTemplates.companyId, companyId)))
       .limit(1);
+    
+    // If no template found and it's B2B, create default Tally B2B template
+    if (!template && assignedTo === "b2b") {
+      return await this.createDefaultTallyB2BTemplate(companyId);
+    }
+    
     return template || await this.getDefaultBillTemplate(companyId);
+  }
+
+  async createDefaultTallyB2BTemplate(companyId: number): Promise<BillTemplate> {
+    const [newTemplate] = await db
+      .insert(billTemplates)
+      .values({
+        companyId,
+        name: "Tally B2B Invoice",
+        formatType: "A4",
+        assignedTo: "b2b",
+        headerText: null,
+        footerText: "Thank you for your business!",
+        showTaxBreakup: true,
+        showHsnCode: true,
+        showItemCode: true,
+        showPartyBalance: false,
+        showBankDetails: false,
+        showCashReturn: true,
+        bankDetails: null,
+        termsAndConditions: "1. Goods once sold are not returnable.\n2. Subject to jurisdiction.",
+        fontSize: 10,
+        logoUrl: null,
+        isDefault: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+    return newTemplate;
   }
 
   async createBillTemplate(template: InsertBillTemplate, userId: string, companyId: number): Promise<BillTemplate> {
