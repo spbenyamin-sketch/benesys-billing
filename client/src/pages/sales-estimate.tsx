@@ -106,7 +106,8 @@ export default function SalesEstimate() {
     if (!barcodeInput.trim()) return;
 
     try {
-      const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
+      const response = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
+      const data: any = await response.json();
       
       // Check if item is already sold
       if (data.soldAt) {
