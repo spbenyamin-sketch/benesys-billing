@@ -672,6 +672,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock info for bill entry - available qty and barcode flag
+  app.get("/api/stock/info/:companyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const stockInfo = await storage.getStockInfoForBillEntry(req.companyId);
+      res.json(stockInfo);
+    } catch (error) {
+      console.error("Error fetching stock info:", error);
+      res.status(500).json({ message: "Failed to fetch stock info" });
+    }
+  });
+
   // Barcode lookup - get inventory item by barcode
   app.get("/api/inventory/barcode/:barcode", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {

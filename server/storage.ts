@@ -2179,6 +2179,40 @@ export class DatabaseStorage implements IStorage {
       movement: { totalPurchasedQty, totalSoldQty, balanceQty },
     };
   }
+
+  // Get stock info for bill entry - available qty and barcode flag
+  async getStockInfoForBillEntry(companyId: number): Promise<{ [key: number]: { itemId: number; availableQty: number; isBarcoded: boolean } }> {
+    const result: { [key: number]: { itemId: number; availableQty: number; isBarcoded: boolean } } = {};
+
+    // Get all items with stock
+    const itemsWithStock = await db
+      .select({
+        itemId: items.id,
+        quantity: stock.quantity,
+      })
+      .from(items)
+      .leftJoin(stock, and(eq(items.id, stock.itemId), eq(stock.companyId, companyId)))
+      .where(eq(items.companyId, companyId));
+
+    for (const item of itemsWithStock) {
+      const qty = item.quantity ? parseFloat(item.quantity) : 0;
+
+      // Check if item has barcodes (stockInwardItems)
+      const [barcodedItem] = await db
+        .select({ id: stockInwardItems.id })
+        .from(stockInwardItems)
+        .where(and(eq(stockInwardItems.itemId, item.itemId), eq(stockInwardItems.companyId, companyId)))
+        .limit(1);
+
+      result[item.itemId] = {
+        itemId: item.itemId,
+        availableQty: qty,
+        isBarcoded: !!barcodedItem,
+      };
+    }
+
+    return result;
+  }
 }
 
 export const storage = new DatabaseStorage();

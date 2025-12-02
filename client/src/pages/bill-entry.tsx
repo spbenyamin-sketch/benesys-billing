@@ -25,6 +25,13 @@ interface Item {
   hsnCode?: string;
   sellingPrice: string;
   mrp: string;
+  packType?: string;
+}
+
+interface StockInfo {
+  itemId: number;
+  availableQty: number;
+  isBarcoded: boolean; // true if has unique barcodes
 }
 
 interface BillItem {
@@ -35,6 +42,7 @@ interface BillItem {
   quantity: number;
   rate: number;
   amount: number;
+  barcodes?: string[]; // Track used barcodes for validation
 }
 
 type BillType = "b2b" | "b2c" | "estimate";
@@ -69,6 +77,11 @@ export default function BillEntry() {
 
   const { data: items = [] } = useQuery<Item[]>({
     queryKey: ["/api/items", companyId],
+    enabled: !!companyId,
+  });
+
+  const { data: stockInfo = {} } = useQuery<{ [key: number]: StockInfo }>({
+    queryKey: ["/api/stock/info", companyId],
     enabled: !!companyId,
   });
 
@@ -141,14 +154,41 @@ export default function BillEntry() {
       if (selectedParty && itemSearch && currentRowQty && currentRowRate) {
         const selectedItem = filteredItems[0];
         if (selectedItem) {
+          const qty = parseFloat(currentRowQty);
+          const stock = stockInfo[selectedItem.id];
+
+          // Validate stock availability
+          if (!stock || stock.availableQty < qty) {
+            toast({
+              title: "Stock Not Available",
+              description: `Only ${stock?.availableQty || 0} units available for ${selectedItem.name}`,
+              variant: "destructive",
+            });
+            return;
+          }
+
+          // For barcode items (qty=1), check if already added
+          if (stock.isBarcoded && qty === 1) {
+            const alreadyAdded = billItems.some(item => item.itemId === selectedItem.id);
+            if (alreadyAdded) {
+              toast({
+                title: "Barcode Already Used",
+                description: `${selectedItem.name} has already been added once (barcode item)`,
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+
           const newItem: BillItem = {
             itemId: selectedItem.id,
             itemCode: selectedItem.code,
             itemName: selectedItem.name,
             hsnCode: selectedItem.hsnCode,
-            quantity: parseFloat(currentRowQty),
+            quantity: qty,
             rate: parseFloat(currentRowRate),
-            amount: parseFloat(currentRowQty) * parseFloat(currentRowRate),
+            amount: qty * parseFloat(currentRowRate),
+            barcodes: stock.isBarcoded ? [selectedItem.code] : undefined,
           };
           setBillItems(prev => [...prev, newItem]);
           setItemSearch("");
