@@ -49,6 +49,7 @@ import Companies from "@/pages/companies";
 import SelectCompany from "@/pages/select-company";
 import BarcodeLookup from "@/pages/barcode-lookup";
 import PurchaseDetails from "@/pages/purchase-details";
+import PurchaseTally from "@/pages/purchase-tally";
 
 function Router() {
   const { isAuthenticated, user } = useAuth();
@@ -76,6 +77,7 @@ function Router() {
       <Route path="/invoice/:id" component={Invoice} />
       <Route path="/purchases/new" component={PurchaseEntry} />
       <Route path="/purchase-entry" component={PurchaseEntry} />
+      <Route path="/purchase-tally" component={PurchaseTally} />
       <Route path="/stock-inward" component={StockInward} />
       <Route path="/barcode-management" component={BarcodeManagement} />
       <Route path="/barcode-lookup" component={BarcodeLookup} />

@@ -147,6 +147,7 @@ export interface IStorage {
   getSizeMaster(): Promise<any[]>;
   createPurchaseEntry(purchase: InsertPurchase, userId: string, companyId: number): Promise<Purchase>;
   updatePurchase(id: number, purchase: Partial<InsertPurchase>, companyId: number): Promise<Purchase>;
+  getPurchaseTallyStatus(companyId: number): Promise<any[]>;
   
   // Stock Inward Barcode Management
   getAllStockInwardItems(companyId: number, filters?: { purchaseId?: number; status?: string; size?: string }): Promise<StockInwardItem[]>;
@@ -1854,6 +1855,57 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return newPurchase;
+  }
+
+  async getPurchaseTallyStatus(companyId: number): Promise<any[]> {
+    const result = await db
+      .select({
+        purchaseId: purchases.id,
+        purchaseNo: purchases.purchaseNo,
+        date: purchases.date,
+        invoiceNo: purchases.invoiceNo,
+        partyName: purchases.partyName,
+        totalItems: sql<number>`COUNT(DISTINCT ${purchaseItems.id})`,
+        matchedItems: sql<number>`COUNT(DISTINCT CASE WHEN ${stockInwardItems.id} IS NOT NULL THEN ${purchaseItems.id} END)`,
+        unmatchedItems: sql<number>`COUNT(DISTINCT CASE WHEN ${stockInwardItems.id} IS NULL THEN ${purchaseItems.id} END)`,
+        totalQty: purchases.totalQty,
+        receivedQty: sql<string>`COALESCE(SUM(${stockInwardItems.qty}), 0)`,
+      })
+      .from(purchases)
+      .leftJoin(purchaseItems, eq(purchases.id, purchaseItems.purchaseId))
+      .leftJoin(stockInwardItems, eq(purchaseItems.id, stockInwardItems.purchaseItemId))
+      .where(eq(purchases.companyId, companyId))
+      .groupBy(purchases.id, purchases.purchaseNo, purchases.date, purchases.invoiceNo, purchases.partyName, purchases.totalQty);
+
+    const detailed = await Promise.all(result.map(async (purchase) => {
+      const items = await db
+        .select({
+          id: purchaseItems.id,
+          itemName: purchaseItems.itname,
+          billQty: purchaseItems.qty,
+          receivedQty: sql<string>`COALESCE(SUM(${stockInwardItems.qty}), 0)`,
+          cost: purchaseItems.cost,
+          tax: purchaseItems.tax,
+          matched: sql<boolean>`${stockInwardItems.id} IS NOT NULL`,
+        })
+        .from(purchaseItems)
+        .leftJoin(stockInwardItems, eq(purchaseItems.id, stockInwardItems.purchaseItemId))
+        .where(eq(purchaseItems.purchaseId, purchase.purchaseId))
+        .groupBy(purchaseItems.id);
+
+      return {
+        ...purchase,
+        items: items.map(item => ({
+          ...item,
+          billQty: parseFloat(item.billQty.toString()),
+          receivedQty: parseFloat(item.receivedQty.toString()),
+          cost: parseFloat(item.cost.toString()),
+          tax: parseFloat(item.tax.toString()),
+        })),
+      };
+    }));
+
+    return detailed;
   }
 
   async updatePurchase(id: number, purchaseData: Partial<InsertPurchase>, companyId: number): Promise<Purchase> {

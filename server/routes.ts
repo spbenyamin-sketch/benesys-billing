@@ -950,6 +950,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get purchase tally status (qty matching between bills and stock inward)
+  app.get("/api/purchase-tally", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const tallyStatus = await storage.getPurchaseTallyStatus(req.companyId);
+      res.json(tallyStatus);
+    } catch (error) {
+      console.error("Error fetching purchase tally status:", error);
+      res.status(500).json({ message: "Failed to fetch purchase tally status" });
+    }
+  });
+
   // ==================== STOCK INWARD (Phase 2 - Item Entry) ====================
 
   // Get size master for size conversion

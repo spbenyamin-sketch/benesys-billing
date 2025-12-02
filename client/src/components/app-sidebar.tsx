@@ -104,6 +104,11 @@ export function AppSidebar() {
       icon: PackagePlus,
     },
     {
+      title: "Purchase Tally",
+      url: "/purchase-tally",
+      icon: FileText,
+    },
+    {
       title: "Barcode Management",
       url: "/barcode-management",
       icon: Barcode,
