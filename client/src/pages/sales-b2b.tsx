@@ -2,18 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
+import { SearchableSelect } from "@/components/searchable-select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -86,8 +80,13 @@ export default function SalesB2B() {
   const { toast } = useToast();
   const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
+
+  useEffect(() => {
+    dateInputRef.current?.focus();
+  }, []);
   
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [gstType, setGstType] = useState<0 | 1>(0);
@@ -496,6 +495,7 @@ export default function SalesB2B() {
               <div className="space-y-2">
                 <Label htmlFor="invoiceDate">Invoice Date</Label>
                 <Input
+                  ref={dateInputRef}
                   id="invoiceDate"
                   type="date"
                   value={invoiceDate}
@@ -504,22 +504,15 @@ export default function SalesB2B() {
                 />
               </div>
               <div className="space-y-2 lg:col-span-2">
-                <Label htmlFor="party">Customer (Required for B2B)</Label>
-                <Select
-                  value={selectedPartyId?.toString() || ""}
-                  onValueChange={(v) => setSelectedPartyId(v ? parseInt(v) : null)}
-                >
-                  <SelectTrigger id="party" data-testid="select-party">
-                    <SelectValue placeholder="Select business customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {parties?.map((party) => (
-                      <SelectItem key={party.id} value={party.id.toString()}>
-                        {party.name} {party.shortname && `(${party.shortname})`} - {party.city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Customer (Required for B2B)</Label>
+                <SearchableSelect
+                  items={parties || []}
+                  selectedId={selectedPartyId}
+                  onSelect={setSelectedPartyId}
+                  placeholder="Search party code or name..."
+                  getLabel={(p) => `${p.name} ${p.shortname ? `(${p.shortname})` : ''} - ${p.city || ''}`}
+                  testId="input-party-search"
+                />
               </div>
             </div>
 
