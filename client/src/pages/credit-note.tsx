@@ -484,21 +484,20 @@ export default function CreditNote() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="party">Party/Customer *</Label>
-                <Select
-                  value={selectedPartyId?.toString() || ""}
-                  onValueChange={(v) => setSelectedPartyId(parseInt(v))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start h-9"
+                  onClick={() => setShowPartySearch(true)}
+                  data-testid="button-select-party"
                 >
-                  <SelectTrigger id="party" data-testid="select-party">
-                    <SelectValue placeholder="Select Party" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {parties?.map((party) => (
-                      <SelectItem key={party.id} value={party.id.toString()}>
-                        {party.name} - {party.city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  {selectedParty ? (
+                    <span className="text-sm">{selectedParty.name} - {selectedParty.city}</span>
+                  ) : (
+                    <span className="text-muted-foreground text-sm">Click to search party...</span>
+                  )}
+                </Button>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="originalInvoice">Original Invoice No.</Label>
