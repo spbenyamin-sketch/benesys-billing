@@ -85,6 +85,18 @@ export default function SalesB2C() {
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
 
+  // Auto-select walk-in customer for B2C
+  useEffect(() => {
+    if (parties && parties.length > 0 && !selectedPartyId) {
+      const walkInCustomer = parties.find((p) => p.code === "WALKIN" || p.name.toLowerCase().includes("walk"));
+      if (walkInCustomer) {
+        setSelectedPartyId(walkInCustomer.id);
+      } else {
+        setSelectedPartyId(parties[0].id);
+      }
+    }
+  }, [parties]);
+
   useEffect(() => {
     dateInputRef.current?.focus();
   }, []);
@@ -407,7 +419,7 @@ export default function SalesB2C() {
   });
 
   return (
-    <div ref={formContainerRef} className="p-4 space-y-4 max-w-7xl mx-auto">
+    <div ref={formContainerRef} className="p-4 space-y-4 w-full">
       {/* Header Section */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">B2C SALES (RETAIL)</h1>
@@ -426,7 +438,7 @@ export default function SalesB2C() {
       <Card>
         <CardContent className="pt-6 space-y-4">
           {/* Top Row - Invoice Details */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Invoice Date</Label>
               <Input
@@ -439,18 +451,29 @@ export default function SalesB2C() {
               />
             </div>
             <div className="space-y-1">
+              <Label className="text-xs">Customer</Label>
+              <SelectOption
+                items={parties || []}
+                selectedId={selectedPartyId}
+                onSelect={setSelectedPartyId}
+                placeholder="Select customer"
+                getLabel={(p) => `${p.name} - ${p.city || ''}`}
+                testId="input-party-search"
+              />
+            </div>
+            <div className="space-y-1">
               <Label className="text-xs">Tax Type</Label>
               <Select value={gstType.toString()} onValueChange={(v) => setGstType(parseInt(v) as 0 | 1)}>
                 <SelectTrigger className="text-sm" data-testid="select-gst-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Local (CGST+SGST)</SelectItem>
-                  <SelectItem value="1">Inter-State (IGST)</SelectItem>
+                  <SelectItem value="0">CGST+SGST</SelectItem>
+                  <SelectItem value="1">IGST</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-1 flex items-end gap-2">
+            <div className="space-y-1 flex items-end">
               <div className="flex items-center gap-2">
                 <Checkbox
                   id="inclusive-tax"
@@ -462,36 +485,101 @@ export default function SalesB2C() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Customer</Label>
-              <SelectOption
-                items={parties || []}
-                selectedId={selectedPartyId}
-                onSelect={setSelectedPartyId}
-                placeholder="Select customer"
-                getLabel={(p) => `${p.name} - ${p.city || ''}`}
-                testId="input-party-search"
-              />
+              <Label className="text-xs">Payment Mode</Label>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={paymentMode === "CASH" ? "default" : "outline"}
+                  onClick={() => setPaymentMode("CASH")}
+                  className="flex-1 h-8 text-xs"
+                  data-testid="button-cash"
+                >
+                  Cash
+                </Button>
+                <Button
+                  size="sm"
+                  variant={paymentMode === "CARD" ? "default" : "outline"}
+                  onClick={() => setPaymentMode("CARD")}
+                  className="flex-1 h-8 text-xs"
+                  data-testid="button-card"
+                >
+                  Card
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Barcode Scan */}
-          <div className="flex gap-2">
-            <Input
-              ref={barcodeInputRef}
-              placeholder="Scan or enter barcode..."
-              value={barcodeInput}
-              onChange={(e) => setBarcodeInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
-              className="text-sm"
-              data-testid="input-barcode"
-            />
-            <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search">
-              <Barcode className="h-4 w-4" />
-            </Button>
-            <Button size="sm" onClick={addLineItem} variant="outline" data-testid="button-add-line-item">
-              <Plus className="h-4 w-4" />
-              Add Item
-            </Button>
+          {/* Item Search & Barcode */}
+          <div className="flex gap-2 flex-wrap">
+            <div className="flex-1 min-w-64">
+              <div className="space-y-1">
+                <Label className="text-xs">Search Item by Code or Name</Label>
+                <SelectOption
+                  items={items || []}
+                  selectedId={null}
+                  onSelect={(itemId) => {
+                    if (itemId && items) {
+                      const selectedItem = items.find((i) => i.id === itemId);
+                      if (selectedItem) {
+                        const newItem: SaleLineItem = {
+                          tempId: Date.now().toString(),
+                          itemId: selectedItem.id,
+                          purchaseItemId: null,
+                          stockInwardId: null,
+                          barcode: "",
+                          itemCode: selectedItem.code,
+                          itemName: selectedItem.name,
+                          hsnCode: selectedItem.hsnCode || "",
+                          quantity: 1,
+                          rate: parseFloat(selectedItem.cost),
+                          mrp: parseFloat(selectedItem.cost),
+                          discount: 0,
+                          discountPercent: 0,
+                          amount: 0,
+                          taxRate: parseFloat(selectedItem.tax),
+                          cgstRate: parseFloat(selectedItem.cgst),
+                          sgstRate: parseFloat(selectedItem.sgst),
+                          saleValue: 0,
+                          taxValue: 0,
+                          cgst: 0,
+                          sgst: 0,
+                          stockQty: getStockQuantity(selectedItem.id),
+                          isFromBarcode: false,
+                        };
+                        recalculateItem(newItem);
+                        setLineItems([...lineItems, newItem]);
+                        toast({
+                          title: "Item Added",
+                          description: `${selectedItem.name} added to bill`,
+                        });
+                      }
+                    }
+                  }}
+                  placeholder="Type item code or name..."
+                  getLabel={(i) => `${i.name}`}
+                  testId="input-item-search"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 items-end">
+              <div className="space-y-1">
+                <Label className="text-xs">Barcode Scan</Label>
+                <div className="flex gap-2">
+                  <Input
+                    ref={barcodeInputRef}
+                    placeholder="Scan..."
+                    value={barcodeInput}
+                    onChange={(e) => setBarcodeInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
+                    className="text-sm w-32"
+                    data-testid="input-barcode"
+                  />
+                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search">
+                    <Barcode className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -613,68 +701,10 @@ export default function SalesB2C() {
         </Table>
       </div>
 
-      {/* Payment & Summary Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Payment Mode */}
-        <Card className="bg-muted">
-          <CardContent className="pt-4 space-y-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Payment Mode</Label>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={paymentMode === "CASH" ? "default" : "outline"}
-                  onClick={() => setPaymentMode("CASH")}
-                  className="flex-1"
-                  data-testid="button-cash"
-                >
-                  <Banknote className="h-4 w-4 mr-1" />
-                  Cash
-                </Button>
-                <Button
-                  size="sm"
-                  variant={paymentMode === "CARD" ? "default" : "outline"}
-                  onClick={() => setPaymentMode("CARD")}
-                  className="flex-1"
-                  data-testid="button-card"
-                >
-                  <CreditCard className="h-4 w-4 mr-1" />
-                  Card
-                </Button>
-              </div>
-            </div>
-
-            {paymentMode === "CASH" && (
-              <>
-                <div className="space-y-1">
-                  <Label className="text-xs">Amount Given</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={amountGiven}
-                    onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
-                    className="text-sm"
-                    data-testid="input-amount-given"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Amount Return</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={amountReturn}
-                    onChange={(e) => setAmountReturn(parseFloat(e.target.value) || 0)}
-                    className="text-sm"
-                    data-testid="input-amount-return"
-                  />
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Summary Footer */}
-        <Card className="bg-muted">
+      {/* Summary & Payment Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Summary */}
+        <Card className="bg-muted lg:col-span-2">
           <CardContent className="pt-4">
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
