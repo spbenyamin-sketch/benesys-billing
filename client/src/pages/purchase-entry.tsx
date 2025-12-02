@@ -273,8 +273,8 @@ export default function PurchaseEntry() {
                         onClick={() => setShowPartySearch(true)}
                         data-testid="button-select-party"
                       >
-                        {selectedPartyName ? (
-                          <span className="text-sm">{selectedPartyName}</span>
+                        {selectedParty ? (
+                          <span className="text-sm">{selectedParty.name}</span>
                         ) : (
                           <span className="text-muted-foreground text-sm">Click to search supplier...</span>
                         )}
