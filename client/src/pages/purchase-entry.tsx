@@ -119,17 +119,16 @@ export default function PurchaseEntry() {
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
       const party = (parties as any)?.find((p: any) => p.id === data.partyId);
-      const convertToNumber = (val: string | undefined) => parseFloat(val || "0") || 0;
       const res = await apiRequest("POST", "/api/purchase-entries", {
         ...data,
         partyName: party?.name || data.partyName || "",
         city: party?.city || data.city || "",
-        amount: convertToNumber(data.amount),
-        totalQty: convertToNumber(data.totalQty),
-        cgst: convertToNumber(data.cgst),
-        sgst: convertToNumber(data.sgst),
-        igst: convertToNumber(data.igst),
-        cess: convertToNumber(data.cess),
+        amount: data.amount || "0",
+        totalQty: data.totalQty || "0",
+        cgst: data.cgst || "0",
+        sgst: data.sgst || "0",
+        igst: data.igst || "0",
+        cess: data.cess || "0",
         val0: data.val0 || "0",
         val5: data.val5 || "0",
         val12: data.val12 || "0",
