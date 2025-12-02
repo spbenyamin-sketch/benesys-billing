@@ -63,6 +63,11 @@ export function AppSidebar() {
       icon: CreditCard,
     },
     {
+      title: "Debit Note",
+      url: "/sales/debit-note",
+      icon: CreditCard,
+    },
+    {
       title: "Sales List",
       url: "/sales",
       icon: ShoppingCart,

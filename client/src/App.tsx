@@ -24,6 +24,7 @@ import SalesB2B from "@/pages/sales-b2b";
 import SalesB2C from "@/pages/sales-b2c";
 import SalesEstimate from "@/pages/sales-estimate";
 import CreditNote from "@/pages/credit-note";
+import DebitNote from "@/pages/debit-note";
 import Sales from "@/pages/sales";
 import Purchases from "@/pages/purchases";
 import PurchaseEntry from "@/pages/purchase-entry";
@@ -67,6 +68,7 @@ function Router() {
       <Route path="/sales/b2c" component={SalesB2C} />
       <Route path="/sales/estimate" component={SalesEstimate} />
       <Route path="/sales/credit-note" component={CreditNote} />
+      <Route path="/sales/debit-note" component={DebitNote} />
       <Route path="/sales/new" component={SalesBilling} />
       <Route path="/bill-entry" component={BillEntry} />
       <Route path="/sales" component={Sales} />

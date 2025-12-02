@@ -240,7 +240,7 @@ export const sales = pgTable("sales", {
   companyId: integer("company_id").references(() => companies.id).notNull(),
   invoiceNo: integer("invoice_no").notNull(),
   billType: varchar("bill_type", { length: 10 }).notNull(), // GST or EST
-  saleType: varchar("sale_type", { length: 10 }).default("B2C").notNull(), // B2B, B2C, ESTIMATE
+  saleType: varchar("sale_type", { length: 20 }).default("B2C").notNull(), // B2B, B2C, ESTIMATE, CREDIT_NOTE, DEBIT_NOTE
   paymentMode: varchar("payment_mode", { length: 10 }).default("CASH").notNull(), // CASH, CARD, CREDIT
   inclusiveTax: boolean("inclusive_tax").default(false).notNull(), // true=rate includes tax
   date: date("date").notNull(),
