@@ -509,22 +509,45 @@ export default function SalesB2C() {
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="party">Customer (Optional)</Label>
-                <Select
-                  value={selectedPartyId?.toString() || "walk-in"}
-                  onValueChange={(v) => setSelectedPartyId(v === "walk-in" ? null : parseInt(v))}
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 justify-start text-left h-9"
+                    onClick={() => setShowPartySearch(true)}
+                    data-testid="button-search-party"
+                  >
+                    {selectedParty ? (
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-sm">{selectedParty.code}</span>
+                        <span className="text-xs text-muted-foreground">{selectedParty.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Click to search customer...</span>
+                    )}
+                  </Button>
+                  {selectedParty && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedPartyId(null)}
+                      data-testid="button-clear-party"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setSelectedPartyId(null)}
+                  data-testid="button-walkin-b2c"
                 >
-                  <SelectTrigger id="party" data-testid="select-party">
-                    <SelectValue placeholder="Walk-in customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="walk-in">Walk-in customer</SelectItem>
-                    {parties?.map((party) => (
-                      <SelectItem key={party.id} value={party.id.toString()}>
-                        {party.name} - {party.city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  Walk-in Customer
+                </Button>
               </div>
             </div>
 
@@ -611,21 +634,23 @@ export default function SalesB2C() {
                                 <div className="text-xs text-muted-foreground">BC: {item.barcode}</div>
                               </div>
                             ) : (
-                              <Select
-                                value={item.itemId?.toString() || ""}
-                                onValueChange={(v) => updateLineItem(item.tempId, "itemId", v)}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left h-8"
+                                onClick={() => {
+                                  setSelectedLineItemTempId(item.tempId);
+                                  setShowItemSearch(true);
+                                }}
+                                data-testid={`button-select-item-${item.tempId}`}
                               >
-                                <SelectTrigger data-testid={`select-item-${item.tempId}`}>
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {items?.map((i) => (
-                                    <SelectItem key={i.id} value={i.id.toString()}>
-                                      {i.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {item.itemName ? (
+                                  <span className="text-sm">{item.itemName}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">Click to search item...</span>
+                                )}
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>
