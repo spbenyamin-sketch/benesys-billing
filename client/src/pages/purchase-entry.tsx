@@ -119,10 +119,32 @@ export default function PurchaseEntry() {
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
       const party = (parties as any)?.find((p: any) => p.id === data.partyId);
+      const convertToNumber = (val: string | undefined) => parseFloat(val || "0") || 0;
       const res = await apiRequest("POST", "/api/purchase-entries", {
         ...data,
         partyName: party?.name || data.partyName || "",
         city: party?.city || data.city || "",
+        amount: convertToNumber(data.amount),
+        totalQty: convertToNumber(data.totalQty),
+        cgst: convertToNumber(data.cgst),
+        sgst: convertToNumber(data.sgst),
+        igst: convertToNumber(data.igst),
+        cess: convertToNumber(data.cess),
+        val0: convertToNumber(data.val0),
+        val5: convertToNumber(data.val5),
+        val12: convertToNumber(data.val12),
+        val18: convertToNumber(data.val18),
+        val28: convertToNumber(data.val28),
+        ctax0: convertToNumber(data.ctax0),
+        ctax5: convertToNumber(data.ctax5),
+        ctax12: convertToNumber(data.ctax12),
+        ctax18: convertToNumber(data.ctax18),
+        ctax28: convertToNumber(data.ctax28),
+        stax0: convertToNumber(data.stax0),
+        stax5: convertToNumber(data.stax5),
+        stax12: convertToNumber(data.stax12),
+        stax18: convertToNumber(data.stax18),
+        stax28: convertToNumber(data.stax28),
       });
       return res.json();
     },
