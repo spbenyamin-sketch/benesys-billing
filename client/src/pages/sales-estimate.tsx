@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { SearchableSelect } from "@/components/searchable-select";
+import { PartySearchModal } from "@/components/party-search-modal";
+import { ItemSearchModal } from "@/components/item-search-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,12 +84,15 @@ export default function SalesEstimate() {
   const [searchMode, setSearchMode] = useState<"item" | "barcode">("item");
   const [mobile, setMobile] = useState("");
   const [amountGiven, setAmountGiven] = useState(0);
+  const [showPartySearch, setShowPartySearch] = useState(false);
+  const [showItemSearch, setShowItemSearch] = useState(false);
+  const [selectedLineItemTempId, setSelectedLineItemTempId] = useState<string | null>(null);
 
-  const { data: parties } = useQuery<Party[]>({
+  const { data: parties, isLoading: partiesLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
   });
 
-  const { data: items } = useQuery<Item[]>({
+  const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
     queryKey: ["/api/items"],
   });
 
@@ -348,31 +353,49 @@ export default function SalesEstimate() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="party">Customer</Label>
-                <Select
-                  value={isWalkIn ? "walkin" : (selectedPartyId?.toString() || "")}
-                  onValueChange={(v) => {
-                    if (v === "walkin") {
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 justify-start text-left h-9"
+                    onClick={() => setShowPartySearch(true)}
+                    data-testid="button-search-party"
+                  >
+                    {selectedParty ? (
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium text-sm">{selectedParty.code}</span>
+                        <span className="text-xs text-muted-foreground">{selectedParty.name}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">Click to search customer...</span>
+                    )}
+                  </Button>
+                  {selectedParty && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setSelectedPartyId(null)}
+                      data-testid="button-clear-party"
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={isWalkIn ? "default" : "outline"}
+                    onClick={() => {
                       setIsWalkIn(true);
                       setSelectedPartyId(null);
-                    } else {
-                      setIsWalkIn(false);
-                      setWalkInName("");
-                      setSelectedPartyId(v ? parseInt(v) : null);
-                    }
-                  }}
-                >
-                  <SelectTrigger id="party" data-testid="select-party">
-                    <SelectValue placeholder="Select customer" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="walkin">Walk-in Customer</SelectItem>
-                    {parties?.map((party) => (
-                      <SelectItem key={party.id} value={party.id.toString()}>
-                        {party.name} - {party.city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    }}
+                    data-testid="button-walkin"
+                  >
+                    Walk-in
+                  </Button>
+                </div>
               </div>
             </div>
             {isWalkIn && (
@@ -639,6 +662,36 @@ export default function SalesEstimate() {
           )}
         </div>
       </div>
+
+      <PartySearchModal
+        open={showPartySearch}
+        parties={parties}
+        isLoading={partiesLoading}
+        onSelect={(party) => {
+          setSelectedPartyId(party.id);
+          setIsWalkIn(false);
+        }}
+        onClose={() => setShowPartySearch(false)}
+        title="Search & Select Customer"
+      />
+
+      <ItemSearchModal
+        open={showItemSearch}
+        items={items}
+        isLoading={itemsLoading}
+        onSelect={(item) => {
+          if (selectedLineItemTempId) {
+            updateLineItem(selectedLineItemTempId, "itemId", item.id);
+            setSelectedLineItemTempId(null);
+          }
+          setShowItemSearch(false);
+        }}
+        onClose={() => {
+          setShowItemSearch(false);
+          setSelectedLineItemTempId(null);
+        }}
+        title="Search & Select Item"
+      />
     </div>
   );
 }

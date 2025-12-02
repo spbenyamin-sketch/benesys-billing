@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { PartySearchModal } from "@/components/party-search-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,14 +69,25 @@ interface Purchase {
   stockInwardCompleted: boolean;
 }
 
+interface Party {
+  id: number;
+  code: string;
+  name: string;
+  city: string | null;
+}
+
 export default function PurchaseEntry() {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("entry");
   const [gstType, setGstType] = useState<"local" | "interstate" | "exempt">("local");
+  const [showPartySearch, setShowPartySearch] = useState(false);
+  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
 
-  const { data: parties } = useQuery({
+  const { data: parties, isLoading: partiesLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
   });
+
+  const selectedParty = (parties as any)?.find((p: any) => p.id === selectedPartyId);
 
   const { data: purchases, isLoading: purchasesLoading } = useQuery<Purchase[]>({
     queryKey: ["/api/purchases"],
