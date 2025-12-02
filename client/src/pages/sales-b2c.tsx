@@ -121,6 +121,20 @@ export default function SalesB2C() {
       const response = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       const data: any = await response.json();
       
+      // Check if this barcode item (qty=1) is already in the bill
+      if (data.stockQty === 1) {
+        const alreadyAdded = lineItems.some(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.quantity === 1));
+        if (alreadyAdded) {
+          toast({
+            title: "Barcode Already Used",
+            description: `${data.itemName} (${data.barcode}) has already been added to this bill`,
+            variant: "destructive",
+          });
+          setBarcodeInput("");
+          return;
+        }
+      }
+      
       // Get rate from barcode data - use mrp first, then rate (selling rate from stock inward)
       const saleRate = parseFloat(data.mrp) || parseFloat(data.rate) || 0;
       

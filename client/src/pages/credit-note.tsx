@@ -135,6 +135,20 @@ export default function CreditNote() {
     try {
       const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       
+      // Check if this barcode item (qty=1) is already in the bill
+      if (data.stockQty === 1) {
+        const alreadyAdded = lineItems.some(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.quantity === 1));
+        if (alreadyAdded) {
+          toast({
+            title: "Barcode Already Used",
+            description: `${data.itemName} (${data.barcode}) has already been added to this bill`,
+            variant: "destructive",
+          });
+          setBarcodeInput("");
+          return;
+        }
+      }
+      
       const newItem: CreditNoteLineItem = {
         tempId: Date.now().toString(),
         itemId: data.itemId,
