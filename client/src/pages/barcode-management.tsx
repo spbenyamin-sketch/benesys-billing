@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ItemSearchModal } from "@/components/item-search-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,6 +137,7 @@ export default function BarcodeManagement() {
   const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showLabelDesigner, setShowLabelDesigner] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [showItemSearch, setShowItemSearch] = useState(false);
 
   const { data: stockItems, isLoading, refetch } = useQuery<StockInwardItem[]>({
     queryKey: ["/api/stock-inward-items", filterPurchaseId, filterStatus !== "all" ? filterStatus : null, filterSize],
@@ -1068,4 +1070,20 @@ function PrintLabelsDialog({ open, onOpenChange, selectedItems }: PrintLabelsDia
       </DialogContent>
     </Dialog>
   );
+}
+
+interface Item {
+  id: number;
+  code: string;
+  name: string;
+  hsnCode?: string;
+  cgstRate?: string;
+  sgstRate?: string;
+  packType?: string;
+}
+
+interface BarcodeManagementPageProps {
+  showItemSearch: boolean;
+  setShowItemSearch: (show: boolean) => void;
+  items: Item[];
 }

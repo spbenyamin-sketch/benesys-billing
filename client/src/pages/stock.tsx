@@ -586,19 +586,17 @@ export default function Stock() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="item">Item</Label>
-              <Select value={itemFilter} onValueChange={setItemFilter}>
-                <SelectTrigger id="item" data-testid="select-item">
-                  <SelectValue placeholder="All Items" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Items</SelectItem>
-                  {items.map((item) => (
-                    item && <SelectItem key={item.id} value={item.id.toString()}>
-                      {item.code} - {item.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start text-left h-9"
+                onClick={() => setShowItemSearch(true)}
+                data-testid="button-search-stock-item"
+              >
+                {itemFilter && itemFilter !== "all" 
+                  ? items.find(i => i?.id.toString() === itemFilter)?.name 
+                  : "All Items"}
+              </Button>
             </div>
             <div className="space-y-2">
               <Label htmlFor="category">Category</Label>
@@ -828,6 +826,18 @@ export default function Stock() {
           setHistoryDialogOpen(false);
           setSelectedItemId(null);
         }}
+      />
+
+      <ItemSearchModal
+        open={showItemSearch}
+        items={items.filter((i): i is Item => i !== null)}
+        isLoading={false}
+        onSelect={(item) => {
+          setItemFilter(item.id.toString());
+          setShowItemSearch(false);
+        }}
+        onClose={() => setShowItemSearch(false)}
+        title="Search & Select Item"
       />
     </div>
   );
