@@ -135,6 +135,17 @@ export default function SalesB2C() {
       const response = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       const data: any = await response.json();
       
+      // Check if item is already sold
+      if (data.soldAt) {
+        toast({
+          title: "Item Already Sold",
+          description: `${data.itemName} (${data.barcode}) has already been sold and cannot be scanned again`,
+          variant: "destructive",
+        });
+        setBarcodeInput("");
+        return;
+      }
+      
       // Unique barcode (qty=1): Can only scan once per bill
       if (data.stockQty === 1) {
         const alreadyAdded = lineItems.some(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.quantity === 1));
