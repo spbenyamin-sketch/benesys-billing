@@ -486,7 +486,7 @@ export default function SalesB2B() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Tax Type</Label>
-              <Select value={gstType.toString()} onValueChange={(v) => setGstType(v as "0" | "1")}>
+              <Select value={gstType.toString()} onValueChange={(v) => setGstType(parseInt(v) as 0 | 1)}>
                 <SelectTrigger className="text-sm" data-testid="select-gst-type">
                   <SelectValue />
                 </SelectTrigger>

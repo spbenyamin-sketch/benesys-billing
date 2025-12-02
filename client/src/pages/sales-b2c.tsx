@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePrintSettings } from "@/hooks/use-print-settings";
 import { Plus, Trash2, Save, Barcode, CreditCard, Banknote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
 
@@ -439,7 +440,7 @@ export default function SalesB2C() {
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Tax Type</Label>
-              <Select value={gstType.toString()} onValueChange={(v) => setGstType(v as "0" | "1")}>
+              <Select value={gstType.toString()} onValueChange={(v) => setGstType(parseInt(v) as 0 | 1)}>
                 <SelectTrigger className="text-sm" data-testid="select-gst-type">
                   <SelectValue />
                 </SelectTrigger>
