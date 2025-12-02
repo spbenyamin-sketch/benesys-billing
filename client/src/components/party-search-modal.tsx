@@ -59,6 +59,36 @@ export function PartySearchModal({
     );
   }, [search, parties]);
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      
+      // Check if search matches a party code exactly
+      const exactMatch = parties.find(
+        (party) => party.code.toLowerCase() === search.toLowerCase()
+      );
+      
+      if (exactMatch) {
+        onSelect(exactMatch);
+        onClose();
+        return;
+      }
+
+      // If only one result, select it
+      if (filtered.length === 1) {
+        onSelect(filtered[0]);
+        onClose();
+        return;
+      }
+
+      // If multiple results and search is not empty, select first match
+      if (filtered.length > 0 && search.trim()) {
+        onSelect(filtered[0]);
+        onClose();
+      }
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-96">
@@ -72,9 +102,10 @@ export function PartySearchModal({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by code, name, or GSTIN..."
+                placeholder="Search by code, name, or GSTIN... (Enter to select)"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={handleKeyDown}
                 autoFocus
                 className="pl-9"
                 data-testid="input-party-search"
