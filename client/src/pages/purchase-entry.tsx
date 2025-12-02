@@ -31,6 +31,22 @@ const purchaseEntrySchema = z.object({
   cess: z.string().optional(),
   gstType: z.enum(["local", "interstate", "exempt"]).default("local"),
   remarks: z.string().optional(),
+  // Multiple tax rates for Tally-style invoicing
+  val0: z.string().default("0").optional(),
+  val5: z.string().default("0").optional(),
+  val12: z.string().default("0").optional(),
+  val18: z.string().default("0").optional(),
+  val28: z.string().default("0").optional(),
+  ctax0: z.string().default("0").optional(),
+  ctax5: z.string().default("0").optional(),
+  ctax12: z.string().default("0").optional(),
+  ctax18: z.string().default("0").optional(),
+  ctax28: z.string().default("0").optional(),
+  stax0: z.string().default("0").optional(),
+  stax5: z.string().default("0").optional(),
+  stax12: z.string().default("0").optional(),
+  stax18: z.string().default("0").optional(),
+  stax28: z.string().default("0").optional(),
 });
 
 type PurchaseEntryForm = z.infer<typeof purchaseEntrySchema>;
@@ -337,6 +353,56 @@ export default function PurchaseEntry() {
                       </div>
                     </div>
                   )}
+
+                  <div className="border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-4">Tax Rates Breakdown (Tally Import)</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Enter amounts before tax (Camount) for each tax rate if your bill has multiple tax rates</p>
+                    <div className="grid grid-cols-5 gap-3">
+                      {[0, 5, 12, 18, 28].map((rate) => (
+                        <div key={`val${rate}`}>
+                          <Label htmlFor={`val${rate}`} className="text-xs">0% Amount</Label>
+                          <Input
+                            id={`val${rate}`}
+                            type="number"
+                            step="0.01"
+                            {...form.register(`val${rate}` as any)}
+                            placeholder="0"
+                            data-testid={`input-val${rate}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-5 gap-3 mt-4">
+                      {[0, 5, 12, 18, 28].map((rate) => (
+                        <div key={`ctax${rate}`}>
+                          <Label htmlFor={`ctax${rate}`} className="text-xs">CGST {rate}%</Label>
+                          <Input
+                            id={`ctax${rate}`}
+                            type="number"
+                            step="0.01"
+                            {...form.register(`ctax${rate}` as any)}
+                            placeholder="0"
+                            data-testid={`input-ctax${rate}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-5 gap-3 mt-4">
+                      {[0, 5, 12, 18, 28].map((rate) => (
+                        <div key={`stax${rate}`}>
+                          <Label htmlFor={`stax${rate}`} className="text-xs">SGST {rate}%</Label>
+                          <Input
+                            id={`stax${rate}`}
+                            type="number"
+                            step="0.01"
+                            {...form.register(`stax${rate}` as any)}
+                            placeholder="0"
+                            data-testid={`input-stax${rate}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
                   <div>
                     <Label htmlFor="remarks">Remarks</Label>
