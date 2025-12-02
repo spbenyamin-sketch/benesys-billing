@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { ItemSearchModal } from "@/components/item-search-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -646,18 +647,15 @@ export default function StockInward() {
                 <div className="grid grid-cols-4 gap-4">
                   <div className="col-span-2">
                     <Label htmlFor="itemSelect">Select Item from Master *</Label>
-                    <Select onValueChange={handleItemSelect}>
-                      <SelectTrigger data-testid="select-item-master">
-                        <SelectValue placeholder="Select from item master" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(masterItems as any)?.map((item: any) => (
-                          <SelectItem key={item.id} value={item.id.toString()}>
-                            {item.name} {item.brand ? `- ${item.brand}` : ""}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full justify-start text-left h-9"
+                      onClick={() => setShowItemSearch(true)}
+                      data-testid="button-search-item"
+                    >
+                      Search item from master...
+                    </Button>
                     <Input
                       id="itname"
                       {...form.register("itname")}

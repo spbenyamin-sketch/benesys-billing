@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { PartySearchModal } from "@/components/party-search-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -162,6 +163,7 @@ export default function Payments() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [showPartySearch, setShowPartySearch] = useState(false);
   const [isPrintReady, setIsPrintReady] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -383,23 +385,15 @@ export default function Payments() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Party (Optional)</FormLabel>
-                      <Select
-                        value={field.value?.toString() || ""}
-                        onValueChange={(v) => field.onChange(v ? parseInt(v) : undefined)}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start text-left h-9"
+                        onClick={() => setShowPartySearch(true)}
+                        data-testid="button-search-payment-party"
                       >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-payment-party">
-                            <SelectValue placeholder="Select party" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {parties?.map((party) => (
-                            <SelectItem key={party.id} value={party.id.toString()}>
-                              {party.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        {field.value ? parties?.find(p => p.id === field.value)?.name : "Click to search party..."}
+                      </Button>
                       <FormMessage />
                     </FormItem>
                   )}
