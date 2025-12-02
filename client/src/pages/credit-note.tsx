@@ -584,7 +584,38 @@ export default function CreditNote() {
               <div className="flex items-center justify-between">
                 <Label>Return Items ({lineItems.length})</Label>
                 {searchMode === "item" && (
-                  <Button size="sm" onClick={addLineItem} data-testid="button-add-line-item">
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      const newItem: CreditNoteLineItem = {
+                        tempId: Date.now().toString(),
+                        itemId: null,
+                        purchaseItemId: null,
+                        barcode: "",
+                        itemCode: "",
+                        itemName: "",
+                        hsnCode: "",
+                        quantity: 1,
+                        rate: 0,
+                        mrp: 0,
+                        discount: 0,
+                        discountPercent: 0,
+                        amount: 0,
+                        taxRate: 0,
+                        cgstRate: 0,
+                        sgstRate: 0,
+                        saleValue: 0,
+                        taxValue: 0,
+                        cgst: 0,
+                        sgst: 0,
+                        stockQty: null,
+                      };
+                      setLineItems([...lineItems, newItem]);
+                      setSelectedLineItemTempId(newItem.tempId);
+                      setShowItemSearch(true);
+                    }}
+                    data-testid="button-add-line-item"
+                  >
                     <Plus className="mr-1 h-3 w-3" />
                     Add Item
                   </Button>
@@ -621,21 +652,23 @@ export default function CreditNote() {
                                 <div className="text-xs text-muted-foreground">BC: {item.barcode}</div>
                               </div>
                             ) : (
-                              <Select
-                                value={item.itemId?.toString() || ""}
-                                onValueChange={(v) => updateLineItem(item.tempId, "itemId", v)}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left h-8"
+                                onClick={() => {
+                                  setSelectedLineItemTempId(item.tempId);
+                                  setShowItemSearch(true);
+                                }}
+                                data-testid={`button-select-item-${item.tempId}`}
                               >
-                                <SelectTrigger data-testid={`select-item-${item.tempId}`}>
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {items?.map((i) => (
-                                    <SelectItem key={i.id} value={i.id.toString()}>
-                                      {i.name} ({i.code})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {item.itemName ? (
+                                  <span className="text-sm">{item.itemName}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">Click to search item...</span>
+                                )}
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>

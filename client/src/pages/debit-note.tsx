@@ -618,21 +618,23 @@ export default function DebitNote() {
                                 <div className="text-xs text-muted-foreground">BC: {item.barcode}</div>
                               </div>
                             ) : (
-                              <Select
-                                value={item.itemId?.toString() || ""}
-                                onValueChange={(v) => updateLineItem(item.tempId, "itemId", v)}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full justify-start text-left h-8"
+                                onClick={() => {
+                                  setSelectedLineItemTempId(item.tempId);
+                                  setShowItemSearch(true);
+                                }}
+                                data-testid={`button-select-item-${item.tempId}`}
                               >
-                                <SelectTrigger data-testid={`select-item-${item.tempId}`}>
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {items?.map((i) => (
-                                    <SelectItem key={i.id} value={i.id.toString()}>
-                                      {i.name} ({i.code})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {item.itemName ? (
+                                  <span className="text-sm">{item.itemName}</span>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">Click to search item...</span>
+                                )}
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>
