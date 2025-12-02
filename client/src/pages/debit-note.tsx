@@ -107,6 +107,10 @@ export default function DebitNote() {
     queryKey: ["/api/stock"],
   });
 
+  const { data: stockInfo = {} } = useQuery<{ [key: number]: { itemId: number; availableQty: number; isBarcoded: boolean } }>({
+    queryKey: ["/api/stock/info"],
+  });
+
   const selectedParty = parties?.find((p) => p.id === selectedPartyId);
 
   useEffect(() => {

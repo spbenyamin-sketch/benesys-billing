@@ -82,6 +82,10 @@ export default function SalesEstimate() {
     queryKey: ["/api/items"],
   });
 
+  const { data: stockInfo = {} } = useQuery<{ [key: number]: { itemId: number; availableQty: number; isBarcoded: boolean } }>({
+    queryKey: ["/api/stock/info"],
+  });
+
   const selectedParty = parties?.find((p) => p.id === selectedPartyId);
 
   const handleBarcodeSearch = async () => {

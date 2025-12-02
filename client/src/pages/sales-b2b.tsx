@@ -108,6 +108,10 @@ export default function SalesB2B() {
     queryKey: ["/api/stock"],
   });
 
+  const { data: stockInfo = {} } = useQuery<{ [key: number]: { itemId: number; availableQty: number; isBarcoded: boolean } }>({
+    queryKey: ["/api/stock/info"],
+  });
+
   const selectedParty = parties?.find((p) => p.id === selectedPartyId);
 
   useEffect(() => {
@@ -258,6 +262,22 @@ export default function SalesB2B() {
         if (field === "itemId" && value && items) {
           const selectedItem = items.find((i) => i.id === parseInt(value));
           if (selectedItem) {
+            const itemId = parseInt(value);
+            const stock = stockInfo[itemId];
+            
+            // Validate stock for barcode items (qty=1)
+            if (stock && stock.isBarcoded && updated.quantity === 1) {
+              const alreadyAdded = lineItems.some(item => item.itemId === itemId && item.tempId !== tempId);
+              if (alreadyAdded) {
+                toast({
+                  title: "Barcode Already Used",
+                  description: `${selectedItem.name} has already been added once`,
+                  variant: "destructive",
+                });
+                return item;
+              }
+            }
+            
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
