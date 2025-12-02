@@ -4,6 +4,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { SearchableSelect } from "@/components/searchable-select";
 import { PartySearchModal } from "@/components/party-search-modal";
+import { ItemSearchModal } from "@/components/item-search-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,12 +107,14 @@ export default function SalesB2B() {
   const [printOutstanding, setPrintOutstanding] = useState(true);
   const [partyOutstanding, setPartyOutstanding] = useState<number>(0);
   const [showPartySearch, setShowPartySearch] = useState(false);
+  const [showItemSearch, setShowItemSearch] = useState(false);
+  const [selectedLineItemTempId, setSelectedLineItemTempId] = useState<string | null>(null);
 
   const { data: parties, isLoading: partiesLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
   });
 
-  const { data: items } = useQuery<Item[]>({
+  const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
     queryKey: ["/api/items"],
   });
 
@@ -674,21 +677,24 @@ export default function SalesB2B() {
                                 <div className="text-xs text-muted-foreground">BC: {item.barcode}</div>
                               </div>
                             ) : (
-                              <Select
-                                value={item.itemId?.toString() || ""}
-                                onValueChange={(v) => updateLineItem(item.tempId, "itemId", v)}
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-start text-left text-xs"
+                                onClick={() => {
+                                  setSelectedLineItemTempId(item.tempId);
+                                  setShowItemSearch(true);
+                                }}
+                                data-testid={`button-select-item-${item.tempId}`}
                               >
-                                <SelectTrigger data-testid={`select-item-${item.tempId}`}>
-                                  <SelectValue placeholder="Select item" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {items?.map((i) => (
-                                    <SelectItem key={i.id} value={i.id.toString()}>
-                                      {i.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                                {item.itemId && item.itemName ? (
+                                  <div>
+                                    <div className="font-medium">{item.itemName}</div>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">Click to select item...</span>
+                                )}
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>
@@ -855,6 +861,24 @@ export default function SalesB2B() {
         onSelect={(party) => setSelectedPartyId(party.id)}
         onClose={() => setShowPartySearch(false)}
         title="Search & Select Customer"
+      />
+
+      <ItemSearchModal
+        open={showItemSearch}
+        items={items}
+        isLoading={itemsLoading}
+        onSelect={(item) => {
+          if (selectedLineItemTempId) {
+            updateLineItem(selectedLineItemTempId, "itemId", item.id);
+            setSelectedLineItemTempId(null);
+          }
+          setShowItemSearch(false);
+        }}
+        onClose={() => {
+          setShowItemSearch(false);
+          setSelectedLineItemTempId(null);
+        }}
+        title="Search & Select Item"
       />
     </div>
   );
