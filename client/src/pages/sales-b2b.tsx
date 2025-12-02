@@ -452,7 +452,7 @@ export default function SalesB2B() {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div ref={formContainerRef} className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">B2B Sales (Credit)</h1>

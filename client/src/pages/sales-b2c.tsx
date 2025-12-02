@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -78,6 +79,8 @@ export default function SalesB2C() {
   const { toast } = useToast();
   const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
+  const formContainerRef = useRef<HTMLDivElement>(null);
+  useKeyboardNavigation(formContainerRef);
   
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [paymentMode, setPaymentMode] = useState<"CASH" | "CARD">("CASH");
@@ -443,7 +446,7 @@ export default function SalesB2C() {
   });
 
   return (
-    <div className="p-6 space-y-6">
+    <div ref={formContainerRef} className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">B2C Retail Sales</h1>
