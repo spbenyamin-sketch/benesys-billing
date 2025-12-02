@@ -206,6 +206,8 @@ export default function BarcodeManagement() {
     onSuccess: () => {
       toast({ title: "Success", description: "Barcode deleted successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
     },
     onError: (error: any) => {
       toast({ 
@@ -224,6 +226,8 @@ export default function BarcodeManagement() {
       toast({ title: "Success", description: `${selectedItems.size} barcodes deleted successfully` });
       setSelectedItems(new Set());
       queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
     },
     onError: (error: any) => {
       toast({ 
