@@ -58,6 +58,7 @@ interface CreditNoteLineItem {
   tempId: string;
   itemId: number | null;
   purchaseItemId: number | null;
+  stockInwardId?: number | null;
   barcode: string;
   itemCode: string;
   itemName: string;
