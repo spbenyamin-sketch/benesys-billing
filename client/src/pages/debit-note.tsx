@@ -53,7 +53,7 @@ interface Item {
   packType: string;
 }
 
-interface CreditNoteLineItem {
+interface DebitNoteLineItem {
   tempId: string;
   itemId: number | null;
   purchaseItemId: number | null;
@@ -77,7 +77,7 @@ interface CreditNoteLineItem {
   stockQty: number | null;
 }
 
-export default function CreditNote() {
+export default function DebitNote() {
   const { toast } = useToast();
   const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -85,7 +85,7 @@ export default function CreditNote() {
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [gstType, setGstType] = useState<0 | 1>(0);
   const [inclusiveTax, setInclusiveTax] = useState(false);
-  const [lineItems, setLineItems] = useState<CreditNoteLineItem[]>([]);
+  const [lineItems, setLineItems] = useState<DebitNoteLineItem[]>([]);
   const [invoiceDate, setInvoiceDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [barcodeInput, setBarcodeInput] = useState("");
   const [searchMode, setSearchMode] = useState<"item" | "barcode">("item");
@@ -131,7 +131,7 @@ export default function CreditNote() {
     try {
       const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       
-      const newItem: CreditNoteLineItem = {
+      const newItem: DebitNoteLineItem = {
         tempId: Date.now().toString(),
         itemId: data.itemId,
         purchaseItemId: data.purchaseItemId,
@@ -173,7 +173,7 @@ export default function CreditNote() {
     }
   };
 
-  const recalculateItem = (item: CreditNoteLineItem) => {
+  const recalculateItem = (item: DebitNoteLineItem) => {
     const qty = parseFloat(item.quantity.toString()) || 0;
     const rate = parseFloat(item.rate.toString()) || 0;
     const discountPercent = parseFloat(item.discountPercent.toString()) || 0;
@@ -209,7 +209,7 @@ export default function CreditNote() {
   };
 
   const addLineItem = () => {
-    const newItem: CreditNoteLineItem = {
+    const newItem: DebitNoteLineItem = {
       tempId: Date.now().toString(),
       itemId: null,
       purchaseItemId: null,
@@ -239,7 +239,7 @@ export default function CreditNote() {
     setLineItems(lineItems.filter((item) => item.tempId !== tempId));
   };
 
-  const updateLineItem = (tempId: string, field: keyof CreditNoteLineItem, value: any) => {
+  const updateLineItem = (tempId: string, field: keyof DebitNoteLineItem, value: any) => {
     setLineItems(
       lineItems.map((item) => {
         if (item.tempId !== tempId) return item;
@@ -301,15 +301,15 @@ export default function CreditNote() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!selectedPartyId) {
-        throw new Error("Please select a party/customer for credit note");
+        throw new Error("Please select a party/customer for debit note");
       }
       if (lineItems.length === 0) {
         throw new Error("Please add at least one item");
       }
 
-      const creditNoteData = {
-        billType: "CN",
-        saleType: "CREDIT_NOTE",
+      const debitNoteData = {
+        billType: "DN",
+        saleType: "DEBIT_NOTE",
         paymentMode,
         inclusiveTax,
         date: invoiceDate,
@@ -354,7 +354,7 @@ export default function CreditNote() {
         })),
       };
 
-      return apiRequest("POST", "/api/sales", creditNoteData);
+      return apiRequest("POST", "/api/sales", debitNoteData);
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
@@ -363,10 +363,10 @@ export default function CreditNote() {
       
       toast({
         title: "Success",
-        description: "Credit Note saved successfully",
+        description: "Debit Note saved successfully - stock reduced",
       });
 
-      const printParam = shouldAutoPrint("CN") ? "?print=auto" : "";
+      const printParam = shouldAutoPrint("DN") ? "?print=auto" : "";
       window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);
@@ -389,16 +389,16 @@ export default function CreditNote() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Credit Note (B2B)</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Debit Note (Damage/Loss)</h1>
           <p className="text-muted-foreground mt-2">
-            Issue credit notes for returns and adjustments
+            Issue debit notes for damaged items and stock loss - reduces inventory
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId}
-            data-testid="button-save-credit-note"
+            data-testid="button-save-debit-note"
           >
             <Save className="mr-2 h-4 w-4" />
             {saveMutation.isPending ? "Saving..." : "Save & Print"}
@@ -412,7 +412,7 @@ export default function CreditNote() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                Credit Note Details
+                Debit Note Details
               </CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ export default function CreditNote() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="party">Party/Customer *</Label>
+                <Label htmlFor="party">Party/Vendor *</Label>
                 <Select
                   value={selectedPartyId?.toString() || ""}
                   onValueChange={(v) => setSelectedPartyId(parseInt(v))}
@@ -458,23 +458,23 @@ export default function CreditNote() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="originalInvoice">Original Invoice No.</Label>
-                <Input
-                  id="originalInvoice"
-                  placeholder="Original Bill No."
-                  value={originalInvoiceNo}
-                  onChange={(e) => setOriginalInvoiceNo(e.target.value)}
-                  data-testid="input-original-invoice"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reason">Reason</Label>
+                <Label htmlFor="reason">Reason *</Label>
                 <Input
                   id="reason"
-                  placeholder="Return reason"
+                  placeholder="Damage, Loss, Expired, etc"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   data-testid="input-reason"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="originalInvoice">Original Invoice No.</Label>
+                <Input
+                  id="originalInvoice"
+                  placeholder="Reference Bill (optional)"
+                  value={originalInvoiceNo}
+                  onChange={(e) => setOriginalInvoiceNo(e.target.value)}
+                  data-testid="input-original-invoice"
                 />
               </div>
             </div>
@@ -487,9 +487,6 @@ export default function CreditNote() {
                     {selectedParty.city && <span className="text-muted-foreground"> - {selectedParty.city}</span>}
                     {selectedParty.gstNo && <span className="text-muted-foreground ml-2">(GST: {selectedParty.gstNo})</span>}
                   </div>
-                  <Badge variant={partyOutstanding > 0 ? "destructive" : "secondary"}>
-                    Outstanding: ₹{partyOutstanding.toFixed(2)}
-                  </Badge>
                 </div>
               </div>
             )}
@@ -539,7 +536,7 @@ export default function CreditNote() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Return Items ({lineItems.length})</Label>
+                <Label>Damaged/Lost Items ({lineItems.length})</Label>
                 {searchMode === "item" && (
                   <Button size="sm" onClick={addLineItem} data-testid="button-add-line-item">
                     <Plus className="mr-1 h-3 w-3" />
@@ -565,7 +562,7 @@ export default function CreditNote() {
                     {lineItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Add items to create credit note
+                          Add items to create debit note
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -641,12 +638,12 @@ export default function CreditNote() {
                           </TableCell>
                           <TableCell>
                             <Button
-                              size="icon"
+                              size="sm"
                               variant="ghost"
                               onClick={() => removeLineItem(item.tempId)}
-                              data-testid={`button-remove-${item.tempId}`}
+                              data-testid={`button-delete-${item.tempId}`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -662,106 +659,40 @@ export default function CreditNote() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Payment</CardTitle>
+              <CardTitle className="text-lg">Summary</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <RadioGroup
-                value={paymentMode}
-                onValueChange={(v) => setPaymentMode(v as "CASH" | "CARD")}
-                className="flex gap-4"
-              >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="CASH" id="cash" data-testid="radio-cash" />
-                  <Label htmlFor="cash">Cash</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="CARD" id="card" data-testid="radio-card" />
-                  <Label htmlFor="card">Card</Label>
-                </div>
-              </RadioGroup>
-
-              {paymentMode === "CASH" && (
-                <div className="space-y-3">
-                  <div className="space-y-2">
-                    <Label htmlFor="amountGiven">Amount to Return</Label>
-                    <Input
-                      id="amountGiven"
-                      type="number"
-                      value={amountGiven || ""}
-                      onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                      data-testid="input-amount-given"
-                    />
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Quantity:</span>
+                <span className="font-medium">{totals.quantity.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sale Value:</span>
+                <span className="font-medium">₹{totals.saleValue.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Discount:</span>
+                <span className="font-medium">₹{totals.discountTotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Tax:</span>
+                <span className="font-medium">₹{totals.taxValue.toFixed(2)}</span>
+              </div>
+              {gstType === 0 && (
+                <>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>CGST:</span>
+                    <span>₹{totals.cgstTotal.toFixed(2)}</span>
                   </div>
-                  {amountGiven > 0 && amountGiven !== finalTotal && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        {amountGiven > finalTotal 
-                          ? `Excess: ₹${(amountGiven - finalTotal).toFixed(2)}`
-                          : `Pending: ₹${(finalTotal - amountGiven).toFixed(2)}`
-                        }
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>SGST:</span>
+                    <span>₹{totals.sgstTotal.toFixed(2)}</span>
+                  </div>
+                </>
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Credit Note Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Items</span>
-                  <span>{lineItems.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Qty</span>
-                  <span>{totals.quantity.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Return Value</span>
-                  <span>₹{totals.saleValue.toFixed(2)}</span>
-                </div>
-                {totals.discountTotal > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount</span>
-                    <span>-₹{totals.discountTotal.toFixed(2)}</span>
-                  </div>
-                )}
-                {gstType === 0 ? (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">CGST</span>
-                      <span>₹{totals.cgstTotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">SGST</span>
-                      <span>₹{totals.sgstTotal.toFixed(2)}</span>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">IGST</span>
-                    <span>₹{totals.taxValue.toFixed(2)}</span>
-                  </div>
-                )}
-                {roundOff !== 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Round Off</span>
-                    <span>{roundOff > 0 ? "+" : ""}₹{roundOff.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between font-bold text-lg">
-                    <span>Credit Total</span>
-                    <span>₹{finalTotal.toFixed(2)}</span>
-                  </div>
-                </div>
+              <div className="border-t pt-3 flex justify-between font-semibold">
+                <span>Total:</span>
+                <span>₹{finalTotal.toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
