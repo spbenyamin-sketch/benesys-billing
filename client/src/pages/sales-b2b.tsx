@@ -514,14 +514,34 @@ export default function SalesB2B() {
               </div>
               <div className="space-y-2 lg:col-span-2">
                 <Label>Customer (Required for B2B)</Label>
-                <SearchableSelect
-                  items={parties || []}
-                  selectedId={selectedPartyId}
-                  onSelect={setSelectedPartyId}
-                  placeholder="Search party code or name..."
-                  getLabel={(p) => `${p.name} ${p.shortname ? `(${p.shortname})` : ''} - ${p.city || ''}`}
-                  testId="input-party-search"
-                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full justify-start text-left h-9"
+                  onClick={() => setShowPartySearch(true)}
+                  data-testid="button-search-party"
+                >
+                  {selectedParty ? (
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium text-sm">{selectedParty.code}</span>
+                      <span className="text-xs text-muted-foreground">{selectedParty.name}</span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">Click to search customer...</span>
+                  )}
+                </Button>
+                {selectedParty && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setSelectedPartyId(null)}
+                    className="w-full"
+                    data-testid="button-clear-party"
+                  >
+                    Clear Selection
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -827,6 +847,15 @@ export default function SalesB2B() {
           )}
         </div>
       </div>
+
+      <PartySearchModal
+        open={showPartySearch}
+        parties={parties}
+        isLoading={partiesLoading}
+        onSelect={(party) => setSelectedPartyId(party.id)}
+        onClose={() => setShowPartySearch(false)}
+        title="Search & Select Customer"
+      />
     </div>
   );
 }
