@@ -135,13 +135,29 @@ export default function CreditNote() {
     try {
       const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       
-      // Check if this barcode item (qty=1) is already in the bill
+      // Unique barcode (qty=1): Can only scan once per bill
       if (data.stockQty === 1) {
         const alreadyAdded = lineItems.some(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.quantity === 1));
         if (alreadyAdded) {
           toast({
             title: "Barcode Already Used",
             description: `${data.itemName} (${data.barcode}) has already been added to this bill`,
+            variant: "destructive",
+          });
+          setBarcodeInput("");
+          return;
+        }
+      } else {
+        // Bundle barcode (qty > 1): Validate total quantity doesn't exceed available stock
+        const totalQtyInBill = lineItems
+          .filter(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.stockInwardId === data.stockInwardId))
+          .reduce((sum, item) => sum + parseFloat(item.quantity.toString()), 0);
+        
+        const availableStock = parseFloat(data.stockQty) || 1;
+        if (totalQtyInBill >= availableStock) {
+          toast({
+            title: "Insufficient Stock",
+            description: `Only ${availableStock} units available. Already added: ${totalQtyInBill}`,
             variant: "destructive",
           });
           setBarcodeInput("");
