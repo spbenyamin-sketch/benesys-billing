@@ -396,6 +396,7 @@ export default function Stock() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [showItemSearch, setShowItemSearch] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { currentCompany } = useCompany();
 
