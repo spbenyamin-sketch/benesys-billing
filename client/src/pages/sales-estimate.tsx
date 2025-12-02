@@ -108,6 +108,17 @@ export default function SalesEstimate() {
     try {
       const data: any = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       
+      // Check if item is already sold
+      if (data.soldAt) {
+        toast({
+          title: "Item Already Sold",
+          description: `${data.itemName} (${data.barcode}) has already been sold and cannot be scanned again`,
+          variant: "destructive",
+        });
+        setBarcodeInput("");
+        return;
+      }
+      
       const newItem: SaleLineItem = {
         tempId: Date.now().toString(),
         itemId: data.itemId,
