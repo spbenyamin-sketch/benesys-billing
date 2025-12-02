@@ -828,6 +828,18 @@ export default function SalesB2C() {
         </div>
       </div>
 
+      <PartySearchModal
+        open={showPartySearch}
+        parties={parties}
+        isLoading={partiesLoading}
+        onSelect={(party) => {
+          setSelectedPartyId(party.id);
+        }}
+        onClose={() => {
+          setShowPartySearch(false);
+        }}
+      />
+
       <ItemSearchModal
         open={showItemSearch}
         items={items}
