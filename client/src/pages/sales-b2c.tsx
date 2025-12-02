@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { SearchableSelect } from "@/components/searchable-select";
+import { PartySearchModal } from "@/components/party-search-modal";
+import { ItemSearchModal } from "@/components/item-search-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -98,12 +100,15 @@ export default function SalesB2C() {
   const [searchMode, setSearchMode] = useState<"item" | "barcode">("barcode");
   const [mobile, setMobile] = useState("");
   const [amountGiven, setAmountGiven] = useState(0);
+  const [showPartySearch, setShowPartySearch] = useState(false);
+  const [showItemSearch, setShowItemSearch] = useState(false);
+  const [selectedLineItemTempId, setSelectedLineItemTempId] = useState<string | null>(null);
 
-  const { data: parties } = useQuery<Party[]>({
+  const { data: parties, isLoading: partiesLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
   });
 
-  const { data: items } = useQuery<Item[]>({
+  const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
     queryKey: ["/api/items"],
   });
 
