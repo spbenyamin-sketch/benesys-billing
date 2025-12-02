@@ -63,6 +63,11 @@ export function PartySearchModal({
     if (e.key === "Enter") {
       e.preventDefault();
       
+      // If no results, don't select anything
+      if (filtered.length === 0) {
+        return;
+      }
+      
       // Check if search matches a party code exactly
       const exactMatch = parties.find(
         (party) => party.code.toLowerCase() === search.toLowerCase()
@@ -81,8 +86,8 @@ export function PartySearchModal({
         return;
       }
 
-      // If multiple results and search is not empty, select first match
-      if (filtered.length > 0 && search.trim()) {
+      // If multiple results, select first match
+      if (filtered.length > 0) {
         onSelect(filtered[0]);
         onClose();
       }
