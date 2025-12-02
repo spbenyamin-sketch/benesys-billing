@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePrintSettings } from "@/hooks/use-print-settings";
 import { Plus, Trash2, Save, Barcode, Search, Printer, AlertCircle } from "lucide-react";
+import { KeyboardShortcutsGuide } from "@/components/keyboard-shortcuts-guide";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -825,6 +826,8 @@ export default function SalesB2B() {
           )}
         </div>
       </div>
+
+      <KeyboardShortcutsGuide />
     </div>
   );
 }

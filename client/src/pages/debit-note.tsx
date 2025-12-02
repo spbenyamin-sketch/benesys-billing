@@ -25,6 +25,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePrintSettings } from "@/hooks/use-print-settings";
 import { Plus, Trash2, Save, Barcode, Search, Printer, AlertCircle, CreditCard } from "lucide-react";
+import { KeyboardShortcutsGuide } from "@/components/keyboard-shortcuts-guide";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format } from "date-fns";

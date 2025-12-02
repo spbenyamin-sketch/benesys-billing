@@ -4,7 +4,6 @@ import { DollarSign, Users, Package, AlertCircle, FileText } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { KeyboardShortcutsGuide } from "@/components/keyboard-shortcuts-guide";
 import {
   Table,
   TableBody,
@@ -220,8 +219,6 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
-
-      <KeyboardShortcutsGuide />
     </div>
   );
 }

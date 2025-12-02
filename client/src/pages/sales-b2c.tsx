@@ -26,6 +26,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePrintSettings } from "@/hooks/use-print-settings";
 import { Plus, Trash2, Save, Barcode, Search, CreditCard, Banknote } from "lucide-react";
+import { KeyboardShortcutsGuide } from "@/components/keyboard-shortcuts-guide";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useLocation } from "wouter";
@@ -797,6 +798,8 @@ export default function SalesB2C() {
           </Card>
         </div>
       </div>
+
+      <KeyboardShortcutsGuide />
     </div>
   );
 }
