@@ -85,22 +85,6 @@ export default function SalesB2C() {
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
 
-  // Auto-select walk-in customer for B2C
-  useEffect(() => {
-    if (parties && parties.length > 0 && !selectedPartyId) {
-      const walkInCustomer = parties.find((p) => p.code === "WALKIN" || p.name.toLowerCase().includes("walk"));
-      if (walkInCustomer) {
-        setSelectedPartyId(walkInCustomer.id);
-      } else {
-        setSelectedPartyId(parties[0].id);
-      }
-    }
-  }, [parties]);
-
-  useEffect(() => {
-    dateInputRef.current?.focus();
-  }, []);
-
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [gstType, setGstType] = useState<0 | 1>(0);
   const [inclusiveTax, setInclusiveTax] = useState(true);
@@ -126,6 +110,22 @@ export default function SalesB2C() {
   const { data: stockInfo = {} } = useQuery<{ [key: number]: { itemId: number; availableQty: number; isBarcoded: boolean } }>({
     queryKey: ["/api/stock/info"],
   });
+
+  // Auto-select walk-in customer for B2C
+  useEffect(() => {
+    if (parties && parties.length > 0 && !selectedPartyId) {
+      const walkInCustomer = parties.find((p) => p.code === "WALKIN" || p.name.toLowerCase().includes("walk"));
+      if (walkInCustomer) {
+        setSelectedPartyId(walkInCustomer.id);
+      } else {
+        setSelectedPartyId(parties[0].id);
+      }
+    }
+  }, [parties, selectedPartyId]);
+
+  useEffect(() => {
+    dateInputRef.current?.focus();
+  }, []);
 
   const selectedParty = parties?.find((p) => p.id === selectedPartyId);
 
