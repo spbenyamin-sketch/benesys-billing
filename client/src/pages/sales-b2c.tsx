@@ -827,6 +827,22 @@ export default function SalesB2C() {
           </Card>
         </div>
       </div>
+
+      <ItemSearchModal
+        open={showItemSearch}
+        items={items}
+        isLoading={itemsLoading}
+        onSelect={(item) => {
+          if (selectedLineItemTempId) {
+            updateLineItem(selectedLineItemTempId, "itemId", item.id);
+            setSelectedLineItemTempId(null);
+          }
+        }}
+        onClose={() => {
+          setShowItemSearch(false);
+          setSelectedLineItemTempId(null);
+        }}
+      />
     </div>
   );
 }
