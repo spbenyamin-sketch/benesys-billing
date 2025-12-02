@@ -626,6 +626,20 @@ export default function PurchaseEntry() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <PartySearchModal
+          open={showPartySearch}
+          parties={parties}
+          isLoading={partiesLoading}
+          onSelect={(party) => {
+            setSelectedPartyId(party.id);
+            form.setValue("partyId", party.id);
+            form.setValue("partyName", party.name);
+            form.setValue("city", party.city || "");
+          }}
+          onClose={() => setShowPartySearch(false)}
+          title="Search & Select Supplier"
+        />
       </div>
     </div>
   );

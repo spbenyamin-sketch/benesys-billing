@@ -774,6 +774,36 @@ export default function DebitNote() {
           </Card>
         </div>
       </div>
+
+      <PartySearchModal
+        open={showPartySearch}
+        parties={parties}
+        isLoading={partiesLoading}
+        onSelect={(party) => {
+          setSelectedPartyId(party.id);
+          setShowPartySearch(false);
+        }}
+        onClose={() => setShowPartySearch(false)}
+        title="Search & Select Customer"
+      />
+
+      <ItemSearchModal
+        open={showItemSearch}
+        items={items}
+        isLoading={itemsLoading}
+        onSelect={(item) => {
+          if (selectedLineItemTempId) {
+            updateLineItem(selectedLineItemTempId, "itemId", item.id);
+            setSelectedLineItemTempId(null);
+          }
+          setShowItemSearch(false);
+        }}
+        onClose={() => {
+          setShowItemSearch(false);
+          setSelectedLineItemTempId(null);
+        }}
+        title="Search & Select Item"
+      />
     </div>
   );
 }
