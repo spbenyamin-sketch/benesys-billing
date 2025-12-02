@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
-import { SearchableSelect } from "@/components/searchable-select";
+import { SelectOption } from "@/components/select-option";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
