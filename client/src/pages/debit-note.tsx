@@ -581,7 +581,38 @@ export default function DebitNote() {
               <div className="flex items-center justify-between">
                 <Label>Damaged/Lost Items ({lineItems.length})</Label>
                 {searchMode === "item" && (
-                  <Button size="sm" onClick={addLineItem} data-testid="button-add-line-item">
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      const newItem: DebitNoteLineItem = {
+                        tempId: Date.now().toString(),
+                        itemId: null,
+                        purchaseItemId: null,
+                        barcode: "",
+                        itemCode: "",
+                        itemName: "",
+                        hsnCode: "",
+                        quantity: 1,
+                        rate: 0,
+                        mrp: 0,
+                        discount: 0,
+                        discountPercent: 0,
+                        amount: 0,
+                        taxRate: 0,
+                        cgstRate: 0,
+                        sgstRate: 0,
+                        saleValue: 0,
+                        taxValue: 0,
+                        cgst: 0,
+                        sgst: 0,
+                        stockQty: null,
+                      };
+                      setLineItems([...lineItems, newItem]);
+                      setSelectedLineItemTempId(newItem.tempId);
+                      setShowItemSearch(true);
+                    }}
+                    data-testid="button-add-line-item"
+                  >
                     <Plus className="mr-1 h-3 w-3" />
                     Add Item
                   </Button>

@@ -265,18 +265,20 @@ export default function PurchaseEntry() {
                     </div>
                     <div>
                       <Label htmlFor="party">Supplier / Party</Label>
-                      <Select onValueChange={handlePartyChange}>
-                        <SelectTrigger data-testid="select-party">
-                          <SelectValue placeholder="Select supplier" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(parties as any)?.map((party: any) => (
-                            <SelectItem key={party.id} value={party.id.toString()}>
-                              {party.name} - {party.city}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-start h-9"
+                        onClick={() => setShowPartySearch(true)}
+                        data-testid="button-select-party"
+                      >
+                        {selectedPartyName ? (
+                          <span className="text-sm">{selectedPartyName}</span>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Click to search supplier...</span>
+                        )}
+                      </Button>
                     </div>
                   </div>
 
