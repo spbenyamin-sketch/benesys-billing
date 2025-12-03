@@ -615,6 +615,19 @@ export default function Payments() {
           </div>
         </div>
       )}
+
+      {/* Party Search Modal */}
+      <PartySearchModal
+        open={showPartySearch}
+        parties={parties || []}
+        isLoading={false}
+        onClose={() => setShowPartySearch(false)}
+        onSelect={(party: Party) => {
+          form.setValue("partyId", party.id);
+          form.setValue("partyName", party.name);
+          setShowPartySearch(false);
+        }}
+      />
     </div>
   );
 }
