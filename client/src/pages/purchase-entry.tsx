@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -115,6 +115,47 @@ export default function PurchaseEntry() {
       remarks: "",
     },
   });
+
+  // Watch all tax values and amounts to auto-calculate taxes
+  const watchValues = form.watch();
+
+  useEffect(() => {
+    // Tax rates
+    const rates = [0, 5, 12, 18, 28];
+    let totalCGST = 0;
+    let totalSGST = 0;
+
+    rates.forEach((rate) => {
+      const valKey = `val${rate}` as keyof PurchaseEntryForm;
+      const ctaxKey = `ctax${rate}` as keyof PurchaseEntryForm;
+      const staxKey = `stax${rate}` as keyof PurchaseEntryForm;
+
+      const amount = parseFloat((watchValues[valKey] as string) || "0") || 0;
+
+      if (amount > 0) {
+        // Calculate CGST and SGST for this rate
+        const cgstAmount = (amount * rate) / 100;
+        const sgstAmount = (amount * rate) / 100;
+
+        // Auto-set the calculated tax values
+        form.setValue(ctaxKey, cgstAmount.toFixed(2) as any);
+        form.setValue(staxKey, sgstAmount.toFixed(2) as any);
+
+        totalCGST += cgstAmount;
+        totalSGST += sgstAmount;
+      } else {
+        // Clear if amount is 0
+        form.setValue(ctaxKey, "0" as any);
+        form.setValue(staxKey, "0" as any);
+      }
+    });
+
+    // Update total CGST and SGST if in local GST mode
+    if (gstType === "local") {
+      form.setValue("cgst", totalCGST.toFixed(2) as any);
+      form.setValue("sgst", totalSGST.toFixed(2) as any);
+    }
+  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, gstType, form]);
 
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
