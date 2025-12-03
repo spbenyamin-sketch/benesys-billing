@@ -139,8 +139,9 @@ export default function PurchaseEntry() {
 
       if (amount > 0) {
         // Calculate CGST and SGST for this rate
-        const cgstAmount = (amount * rate) / 100;
-        const sgstAmount = (amount * rate) / 100;
+        // CGST and SGST are each half of the total tax rate
+        const cgstAmount = (amount * rate) / 200; // Half of rate: rate/2 / 100
+        const sgstAmount = (amount * rate) / 200; // Half of rate: rate/2 / 100
 
         // Auto-set the calculated tax values
         form.setValue(ctaxKey, cgstAmount.toFixed(2) as any);
