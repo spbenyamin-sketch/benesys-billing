@@ -256,6 +256,27 @@ export default function PurchaseEntry() {
   });
 
   const handleSubmit = (data: PurchaseEntryForm) => {
+    // Validate bill amount tally
+    const beforeTaxAmount = parseFloat(data.beforeTaxAmount || "0") || 0;
+    const billTotalAmount = parseFloat(data.billTotalAmount || "0") || 0;
+    const cgst = parseFloat(data.cgst || "0") || 0;
+    const sgst = parseFloat(data.sgst || "0") || 0;
+    const igst = parseFloat(data.igst || "0") || 0;
+    const cess = parseFloat(data.cess || "0") || 0;
+
+    const taxAmount = gstType === "local" ? cgst + sgst : igst;
+    const expectedBillTotal = parseFloat((beforeTaxAmount + taxAmount + cess).toFixed(2));
+    const actualBillTotal = parseFloat(billTotalAmount.toFixed(2));
+
+    if (Math.abs(expectedBillTotal - actualBillTotal) > 0.01) {
+      toast({
+        title: "Bill Amount Mismatch",
+        description: `Before Tax Amount (₹${beforeTaxAmount.toFixed(2)}) + Tax (₹${taxAmount.toFixed(2)}) + Cess (₹${cess.toFixed(2)}) should equal Bill Total Amount (₹${actualBillTotal.toFixed(2)}). Expected: ₹${expectedBillTotal.toFixed(2)}`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     createPurchaseMutation.mutate(data);
   };
 
