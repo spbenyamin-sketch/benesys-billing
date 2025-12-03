@@ -361,6 +361,15 @@ export default function BarcodeManagement() {
                 <Badge variant="outline">{filteredItems.length} items</Badge>
               )}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowLabelDesigner(true)}
+              data-testid="button-label-printing"
+            >
+              <Settings className="h-4 w-4 mr-2" />
+              Label Printing
+            </Button>
           </CardTitle>
         </CardHeader>
         <CardContent>
