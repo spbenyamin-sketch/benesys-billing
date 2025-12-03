@@ -664,6 +664,19 @@ export const insertBarcodeLabelTemplateSchema = createInsertSchema(barcodeLabelT
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+}).extend({
+  labelWidth: z.coerce.number().or(z.string()),
+  labelHeight: z.coerce.number().or(z.string()),
+  labelsPerRow: z.coerce.number().optional(),
+  labelsPerColumn: z.coerce.number().optional(),
+  marginTop: z.coerce.number().or(z.string()).optional(),
+  marginLeft: z.coerce.number().or(z.string()).optional(),
+  gapHorizontal: z.coerce.number().or(z.string()).optional(),
+  gapVertical: z.coerce.number().or(z.string()).optional(),
+  config: z.string(),
+  isDefault: z.boolean().optional(),
+  paperSize: z.string().optional(),
+  name: z.string(),
 });
 
 export type InsertBarcodeLabelTemplate = z.infer<typeof insertBarcodeLabelTemplateSchema>;
