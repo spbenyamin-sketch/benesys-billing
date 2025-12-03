@@ -507,8 +507,9 @@ export default function StockInward() {
   };
 
   const handleCompletePurchase = () => {
-    if (!selectedPurchaseId) return;
-    
+    if (!selectedPurchaseId || !selectedPurchase || !purchaseItems) return;
+
+    // Check barcodes first
     const allGenerated = purchaseItems?.every(item => item.barcodeGenerated);
     if (!allGenerated) {
       toast({
@@ -518,8 +519,39 @@ export default function StockInward() {
       });
       return;
     }
-    
-    completePurchaseMutation.mutate(selectedPurchaseId);
+
+    // Calculate total quantity from items
+    const totalQtyAdded = purchaseItems.reduce((sum, item) => sum + parseFloat(item.qty || "0"), 0);
+    const expectedQty = parseFloat(selectedPurchase.totalQty || "0");
+
+    // Calculate total amount from items (qty * cost)
+    const totalAmount = purchaseItems.reduce((sum, item) => {
+      const itemCost = parseFloat(item.cost || "0");
+      const itemQty = parseFloat(item.qty || "0");
+      return sum + (itemCost * itemQty);
+    }, 0);
+    const expectedAmount = parseFloat(selectedPurchase.billTotalAmount || selectedPurchase.amount || "0");
+
+    // Validation checks
+    if (totalQtyAdded !== expectedQty) {
+      toast({
+        title: "Quantity Mismatch",
+        description: `Total quantity added (${totalQtyAdded}) does not match expected quantity (${expectedQty})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (Math.abs(totalAmount - expectedAmount) > 0.01) { // Allow 0.01 tolerance for rounding
+      toast({
+        title: "Amount Mismatch",
+        description: `Total amount (₹${totalAmount.toFixed(2)}) does not match expected amount (₹${expectedAmount.toFixed(2)})`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    completePurchaseMutation.mutate(selectedPurchaseId!);
   };
 
   const totalQty = purchaseItems?.reduce((sum, item) => sum + parseFloat(item.qty || "0"), 0) || 0;
