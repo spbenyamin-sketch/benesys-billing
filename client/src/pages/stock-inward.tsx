@@ -1174,10 +1174,11 @@ export default function StockInward() {
 
       {/* Item Search Modal */}
       <ItemSearchModal
+        open={showItemSearch}
         items={masterItems || []}
-        isOpen={showItemSearch}
+        isLoading={false}
         onClose={() => setShowItemSearch(false)}
-        onSelectItem={(item: Item) => {
+        onSelect={(item: Item) => {
           form.setValue("itemId", item.id);
           form.setValue("itname", item.name);
           form.setValue("hsn", item.hsnCode || "");
