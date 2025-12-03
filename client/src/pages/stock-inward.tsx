@@ -60,6 +60,10 @@ interface Purchase {
   invoiceNo: string | null;
   partyName: string | null;
   city: string | null;
+  state: string | null;
+  gstNo: string | null;
+  phone: string | null;
+  address: string | null;
   amount: string;
   beforeTaxAmount?: string;
   billTotalAmount?: string;
@@ -660,19 +664,62 @@ export default function StockInward() {
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-page-title">Stock Inward</h1>
               <p className="text-muted-foreground mt-1">
-                Entry #{selectedPurchase?.purchaseNo} - {selectedPurchase?.partyName}
+                Entry #{selectedPurchase?.purchaseNo}
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Badge variant="outline" className="text-sm px-3 py-1">
-              Invoice: {selectedPurchase?.invoiceNo || "-"}
-            </Badge>
-            <Badge variant="outline" className="text-sm px-3 py-1">
-              {selectedPurchase?.date ? format(new Date(selectedPurchase.date), "dd/MM/yyyy") : "-"}
-            </Badge>
-          </div>
         </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Purchase Entry Details & Party Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-4 gap-6">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Bill Number</p>
+                <p className="text-sm font-semibold" data-testid="text-bill-number">{selectedPurchase?.invoiceNo || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Bill Date</p>
+                <p className="text-sm font-semibold" data-testid="text-bill-date">
+                  {selectedPurchase?.date ? format(new Date(selectedPurchase.date), "dd/MM/yyyy") : "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Total Quantity</p>
+                <p className="text-sm font-semibold" data-testid="text-header-total-qty">{selectedPurchase?.totalQty || "0"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Total Amount</p>
+                <p className="text-sm font-semibold text-primary" data-testid="text-header-total-amount">₹{parseFloat(selectedPurchase?.amount || "0").toFixed(2)}</p>
+              </div>
+            </div>
+            <Separator className="my-4" />
+            <div className="grid grid-cols-4 gap-6">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Party Name</p>
+                <p className="text-sm font-semibold" data-testid="text-party-name">{selectedPurchase?.partyName || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">GST No.</p>
+                <p className="text-sm font-semibold" data-testid="text-party-gst">{selectedPurchase?.gstNo || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Phone</p>
+                <p className="text-sm font-semibold" data-testid="text-party-phone">{selectedPurchase?.phone || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">State</p>
+                <p className="text-sm font-semibold" data-testid="text-party-state">{selectedPurchase?.state || "-"}</p>
+              </div>
+            </div>
+            <div className="mt-4">
+              <p className="text-xs text-muted-foreground mb-1">Address</p>
+              <p className="text-sm" data-testid="text-party-address">{selectedPurchase?.address || "-"} {selectedPurchase?.city ? `, ${selectedPurchase.city}` : ""}</p>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-3 gap-6">
           <Card className="col-span-2">
