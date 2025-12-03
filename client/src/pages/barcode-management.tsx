@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings, Trash2, ExternalLink } from "lucide-react";
+import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -134,7 +134,6 @@ export default function BarcodeManagement() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editRate, setEditRate] = useState<string>("");
   const [editMrp, setEditMrp] = useState<string>("");
-  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [showLabelDesigner, setShowLabelDesigner] = useState(false);
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showItemSearch, setShowItemSearch] = useState(false);
@@ -201,53 +200,6 @@ export default function BarcodeManagement() {
     },
   });
 
-  const deleteItemMutation = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/stock-inward-items/${id}`);
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: "Barcode deleted successfully" });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-purchases"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Error", 
-        description: error?.message || "Failed to delete barcode", 
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const bulkDeleteMutation = useMutation({
-    mutationFn: async (ids: number[]) => {
-      return apiRequest("POST", `/api/stock-inward-items/bulk-delete`, { ids });
-    },
-    onSuccess: () => {
-      toast({ title: "Success", description: `${selectedItems.size} barcodes deleted successfully` });
-      setSelectedItems(new Set());
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-inward-items"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/pending-purchases"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Error", 
-        description: error?.message || "Failed to delete barcodes", 
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const handleDeleteItem = (id: number) => {
-    deleteItemMutation.mutate(id);
-  };
-
-  const handleBulkDelete = () => {
-    if (selectedItems.size === 0) return;
-    bulkDeleteMutation.mutate(Array.from(selectedItems));
-  };
 
   const handleStartEdit = (item: StockInwardItem) => {
     setEditingId(item.id);
@@ -283,23 +235,6 @@ export default function BarcodeManagement() {
     setEditMrp("");
   };
 
-  const toggleSelectItem = (id: number) => {
-    const newSelected = new Set(selectedItems);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedItems(newSelected);
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedItems.size === filteredItems.length) {
-      setSelectedItems(new Set());
-    } else {
-      setSelectedItems(new Set(filteredItems.map(item => item.id)));
-    }
-  };
 
   const handlePrintLabels = () => {
     if (selectedItems.size === 0) {
