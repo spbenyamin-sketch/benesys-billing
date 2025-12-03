@@ -169,12 +169,6 @@ export default function PurchaseEntry() {
       }
     });
 
-    // Add manual IGST if interstate
-    const igst = parseFloat((watchValues.igst as string) || "0") || 0;
-    if (gstType === "interstate") {
-      totalIGST += igst;
-    }
-
     // Add cess
     const cess = parseFloat((watchValues.cess as string) || "0") || 0;
 
@@ -182,17 +176,16 @@ export default function PurchaseEntry() {
     if (gstType === "local") {
       form.setValue("cgst", totalCGST.toFixed(2) as any);
       form.setValue("sgst", totalSGST.toFixed(2) as any);
-    } else if (gstType === "interstate") {
-      form.setValue("igst", totalIGST.toFixed(2) as any);
     }
 
     // Update before tax amount
     form.setValue("beforeTaxAmount", beforeTaxAmount.toFixed(2) as any);
 
     // Calculate bill total amount
-    const billTotal = beforeTaxAmount + (gstType === "local" ? totalCGST + totalSGST : totalIGST) + cess;
+    const totalTaxForBill = gstType === "local" ? totalCGST + totalSGST : totalIGST;
+    const billTotal = beforeTaxAmount + totalTaxForBill + cess;
     form.setValue("billTotalAmount", billTotal.toFixed(2) as any);
-  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, watchValues.igst, watchValues.cess, gstType, form]);
+  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, watchValues.cess, gstType, form]);
 
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
