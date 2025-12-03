@@ -530,19 +530,19 @@ export default function StockInward() {
       const itemQty = parseFloat(item.qty || "0");
       return sum + (itemCost * itemQty);
     }, 0);
-    const expectedAmount = parseFloat(selectedPurchase.billTotalAmount || selectedPurchase.amount || "0");
+    const expectedAmount = parseFloat(selectedPurchase.beforeTaxAmount || selectedPurchase.amount || "0");
 
     // Validation checks
-    if (totalQtyAdded !== expectedQty) {
+    if (Math.abs(totalQtyAdded - expectedQty) > 0.01) {
       toast({
         title: "Quantity Mismatch",
-        description: `Total quantity added (${totalQtyAdded}) does not match expected quantity (${expectedQty})`,
+        description: `Total quantity added (${totalQtyAdded.toFixed(0)}) does not match expected quantity (${expectedQty.toFixed(0)})`,
         variant: "destructive",
       });
       return;
     }
 
-    if (Math.abs(totalAmount - expectedAmount) > 0.01) { // Allow 0.01 tolerance for rounding
+    if (Math.abs(totalAmount - expectedAmount) > 0.01) {
       toast({
         title: "Amount Mismatch",
         description: `Total amount (₹${totalAmount.toFixed(2)}) does not match expected amount (₹${expectedAmount.toFixed(2)})`,
