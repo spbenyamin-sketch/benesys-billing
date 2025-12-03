@@ -538,6 +538,7 @@ interface TemplateElement {
   x: number;
   y: number;
   fontSize: number;
+  fontFamily?: string;
   visible: boolean;
   width?: number;
   height?: number;
@@ -549,17 +550,17 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const [labelWidth, setLabelWidth] = useState(50);
   const [labelHeight, setLabelHeight] = useState(25);
   const [isDefault, setIsDefault] = useState(false);
-  const scale = 3; // Scale for display
+  const scale = 6; // Larger scale for display
   
   const elementTemplates: TemplateElement[] = [
-    { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, visible: true, width: 46, height: 8 },
-    { id: "itemName", type: "text", label: "Item Name", x: 2, y: 11, fontSize: 8, visible: true },
-    { id: "size", type: "text", label: "Size", x: 2, y: 14, fontSize: 8, visible: true },
-    { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, visible: true },
-    { id: "mrp", type: "text", label: "MRP", x: 25, y: 17, fontSize: 8, visible: true },
-    { id: "brand", type: "text", label: "Brand", x: 2, y: 20, fontSize: 6, visible: false },
-    { id: "quality", type: "text", label: "Quality", x: 2, y: 22, fontSize: 6, visible: false },
-    { id: "cost", type: "text", label: "Cost", x: 15, y: 20, fontSize: 7, visible: false },
+    { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, fontFamily: "Arial", visible: true, width: 46, height: 8 },
+    { id: "itemName", type: "text", label: "Item Name", x: 2, y: 11, fontSize: 8, fontFamily: "Arial", visible: true },
+    { id: "size", type: "text", label: "Size", x: 2, y: 14, fontSize: 8, fontFamily: "Arial", visible: true },
+    { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, fontFamily: "Arial", visible: true },
+    { id: "mrp", type: "text", label: "MRP", x: 25, y: 17, fontSize: 8, fontFamily: "Arial", visible: true },
+    { id: "brand", type: "text", label: "Brand", x: 2, y: 20, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "quality", type: "text", label: "Quality", x: 2, y: 22, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "cost", type: "text", label: "Cost", x: 15, y: 20, fontSize: 7, fontFamily: "Arial", visible: false },
   ];
 
   const [elements, setElements] = useState<TemplateElement[]>(elementTemplates);
@@ -636,14 +637,14 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Label Designer - Visual Template Editor</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-4">
-          {/* Canvas - Left Side */}
-          <div className="col-span-2 border rounded-lg p-4 bg-gray-50">
+        <div className="grid grid-cols-4 gap-4">
+          {/* Canvas - Main Area */}
+          <div className="col-span-3 border rounded-lg p-4 bg-gray-50">
             <div className="flex flex-col gap-2 mb-4">
               <Label>Template Name</Label>
               <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="My Label Template" />
@@ -667,50 +668,60 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className="border-2 border-dashed border-gray-400 relative bg-white cursor-move overflow-hidden"
+              className="border-2 border-dashed border-gray-400 relative bg-white cursor-move overflow-auto flex items-center justify-center"
               style={{
-                width: `${labelWidth * scale}px`,
-                height: `${labelHeight * scale}px`,
+                minWidth: `${labelWidth * scale + 20}px`,
+                minHeight: `${labelHeight * scale + 20}px`,
+                maxHeight: "550px",
               }}
             >
-              {/* Grid background */}
               <div
-                className="absolute inset-0 opacity-10 pointer-events-none"
                 style={{
-                  backgroundImage: `
-                    linear-gradient(0deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent),
-                    linear-gradient(90deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent)
-                  `,
-                  backgroundSize: `${5 * scale}px ${5 * scale}px`,
+                  width: `${labelWidth * scale}px`,
+                  height: `${labelHeight * scale}px`,
                 }}
-              />
+                className="relative bg-white"
+              >
+                {/* Grid background */}
+                <div
+                  className="absolute inset-0 opacity-10 pointer-events-none"
+                  style={{
+                    backgroundImage: `
+                      linear-gradient(0deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent),
+                      linear-gradient(90deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent)
+                    `,
+                    backgroundSize: `${5 * scale}px ${5 * scale}px`,
+                  }}
+                />
 
-              {elements
-                .filter((el) => el.visible)
-                .map((el) => (
-                  <div
-                    key={el.id}
-                    onMouseDown={(e) => handleMouseDown(e, el.id)}
-                    className={`absolute cursor-grab active:cursor-grabbing border transition-all ${
-                      selectedElement === el.id ? "border-2 border-blue-500 bg-blue-50" : "border border-gray-300 bg-white hover:bg-gray-100"
-                    }`}
-                    style={{
-                      left: `${el.x * scale}px`,
-                      top: `${el.y * scale}px`,
-                      width: el.width ? `${el.width * scale}px` : "auto",
-                      height: el.height ? `${el.height * scale}px` : "auto",
-                      padding: "2px 4px",
-                      fontSize: `${el.fontSize * 0.75}px`,
-                      minWidth: "40px",
-                      minHeight: "16px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <span className="text-[9px] font-semibold text-gray-600 truncate">{el.label}</span>
-                  </div>
-                ))}
+                {elements
+                  .filter((el) => el.visible)
+                  .map((el) => (
+                    <div
+                      key={el.id}
+                      onMouseDown={(e) => handleMouseDown(e, el.id)}
+                      className={`absolute cursor-grab active:cursor-grabbing border transition-all ${
+                        selectedElement === el.id ? "border-2 border-blue-500 bg-blue-50 shadow-lg" : "border border-gray-300 bg-white hover:bg-gray-100"
+                      }`}
+                      style={{
+                        left: `${el.x * scale}px`,
+                        top: `${el.y * scale}px`,
+                        width: el.width ? `${el.width * scale}px` : "auto",
+                        height: el.height ? `${el.height * scale}px` : "auto",
+                        padding: "4px 6px",
+                        fontSize: `${el.fontSize * 1.2}px`,
+                        fontFamily: el.fontFamily || "Arial",
+                        minWidth: "50px",
+                        minHeight: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <span className="text-xs font-semibold text-gray-600 truncate">{el.label}</span>
+                    </div>
+                  ))}
+              </div>
             </div>
 
             <div className="flex items-center space-x-2 mt-4">
@@ -722,9 +733,9 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
           </div>
 
           {/* Properties Panel - Right Side */}
-          <div className="border rounded-lg p-4 bg-gray-50">
+          <div className="border rounded-lg p-4 bg-gray-50 max-h-[550px] flex flex-col">
             <div className="font-semibold text-sm mb-4">Elements</div>
-            <ScrollArea className="h-[300px] pr-4 mb-4">
+            <ScrollArea className="flex-1 pr-4 mb-4">
               <div className="space-y-2">
                 {elements.map((el) => (
                   <div
@@ -757,6 +768,7 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                     step="0.5"
                     value={selectedElConfig.x}
                     onChange={(e) => updateElement(selectedElConfig.id, { x: parseFloat(e.target.value) || 0 })}
+                    className="text-xs"
                   />
                 </div>
                 <div>
@@ -766,6 +778,7 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                     step="0.5"
                     value={selectedElConfig.y}
                     onChange={(e) => updateElement(selectedElConfig.id, { y: parseFloat(e.target.value) || 0 })}
+                    className="text-xs"
                   />
                 </div>
                 <div>
@@ -774,7 +787,26 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                     type="number"
                     value={selectedElConfig.fontSize}
                     onChange={(e) => updateElement(selectedElConfig.id, { fontSize: parseInt(e.target.value) || 8 })}
+                    className="text-xs"
                   />
+                </div>
+                <div>
+                  <Label className="text-xs">Font Family</Label>
+                  <select
+                    value={selectedElConfig.fontFamily || "Arial"}
+                    onChange={(e) => updateElement(selectedElConfig.id, { fontFamily: e.target.value })}
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                    data-testid="select-font-family"
+                  >
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Verdana">Verdana</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Trebuchet MS">Trebuchet MS</option>
+                    <option value="Monospace">Monospace</option>
+                  </select>
                 </div>
               </div>
             )}
