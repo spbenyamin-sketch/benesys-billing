@@ -134,7 +134,6 @@ export default function BarcodeManagement() {
   const [editRate, setEditRate] = useState<string>("");
   const [editMrp, setEditMrp] = useState<string>("");
   const [showLabelDesigner, setShowLabelDesigner] = useState(false);
-  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showItemSearch, setShowItemSearch] = useState(false);
 
   const { data: stockItems, isLoading, refetch } = useQuery<StockInwardItem[]>({
@@ -476,30 +475,6 @@ export default function BarcodeManagement() {
                             >
                               <Edit2 className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  disabled={item.status === "sold" || deleteItemMutation.isPending}
-                                  data-testid={`button-delete-${item.id}`}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete Barcode</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete barcode {item.barcode}? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => handleDeleteItem(item.id)}>Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
                           </div>
                         )}
                       </TableCell>
@@ -515,12 +490,6 @@ export default function BarcodeManagement() {
       <LabelDesignerDialog
         open={showLabelDesigner}
         onOpenChange={setShowLabelDesigner}
-      />
-
-      <PrintLabelsDialog
-        open={showPrintDialog}
-        onOpenChange={setShowPrintDialog}
-        selectedItems={stockItems?.filter(item => selectedItems.has(item.id)) || []}
       />
     </div>
   );
@@ -818,137 +787,6 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   );
 }
 
-interface PrintLabelsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedItems: StockInwardItem[];
-}
-
-function PrintLabelsDialog({ open, onOpenChange, selectedItems }: PrintLabelsDialogProps) {
-  const [copies, setCopies] = useState("1");
-
-  const handlePrint = () => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const labelsHtml = selectedItems.map(item => `
-      <div class="label">
-        <div class="barcode">${item.barcode}</div>
-        <div class="item-name">${item.itname}</div>
-        <div class="size">${item.size || ""}</div>
-        <div class="prices">
-          <span class="rate">Rs. ${parseFloat(item.rate).toFixed(0)}</span>
-          <span class="mrp">MRP: ${parseFloat(item.mrp).toFixed(0)}</span>
-        </div>
-      </div>
-    `).join("");
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Print Labels</title>
-        <style>
-          @page { size: A4; margin: 10mm; }
-          body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-          .labels-container { display: flex; flex-wrap: wrap; gap: 2mm; }
-          .label {
-            width: 50mm;
-            height: 25mm;
-            border: 1px solid #000;
-            padding: 2mm;
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-          }
-          .barcode {
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            text-align: center;
-            letter-spacing: 2px;
-          }
-          .item-name {
-            font-size: 8px;
-            font-weight: bold;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-          }
-          .size {
-            font-size: 10px;
-            font-weight: bold;
-            text-align: right;
-          }
-          .prices {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          }
-          .rate { font-size: 12px; font-weight: bold; }
-          .mrp { font-size: 8px; color: #666; text-decoration: line-through; }
-          @media print {
-            .label { break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="labels-container">
-          ${labelsHtml.repeat(parseInt(copies))}
-        </div>
-        <script>
-          window.onload = function() { window.print(); window.close(); }
-        </script>
-      </body>
-      </html>
-    `);
-    printWindow.document.close();
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Print Labels</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div>
-            <Label>Selected Items</Label>
-            <p className="text-sm text-muted-foreground">{selectedItems.length} items selected</p>
-          </div>
-
-          <div>
-            <Label>Copies per Item</Label>
-            <Input
-              type="number"
-              min="1"
-              max="10"
-              value={copies}
-              onChange={(e) => setCopies(e.target.value)}
-              data-testid="input-copies"
-            />
-          </div>
-
-          <div className="text-sm text-muted-foreground">
-            Total labels to print: {selectedItems.length * parseInt(copies || "1")}
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 interface Item {
   id: number;
