@@ -363,16 +363,27 @@ export default function BarcodeManagement() {
                 <Badge variant="outline">{filteredItems.length} items</Badge>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowPrintDialog(true)}
-              disabled={!filteredItems.length}
-              data-testid="button-print-barcodes"
-            >
-              <Printer className="h-4 w-4 mr-2" />
-              Print Barcodes
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLabelDesigner(true)}
+                data-testid="button-label-designer"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Design Template
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPrintDialog(true)}
+                disabled={!filteredItems.length}
+                data-testid="button-print-barcodes"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Barcodes
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -498,6 +509,11 @@ export default function BarcodeManagement() {
           )}
         </CardContent>
       </Card>
+
+      <LabelDesignerDialog
+        open={showLabelDesigner}
+        onOpenChange={setShowLabelDesigner}
+      />
 
       <PrintBarcodeDialog
         open={showPrintDialog}
