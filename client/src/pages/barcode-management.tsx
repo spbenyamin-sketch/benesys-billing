@@ -531,44 +531,40 @@ interface LabelDesignerDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+interface TemplateElement {
+  id: string;
+  type: string;
+  label: string;
+  x: number;
+  y: number;
+  fontSize: number;
+  visible: boolean;
+  width?: number;
+  height?: number;
+}
+
 function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const { toast } = useToast();
   const [templateName, setTemplateName] = useState("Default Template");
-  const [labelWidth, setLabelWidth] = useState("50");
-  const [labelHeight, setLabelHeight] = useState("25");
-  const [labelsPerRow, setLabelsPerRow] = useState("4");
-  const [labelsPerColumn, setLabelsPerColumn] = useState("10");
-  const [marginTop, setMarginTop] = useState("10");
-  const [marginLeft, setMarginLeft] = useState("5");
-  const [gapH, setGapH] = useState("2");
-  const [gapV, setGapV] = useState("2");
-  
-  // Basic fields
-  const [showBarcode, setShowBarcode] = useState(true);
-  const [showItemName, setShowItemName] = useState(true);
-  const [showSize, setShowSize] = useState(true);
-  const [showRate, setShowRate] = useState(true);
-  const [showMrp, setShowMrp] = useState(true);
-  const [showBrand, setShowBrand] = useState(false);
-  
-  // Attribute fields
-  const [showQuality, setShowQuality] = useState(false);
-  const [showPattern, setShowPattern] = useState(false);
-  const [showSleeve, setShowSleeve] = useState(false);
-  const [showDno1, setShowDno1] = useState(false);
-  
-  // Cost fields
-  const [showCost, setShowCost] = useState(false);
-  const [showNcost, setShowNcost] = useState(false);
-  const [showLcost, setShowLcost] = useState(false);
-  
-  // Additional fields
-  const [showTax, setShowTax] = useState(false);
-  const [showStatus, setShowStatus] = useState(false);
-  const [showPurchaseNo, setShowPurchaseNo] = useState(false);
-  const [showSerial, setShowSerial] = useState(false);
-  
+  const [labelWidth, setLabelWidth] = useState(50);
+  const [labelHeight, setLabelHeight] = useState(25);
   const [isDefault, setIsDefault] = useState(false);
+  const scale = 3; // Scale for display
+  
+  const elementTemplates: TemplateElement[] = [
+    { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, visible: true, width: 46, height: 8 },
+    { id: "itemName", type: "text", label: "Item Name", x: 2, y: 11, fontSize: 8, visible: true },
+    { id: "size", type: "text", label: "Size", x: 2, y: 14, fontSize: 8, visible: true },
+    { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, visible: true },
+    { id: "mrp", type: "text", label: "MRP", x: 25, y: 17, fontSize: 8, visible: true },
+    { id: "brand", type: "text", label: "Brand", x: 2, y: 20, fontSize: 6, visible: false },
+    { id: "quality", type: "text", label: "Quality", x: 2, y: 22, fontSize: 6, visible: false },
+    { id: "cost", type: "text", label: "Cost", x: 15, y: 20, fontSize: 7, visible: false },
+  ];
+
+  const [elements, setElements] = useState<TemplateElement[]>(elementTemplates);
+  const [selectedElement, setSelectedElement] = useState<string | null>("barcode");
+  const [dragging, setDragging] = useState<{ id: string; startX: number; startY: number } | null>(null);
 
   const { data: templates, refetch: refetchTemplates } = useQuery({
     queryKey: ["/api/barcode-label-templates"],
@@ -588,390 +584,208 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
     },
   });
 
-  const handleSaveTemplate = () => {
-    const config = JSON.stringify({
-      elements: [
-        { type: "serial", visible: showSerial, x: 5, y: 2, fontSize: 6 },
-        { type: "purchaseNo", visible: showPurchaseNo, x: 35, y: 2, fontSize: 6 },
-        { type: "barcode", visible: showBarcode, x: 5, y: 5, width: 40, height: 10 },
-        { type: "itemName", visible: showItemName, x: 5, y: 16, fontSize: 8 },
-        { type: "brand", visible: showBrand, x: 5, y: 12, fontSize: 6 },
-        { type: "quality", visible: showQuality, x: 5, y: 14, fontSize: 6 },
-        { type: "pattern", visible: showPattern, x: 15, y: 14, fontSize: 6 },
-        { type: "sleeve", visible: showSleeve, x: 25, y: 14, fontSize: 6 },
-        { type: "dno1", visible: showDno1, x: 35, y: 14, fontSize: 6 },
-        { type: "size", visible: showSize, x: 35, y: 16, fontSize: 8 },
-        { type: "cost", visible: showCost, x: 5, y: 18, fontSize: 7 },
-        { type: "ncost", visible: showNcost, x: 15, y: 18, fontSize: 7 },
-        { type: "lcost", visible: showLcost, x: 25, y: 18, fontSize: 7 },
-        { type: "tax", visible: showTax, x: 35, y: 18, fontSize: 7 },
-        { type: "rate", visible: showRate, x: 5, y: 20, fontSize: 10 },
-        { type: "mrp", visible: showMrp, x: 30, y: 20, fontSize: 10 },
-        { type: "status", visible: showStatus, x: 5, y: 22, fontSize: 6 },
-      ],
+  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+    setSelectedElement(elementId);
+    const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    setDragging({
+      id: elementId,
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top,
     });
+  };
 
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!dragging) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const newX = Math.max(0, Math.min((e.clientX - rect.left) / scale, labelWidth - 5));
+    const newY = Math.max(0, Math.min((e.clientY - rect.top) / scale, labelHeight - 2));
+
+    setElements(
+      elements.map((el) =>
+        el.id === dragging.id ? { ...el, x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 } : el
+      )
+    );
+  };
+
+  const handleMouseUp = () => {
+    setDragging(null);
+  };
+
+  const updateElement = (id: string, updates: Partial<TemplateElement>) => {
+    setElements(elements.map((el) => (el.id === id ? { ...el, ...updates } : el)));
+  };
+
+  const handleSaveTemplate = () => {
+    const config = JSON.stringify({ elements });
     saveMutation.mutate({
       name: templateName,
       labelWidth,
       labelHeight,
-      labelsPerRow: parseInt(labelsPerRow),
-      labelsPerColumn: parseInt(labelsPerColumn),
-      marginTop,
-      marginLeft,
-      gapHorizontal: gapH,
-      gapVertical: gapV,
+      labelsPerRow: 4,
+      labelsPerColumn: 10,
+      marginTop: 10,
+      marginLeft: 5,
+      gapHorizontal: 2,
+      gapVertical: 2,
       config,
       isDefault,
     });
   };
 
+  const selectedElConfig = elements.find((el) => el.id === selectedElement);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Barcode Label Designer</DialogTitle>
+          <DialogTitle>Label Designer - Visual Template Editor</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="layout">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="layout">Layout</TabsTrigger>
-            <TabsTrigger value="content">Content</TabsTrigger>
-            <TabsTrigger value="preview">Preview</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-3 gap-4">
+          {/* Canvas - Left Side */}
+          <div className="col-span-2 border rounded-lg p-4 bg-gray-50">
+            <div className="flex flex-col gap-2 mb-4">
+              <Label>Template Name</Label>
+              <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="My Label Template" />
+            </div>
 
-          <TabsContent value="layout" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Template Name</Label>
-                <Input
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  data-testid="input-template-name"
-                />
+            <div className="flex gap-4 mb-4">
+              <div className="flex-1">
+                <Label className="text-xs">Width (mm)</Label>
+                <Input type="number" value={labelWidth} onChange={(e) => setLabelWidth(Math.max(1, parseInt(e.target.value) || 50))} />
               </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <Checkbox
-                  id="isDefault"
-                  checked={isDefault}
-                  onCheckedChange={(checked) => setIsDefault(checked as boolean)}
-                />
-                <Label htmlFor="isDefault">Set as default template</Label>
+              <div className="flex-1">
+                <Label className="text-xs">Height (mm)</Label>
+                <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Math.max(1, parseInt(e.target.value) || 25))} />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Label Width (mm)</Label>
-                <Input
-                  type="number"
-                  value={labelWidth}
-                  onChange={(e) => setLabelWidth(e.target.value)}
-                  data-testid="input-label-width"
-                />
-              </div>
-              <div>
-                <Label>Label Height (mm)</Label>
-                <Input
-                  type="number"
-                  value={labelHeight}
-                  onChange={(e) => setLabelHeight(e.target.value)}
-                  data-testid="input-label-height"
-                />
-              </div>
+            <p className="text-xs text-muted-foreground mb-2">Drag elements to position them on your label</p>
+
+            {/* Canvas */}
+            <div
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              className="border-2 border-dashed border-gray-400 relative bg-white cursor-move overflow-hidden"
+              style={{
+                width: `${labelWidth * scale}px`,
+                height: `${labelHeight * scale}px`,
+              }}
+            >
+              {/* Grid background */}
+              <div
+                className="absolute inset-0 opacity-10 pointer-events-none"
+                style={{
+                  backgroundImage: `
+                    linear-gradient(0deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent),
+                    linear-gradient(90deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent)
+                  `,
+                  backgroundSize: `${5 * scale}px ${5 * scale}px`,
+                }}
+              />
+
+              {elements
+                .filter((el) => el.visible)
+                .map((el) => (
+                  <div
+                    key={el.id}
+                    onMouseDown={(e) => handleMouseDown(e, el.id)}
+                    className={`absolute cursor-grab active:cursor-grabbing border transition-all ${
+                      selectedElement === el.id ? "border-2 border-blue-500 bg-blue-50" : "border border-gray-300 bg-white hover:bg-gray-100"
+                    }`}
+                    style={{
+                      left: `${el.x * scale}px`,
+                      top: `${el.y * scale}px`,
+                      width: el.width ? `${el.width * scale}px` : "auto",
+                      height: el.height ? `${el.height * scale}px` : "auto",
+                      padding: "2px 4px",
+                      fontSize: `${el.fontSize * 0.75}px`,
+                      minWidth: "40px",
+                      minHeight: "16px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <span className="text-[9px] font-semibold text-gray-600 truncate">{el.label}</span>
+                  </div>
+                ))}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label>Labels per Row</Label>
-                <Input
-                  type="number"
-                  value={labelsPerRow}
-                  onChange={(e) => setLabelsPerRow(e.target.value)}
-                  data-testid="input-labels-per-row"
-                />
-              </div>
-              <div>
-                <Label>Labels per Column</Label>
-                <Input
-                  type="number"
-                  value={labelsPerColumn}
-                  onChange={(e) => setLabelsPerColumn(e.target.value)}
-                  data-testid="input-labels-per-column"
-                />
-              </div>
+            <div className="flex items-center space-x-2 mt-4">
+              <Checkbox id="isDefault" checked={isDefault} onCheckedChange={(checked) => setIsDefault(checked as boolean)} />
+              <Label htmlFor="isDefault" className="text-sm">
+                Set as default template
+              </Label>
             </div>
+          </div>
 
-            <div className="grid grid-cols-4 gap-4">
-              <div>
-                <Label>Top Margin (mm)</Label>
-                <Input
-                  type="number"
-                  value={marginTop}
-                  onChange={(e) => setMarginTop(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Left Margin (mm)</Label>
-                <Input
-                  type="number"
-                  value={marginLeft}
-                  onChange={(e) => setMarginLeft(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Horizontal Gap (mm)</Label>
-                <Input
-                  type="number"
-                  value={gapH}
-                  onChange={(e) => setGapH(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Vertical Gap (mm)</Label>
-                <Input
-                  type="number"
-                  value={gapV}
-                  onChange={(e) => setGapV(e.target.value)}
-                />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="content" className="space-y-4">
-            <ScrollArea className="h-[400px] pr-4">
-              <div className="space-y-3">
-                <div className="font-semibold text-sm mb-3">Reference Fields</div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showSerial"
-                    checked={showSerial}
-                    onCheckedChange={(checked) => setShowSerial(checked as boolean)}
-                  />
-                  <Label htmlFor="showSerial">Show Serial Number</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showPurchaseNo"
-                    checked={showPurchaseNo}
-                    onCheckedChange={(checked) => setShowPurchaseNo(checked as boolean)}
-                  />
-                  <Label htmlFor="showPurchaseNo">Show Purchase Number</Label>
-                </div>
-
-                <div className="font-semibold text-sm mb-3 mt-4">Basic Info</div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showBarcode"
-                    checked={showBarcode}
-                    onCheckedChange={(checked) => setShowBarcode(checked as boolean)}
-                  />
-                  <Label htmlFor="showBarcode">Show Barcode</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showItemName"
-                    checked={showItemName}
-                    onCheckedChange={(checked) => setShowItemName(checked as boolean)}
-                  />
-                  <Label htmlFor="showItemName">Show Item Name</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showBrand"
-                    checked={showBrand}
-                    onCheckedChange={(checked) => setShowBrand(checked as boolean)}
-                  />
-                  <Label htmlFor="showBrand">Show Brand</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showSize"
-                    checked={showSize}
-                    onCheckedChange={(checked) => setShowSize(checked as boolean)}
-                  />
-                  <Label htmlFor="showSize">Show Size</Label>
-                </div>
-
-                <div className="font-semibold text-sm mb-3 mt-4">Attributes</div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showQuality"
-                    checked={showQuality}
-                    onCheckedChange={(checked) => setShowQuality(checked as boolean)}
-                  />
-                  <Label htmlFor="showQuality">Show Quality</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showPattern"
-                    checked={showPattern}
-                    onCheckedChange={(checked) => setShowPattern(checked as boolean)}
-                  />
-                  <Label htmlFor="showPattern">Show Pattern</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showSleeve"
-                    checked={showSleeve}
-                    onCheckedChange={(checked) => setShowSleeve(checked as boolean)}
-                  />
-                  <Label htmlFor="showSleeve">Show Sleeve</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showDno1"
-                    checked={showDno1}
-                    onCheckedChange={(checked) => setShowDno1(checked as boolean)}
-                  />
-                  <Label htmlFor="showDno1">Show Design Number</Label>
-                </div>
-
-                <div className="font-semibold text-sm mb-3 mt-4">Pricing</div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showCost"
-                    checked={showCost}
-                    onCheckedChange={(checked) => setShowCost(checked as boolean)}
-                  />
-                  <Label htmlFor="showCost">Show Cost Price</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showNcost"
-                    checked={showNcost}
-                    onCheckedChange={(checked) => setShowNcost(checked as boolean)}
-                  />
-                  <Label htmlFor="showNcost">Show Net Cost</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showLcost"
-                    checked={showLcost}
-                    onCheckedChange={(checked) => setShowLcost(checked as boolean)}
-                  />
-                  <Label htmlFor="showLcost">Show Last Cost</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showTax"
-                    checked={showTax}
-                    onCheckedChange={(checked) => setShowTax(checked as boolean)}
-                  />
-                  <Label htmlFor="showTax">Show Tax %</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showRate"
-                    checked={showRate}
-                    onCheckedChange={(checked) => setShowRate(checked as boolean)}
-                  />
-                  <Label htmlFor="showRate">Show Selling Rate</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showMrp"
-                    checked={showMrp}
-                    onCheckedChange={(checked) => setShowMrp(checked as boolean)}
-                  />
-                  <Label htmlFor="showMrp">Show MRP</Label>
-                </div>
-
-                <div className="font-semibold text-sm mb-3 mt-4">Status</div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="showStatus"
-                    checked={showStatus}
-                    onCheckedChange={(checked) => setShowStatus(checked as boolean)}
-                  />
-                  <Label htmlFor="showStatus">Show Item Status</Label>
-                </div>
+          {/* Properties Panel - Right Side */}
+          <div className="border rounded-lg p-4 bg-gray-50">
+            <div className="font-semibold text-sm mb-4">Elements</div>
+            <ScrollArea className="h-[300px] pr-4 mb-4">
+              <div className="space-y-2">
+                {elements.map((el) => (
+                  <div
+                    key={el.id}
+                    onClick={() => setSelectedElement(el.id)}
+                    className={`p-2 rounded cursor-pointer border transition-all ${
+                      selectedElement === el.id ? "border-blue-500 bg-blue-100" : "border-gray-200 bg-white hover:bg-gray-100"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <Checkbox
+                        checked={el.visible}
+                        onCheckedChange={(checked) => updateElement(el.id, { visible: checked as boolean })}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <span className="text-xs font-medium flex-1">{el.label}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </ScrollArea>
-          </TabsContent>
 
-          <TabsContent value="preview">
-            <div className="border rounded-lg p-4 bg-white">
-              <div
-                className="border-2 border-dashed border-gray-300 relative mx-auto overflow-hidden"
-                style={{
-                  width: `${parseFloat(labelWidth) * 3}px`,
-                  height: `${parseFloat(labelHeight) * 3}px`,
-                  fontSize: "11px",
-                }}
-              >
-                {showSerial && (
-                  <div className="absolute top-0.5 left-0.5 text-[6px] text-gray-600">
-                    S: 1001
-                  </div>
-                )}
-                {showPurchaseNo && (
-                  <div className="absolute top-0.5 right-0.5 text-[6px] text-gray-600">
-                    P: 1
-                  </div>
-                )}
-                {showBarcode && (
-                  <div className="absolute top-2 left-1 right-1 h-7 bg-gray-200 flex items-center justify-center text-xs">
-                    |||||||||||
-                  </div>
-                )}
-                {showItemName && (
-                  <div className="absolute top-9 left-1 text-[7px] font-medium truncate w-4/5">
-                    Sample Item
-                  </div>
-                )}
-                {showBrand && (
-                  <div className="absolute top-11 left-1 text-[6px] text-gray-500">
-                    Brand
-                  </div>
-                )}
-                {(showQuality || showPattern || showSleeve || showDno1) && (
-                  <div className="absolute top-12 left-1 text-[5px] text-gray-600 flex gap-1">
-                    {showQuality && <span>Qlt: A</span>}
-                    {showPattern && <span>Pat: Std</span>}
-                    {showSleeve && <span>Slv: S</span>}
-                    {showDno1 && <span>D#: 101</span>}
-                  </div>
-                )}
-                {showSize && (
-                  <div className="absolute top-9 right-1 text-[8px] font-bold">
-                    M
-                  </div>
-                )}
-                {(showCost || showNcost || showLcost || showTax) && (
-                  <div className="absolute top-13 left-1 text-[6px] text-gray-600 flex gap-1">
-                    {showCost && <span>C: 300</span>}
-                    {showNcost && <span>N: 310</span>}
-                    {showLcost && <span>L: 320</span>}
-                    {showTax && <span>T: 5%</span>}
-                  </div>
-                )}
-                <div className="absolute bottom-2 left-1 right-1 flex justify-between items-center">
-                  {showRate && (
-                    <span className="text-[9px] font-bold">Rs. 499</span>
-                  )}
-                  {showMrp && (
-                    <span className="text-[7px] text-gray-500 line-through">MRP: 599</span>
-                  )}
+            {selectedElConfig && (
+              <div className="space-y-3 border-t pt-3">
+                <div className="font-semibold text-sm">Properties</div>
+                <div>
+                  <Label className="text-xs">Position X (mm)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={selectedElConfig.x}
+                    onChange={(e) => updateElement(selectedElConfig.id, { x: parseFloat(e.target.value) || 0 })}
+                  />
                 </div>
-                {showStatus && (
-                  <div className="absolute bottom-0.5 right-0.5 text-[6px] px-1 bg-green-100 text-green-800">
-                    Available
-                  </div>
-                )}
+                <div>
+                  <Label className="text-xs">Position Y (mm)</Label>
+                  <Input
+                    type="number"
+                    step="0.5"
+                    value={selectedElConfig.y}
+                    onChange={(e) => updateElement(selectedElConfig.id, { y: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Font Size</Label>
+                  <Input
+                    type="number"
+                    value={selectedElConfig.fontSize}
+                    onChange={(e) => updateElement(selectedElConfig.id, { fontSize: parseInt(e.target.value) || 8 })}
+                  />
+                </div>
               </div>
-              <p className="text-center text-sm text-muted-foreground mt-2">
-                Label Preview (3x scale) - Showing all selected fields
-              </p>
-            </div>
-          </TabsContent>
-        </Tabs>
+            )}
+          </div>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSaveTemplate} disabled={saveMutation.isPending}>
+          <Button onClick={handleSaveTemplate} disabled={saveMutation.isPending} data-testid="button-save-template">
             Save Template
           </Button>
         </DialogFooter>
