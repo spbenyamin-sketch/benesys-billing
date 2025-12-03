@@ -115,10 +115,6 @@ export default function StockInward() {
     queryKey: ["/api/pending-purchases"],
   });
 
-  const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
-    queryKey: ["/api/items"],
-  });
-
   const getCompanyHeader = (): Record<string, string> => {
     const companyId = localStorage.getItem("currentCompanyId");
     return companyId ? { "X-Company-Id": companyId } : {};
@@ -137,7 +133,7 @@ export default function StockInward() {
     enabled: !!selectedPurchaseId,
   });
 
-  const { data: purchaseItems, isLoading: itemsLoading, refetch: refetchItems } = useQuery<PurchaseItem[]>({
+  const { data: purchaseItems, isLoading: purchaseItemsLoading, refetch: refetchItems } = useQuery<PurchaseItem[]>({
     queryKey: ["/api/purchases", selectedPurchaseId, "items"],
     queryFn: async () => {
       const res = await fetch(`/api/purchases/${selectedPurchaseId}/items`, {
@@ -155,7 +151,7 @@ export default function StockInward() {
     enabled: !!selectedPurchaseId,
   });
 
-  const { data: masterItems } = useQuery({
+  const { data: masterItems } = useQuery<Item[]>({
     queryKey: ["/api/items"],
   });
 
@@ -968,7 +964,7 @@ export default function StockInward() {
             </div>
           </CardHeader>
           <CardContent>
-            {itemsLoading ? (
+            {purchaseItemsLoading ? (
               <div className="text-center py-8 text-muted-foreground">Loading items...</div>
             ) : purchaseItems && purchaseItems.length > 0 ? (
               <div className="border rounded-md overflow-x-auto">
@@ -1176,9 +1172,9 @@ export default function StockInward() {
       </Dialog>
 
       {/* Item Search Modal */}
-      {showItemSearch && items && (
+      {showItemSearch && masterItems && (
         <ItemSearchModal
-          items={items}
+          items={masterItems}
           isOpen={showItemSearch}
           onClose={() => setShowItemSearch(false)}
           onSelectItem={(item) => {
