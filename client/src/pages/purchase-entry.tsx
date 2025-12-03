@@ -24,7 +24,9 @@ const purchaseEntrySchema = z.object({
   partyId: z.number().nullable().optional(),
   partyName: z.string().optional(),
   city: z.string().optional(),
+  beforeTaxAmount: z.string().optional(),
   amount: z.string().optional(),
+  billTotalAmount: z.string().optional(),
   totalQty: z.string().optional(),
   cgst: z.string().optional(),
   sgst: z.string().optional(),
@@ -122,8 +124,10 @@ export default function PurchaseEntry() {
   useEffect(() => {
     // Tax rates
     const rates = [0, 5, 12, 18, 28];
+    let beforeTaxAmount = 0;
     let totalCGST = 0;
     let totalSGST = 0;
+    let totalIGST = 0;
 
     rates.forEach((rate) => {
       const valKey = `val${rate}` as keyof PurchaseEntryForm;
@@ -131,6 +135,7 @@ export default function PurchaseEntry() {
       const staxKey = `stax${rate}` as keyof PurchaseEntryForm;
 
       const amount = parseFloat((watchValues[valKey] as string) || "0") || 0;
+      beforeTaxAmount += amount;
 
       if (amount > 0) {
         // Calculate CGST and SGST for this rate
@@ -150,12 +155,26 @@ export default function PurchaseEntry() {
       }
     });
 
+    // Add IGST if interstate
+    const igst = parseFloat((watchValues.igst as string) || "0") || 0;
+    totalIGST = igst;
+
+    // Add cess
+    const cess = parseFloat((watchValues.cess as string) || "0") || 0;
+
     // Update total CGST and SGST if in local GST mode
     if (gstType === "local") {
       form.setValue("cgst", totalCGST.toFixed(2) as any);
       form.setValue("sgst", totalSGST.toFixed(2) as any);
     }
-  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, gstType, form]);
+
+    // Update before tax amount
+    form.setValue("beforeTaxAmount", beforeTaxAmount.toFixed(2) as any);
+
+    // Calculate bill total amount
+    const billTotal = beforeTaxAmount + (gstType === "local" ? totalCGST + totalSGST : totalIGST) + cess;
+    form.setValue("billTotalAmount", billTotal.toFixed(2) as any);
+  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, watchValues.cgst, watchValues.sgst, watchValues.igst, watchValues.cess, gstType, form]);
 
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
