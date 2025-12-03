@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink } from "lucide-react";
+import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink, Printer } from "lucide-react";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -135,6 +135,8 @@ export default function BarcodeManagement() {
   const [editMrp, setEditMrp] = useState<string>("");
   const [showLabelDesigner, setShowLabelDesigner] = useState(false);
   const [showItemSearch, setShowItemSearch] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
+  const [selectedItemsForPrint, setSelectedItemsForPrint] = useState<Set<number>>(new Set());
 
   const { data: stockItems, isLoading, refetch } = useQuery<StockInwardItem[]>({
     queryKey: ["/api/stock-inward-items", filterPurchaseId, filterStatus !== "all" ? filterStatus : null, filterSize],
@@ -361,15 +363,27 @@ export default function BarcodeManagement() {
                 <Badge variant="outline">{filteredItems.length} items</Badge>
               )}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowLabelDesigner(true)}
-              data-testid="button-label-printing"
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Label Printing
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowPrintDialog(true)}
+                disabled={!filteredItems.length}
+                data-testid="button-print-barcodes"
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Barcodes
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLabelDesigner(true)}
+                data-testid="button-label-printing"
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Label Printing
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -499,6 +513,14 @@ export default function BarcodeManagement() {
       <LabelDesignerDialog
         open={showLabelDesigner}
         onOpenChange={setShowLabelDesigner}
+      />
+
+      <PrintBarcodeDialog
+        open={showPrintDialog}
+        onOpenChange={setShowPrintDialog}
+        items={filteredItems}
+        selectedItems={selectedItemsForPrint}
+        onSelectionChange={setSelectedItemsForPrint}
       />
     </div>
   );
@@ -958,6 +980,167 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   );
 }
 
+interface PrintBarcodeDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  items: StockInwardItem[];
+  selectedItems: Set<number>;
+  onSelectionChange: (selected: Set<number>) => void;
+}
+
+function PrintBarcodeDialog({ open, onOpenChange, items, selectedItems, onSelectionChange }: PrintBarcodeDialogProps) {
+  const { toast } = useToast();
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      onSelectionChange(new Set(items.map(item => item.id)));
+    } else {
+      onSelectionChange(new Set());
+    }
+  };
+
+  const handleSelectItem = (itemId: number, checked: boolean) => {
+    const newSelected = new Set(selectedItems);
+    if (checked) {
+      newSelected.add(itemId);
+    } else {
+      newSelected.delete(itemId);
+    }
+    onSelectionChange(newSelected);
+  };
+
+  const handlePrint = () => {
+    if (selectedItems.size === 0) {
+      toast({ title: "No items selected", description: "Please select at least one barcode to print", variant: "destructive" });
+      return;
+    }
+
+    const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+    let printHtml = `
+      <html>
+        <head>
+          <title>Barcode Labels</title>
+          <style>
+            @page { margin: 10mm; size: A4; }
+            body { margin: 0; font-family: Arial, sans-serif; }
+            .label { 
+              display: inline-block; 
+              width: 50mm; 
+              height: 25mm; 
+              border: 1px solid #ccc; 
+              padding: 2mm; 
+              margin: 2mm; 
+              page-break-inside: avoid;
+              position: relative;
+              overflow: hidden;
+              font-size: 10px;
+            }
+            .barcode { font-size: 12px; font-weight: bold; letter-spacing: 2px; }
+            .item-name { font-size: 8px; font-weight: bold; }
+            .size { font-size: 9px; font-weight: bold; }
+            .rate { font-size: 11px; font-weight: bold; color: #d32f2f; }
+            .details { font-size: 7px; }
+          </style>
+        </head>
+        <body>
+    `;
+
+    selectedItemsList.forEach(item => {
+      const qty = item.qty ? parseInt(item.qty.toString()) : 1;
+      for (let i = 0; i < qty; i++) {
+        printHtml += `
+          <div class="label">
+            <div class="barcode">${item.barcode}</div>
+            <div class="item-name">${item.itname}</div>
+            <div style="display: flex; justify-content: space-between;">
+              <span class="size">${item.size || '-'}</span>
+              ${item.brandname ? `<span style="font-size: 7px;">${item.brandname}</span>` : ''}
+            </div>
+            <div class="details" style="margin-top: 2mm;">
+              <div>₹ <span class="rate">${parseFloat(item.rate).toFixed(2)}</span></div>
+              <div style="font-size: 6px; color: #666;">MRP: ₹${parseFloat(item.mrp).toFixed(2)}</div>
+            </div>
+          </div>
+        `;
+      }
+    });
+
+    printHtml += `
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '', 'width=800,height=600');
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+      setTimeout(() => {
+        printWindow.print();
+        onOpenChange(false);
+      }, 250);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Print Barcodes</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex items-center space-x-2 border-b pb-3">
+            <Checkbox
+              id="selectAll"
+              checked={selectedItems.size === items.length && items.length > 0}
+              onCheckedChange={handleSelectAll}
+            />
+            <Label htmlFor="selectAll" className="font-semibold">
+              Select All ({selectedItems.size}/{items.length} selected)
+            </Label>
+          </div>
+
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="space-y-2">
+              {items.map(item => (
+                <div key={item.id} className="flex items-center space-x-3 p-2 border rounded">
+                  <Checkbox
+                    checked={selectedItems.has(item.id)}
+                    onCheckedChange={(checked) => handleSelectItem(item.id, checked as boolean)}
+                  />
+                  <div className="flex-1">
+                    <div className="font-mono font-bold text-sm">{item.barcode}</div>
+                    <div className="text-sm">{item.itname}</div>
+                    <div className="text-xs text-muted-foreground flex gap-2">
+                      {item.brandname && <span>{item.brandname}</span>}
+                      {item.size && <span>Size: {item.size}</span>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">₹{parseFloat(item.rate).toFixed(2)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Qty: {item.qty || 1} stickers
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handlePrint} disabled={selectedItems.size === 0} data-testid="button-print-selected">
+            <Printer className="h-4 w-4 mr-2" />
+            Print {selectedItems.size > 0 ? `(${selectedItems.size})` : ""} Labels
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 interface Item {
   id: number;
