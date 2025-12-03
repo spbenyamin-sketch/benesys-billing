@@ -75,6 +75,7 @@ interface Purchase {
   igst: string | null;
   status: string;
   stockInwardCompleted: boolean;
+  isTallied?: boolean;
 }
 
 interface Party {
@@ -748,6 +749,8 @@ export default function PurchaseEntry() {
                             <TableCell>
                               {purchase.stockInwardCompleted ? (
                                 <Badge variant="default">Completed</Badge>
+                              ) : purchase.isTallied === false ? (
+                                <Badge variant="destructive" data-testid={`badge-not-tallied-${purchase.id}`}>Not Tallied</Badge>
                               ) : (
                                 <Badge variant="secondary">Pending</Badge>
                               )}

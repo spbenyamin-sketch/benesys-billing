@@ -760,12 +760,41 @@ export class DatabaseStorage implements IStorage {
   }
 
   // ==================== PURCHASE OPERATIONS ====================
-  async getPurchases(companyId: number): Promise<Purchase[]> {
-    return await db
+  async getPurchases(companyId: number): Promise<any[]> {
+    const allPurchases = await db
       .select()
       .from(purchases)
       .where(eq(purchases.companyId, companyId))
       .orderBy(desc(purchases.date), desc(purchases.id));
+
+    // Add isTallied field by checking if totalQty and amount match
+    const purchasesWithTallyStatus = await Promise.all(
+      allPurchases.map(async (purchase) => {
+        const items = await db
+          .select()
+          .from(purchaseItems)
+          .where(eq(purchaseItems.purchaseId, purchase.id));
+
+        const itemTotalQty = items.reduce((sum, item) => sum + parseFloat(item.qty.toString()), 0);
+        const itemTotalAmount = items.reduce((sum, item) => {
+          const cost = parseFloat(item.cost.toString());
+          const qty = parseFloat(item.qty.toString());
+          const tax = parseFloat((item.tax || 0).toString());
+          return sum + (cost * qty) + ((cost * qty * tax) / 100);
+        }, 0);
+
+        const purchaseTotalQty = parseFloat(purchase.totalQty.toString());
+        const purchaseTotalAmount = parseFloat(purchase.amount.toString());
+
+        const qtyMatch = Math.abs(itemTotalQty - purchaseTotalQty) < 0.01;
+        const amountMatch = Math.abs(itemTotalAmount - purchaseTotalAmount) < 0.01;
+        const isTallied = qtyMatch && amountMatch;
+
+        return { ...purchase, isTallied };
+      })
+    );
+
+    return purchasesWithTallyStatus;
   }
 
   async getPurchase(id: number, companyId: number): Promise<any | undefined> {
@@ -1641,8 +1670,8 @@ export class DatabaseStorage implements IStorage {
 
   // ==================== STOCK INWARD OPERATIONS ====================
   
-  async getPendingPurchases(companyId: number): Promise<Purchase[]> {
-    return await db
+  async getPendingPurchases(companyId: number): Promise<any[]> {
+    const pending = await db
       .select()
       .from(purchases)
       .where(and(
@@ -1650,6 +1679,35 @@ export class DatabaseStorage implements IStorage {
         eq(purchases.stockInwardCompleted, false)
       ))
       .orderBy(desc(purchases.date), desc(purchases.purchaseNo));
+
+    // Add isTallied field by checking if totalQty and amount match
+    const pendingWithTallyStatus = await Promise.all(
+      pending.map(async (purchase) => {
+        const items = await db
+          .select()
+          .from(purchaseItems)
+          .where(eq(purchaseItems.purchaseId, purchase.id));
+
+        const itemTotalQty = items.reduce((sum, item) => sum + parseFloat(item.qty.toString()), 0);
+        const itemTotalAmount = items.reduce((sum, item) => {
+          const cost = parseFloat(item.cost.toString());
+          const qty = parseFloat(item.qty.toString());
+          const tax = parseFloat((item.tax || 0).toString());
+          return sum + (cost * qty) + ((cost * qty * tax) / 100);
+        }, 0);
+
+        const purchaseTotalQty = parseFloat(purchase.totalQty.toString());
+        const purchaseTotalAmount = parseFloat(purchase.amount.toString());
+
+        const qtyMatch = Math.abs(itemTotalQty - purchaseTotalQty) < 0.01;
+        const amountMatch = Math.abs(itemTotalAmount - purchaseTotalAmount) < 0.01;
+        const isTallied = qtyMatch && amountMatch;
+
+        return { ...purchase, isTallied };
+      })
+    );
+
+    return pendingWithTallyStatus;
   }
 
   async getPurchaseItems(purchaseId: number, companyId: number): Promise<PurchaseItem[]> {
