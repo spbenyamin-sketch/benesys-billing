@@ -5,6 +5,7 @@ import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ItemSearchModal } from "@/components/item-search-modal";
+import type { Item } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1172,19 +1173,17 @@ export default function StockInward() {
       </Dialog>
 
       {/* Item Search Modal */}
-      {showItemSearch && masterItems && (
-        <ItemSearchModal
-          items={masterItems}
-          isOpen={showItemSearch}
-          onClose={() => setShowItemSearch(false)}
-          onSelectItem={(item) => {
-            form.setValue("itemId", item.id);
-            form.setValue("itname", item.name);
-            form.setValue("hsn", item.hsnCode || "");
-            setShowItemSearch(false);
-          }}
-        />
-      )}
+      <ItemSearchModal
+        items={masterItems || []}
+        isOpen={showItemSearch}
+        onClose={() => setShowItemSearch(false)}
+        onSelectItem={(item: Item) => {
+          form.setValue("itemId", item.id);
+          form.setValue("itname", item.name);
+          form.setValue("hsn", item.hsnCode || "");
+          setShowItemSearch(false);
+        }}
+      />
     </div>
   );
 }
