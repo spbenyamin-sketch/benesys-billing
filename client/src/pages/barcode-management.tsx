@@ -7,17 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Printer, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink } from "lucide-react";
+import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 interface StockInwardItem {
   id: number;
@@ -235,15 +233,6 @@ export default function BarcodeManagement() {
     setEditMrp("");
   };
 
-
-  const handlePrintLabels = () => {
-    if (selectedItems.size === 0) {
-      toast({ title: "No items selected", description: "Please select items to print", variant: "destructive" });
-      return;
-    }
-    setShowPrintDialog(true);
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
@@ -274,39 +263,6 @@ export default function BarcodeManagement() {
           >
             <Settings className="h-4 w-4 mr-2" />
             Label Designer
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="destructive"
-                disabled={selectedItems.size === 0 || bulkDeleteMutation.isPending}
-                data-testid="button-bulk-delete"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete ({selectedItems.size})
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete Selected Barcodes</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete {selectedItems.size} barcode(s)? This action cannot be undone.
-                  Note: Sold barcodes cannot be deleted.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleBulkDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button
-            onClick={handlePrintLabels}
-            disabled={selectedItems.size === 0}
-            data-testid="button-print-labels"
-          >
-            <Printer className="h-4 w-4 mr-2" />
-            Print Labels ({selectedItems.size})
           </Button>
         </div>
       </div>
@@ -419,13 +375,6 @@ export default function BarcodeManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        checked={selectedItems.size === filteredItems.length && filteredItems.length > 0}
-                        onCheckedChange={toggleSelectAll}
-                        data-testid="checkbox-select-all"
-                      />
-                    </TableHead>
                     <TableHead>Purchase No</TableHead>
                     <TableHead>Barcode</TableHead>
                     <TableHead>Item Name</TableHead>
@@ -442,13 +391,6 @@ export default function BarcodeManagement() {
                 <TableBody>
                   {filteredItems.map((item) => (
                     <TableRow key={item.id} data-testid={`row-barcode-${item.id}`}>
-                      <TableCell>
-                        <Checkbox
-                          checked={selectedItems.has(item.id)}
-                          onCheckedChange={() => toggleSelectItem(item.id)}
-                          data-testid={`checkbox-item-${item.id}`}
-                        />
-                      </TableCell>
                       <TableCell>
                         <Link href={`/purchases/${item.purchaseId}`}>
                           <Button
