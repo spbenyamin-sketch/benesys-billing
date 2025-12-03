@@ -539,6 +539,7 @@ interface TemplateElement {
   y: number;
   fontSize: number;
   fontFamily?: string;
+  barcodeType?: string;
   visible: boolean;
   width?: number;
   height?: number;
@@ -553,7 +554,7 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const scale = 6; // Larger scale for display
   
   const elementTemplates: TemplateElement[] = [
-    { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, fontFamily: "Arial", visible: true, width: 46, height: 8 },
+    { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, fontFamily: "Arial", barcodeType: "CODE128", visible: true, width: 46, height: 8 },
     { id: "itemName", type: "text", label: "Item Name", x: 2, y: 11, fontSize: 8, fontFamily: "Arial", visible: true },
     { id: "size", type: "text", label: "Size", x: 2, y: 14, fontSize: 8, fontFamily: "Arial", visible: true },
     { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, fontFamily: "Arial", visible: true },
@@ -565,7 +566,7 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
 
   const [elements, setElements] = useState<TemplateElement[]>(elementTemplates);
   const [selectedElement, setSelectedElement] = useState<string | null>("barcode");
-  const [dragging, setDragging] = useState<{ id: string; startX: number; startY: number } | null>(null);
+  const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number; canvasRect: DOMRect } | null>(null);
 
   const { data: templates, refetch: refetchTemplates } = useQuery({
     queryKey: ["/api/barcode-label-templates"],
@@ -586,20 +587,25 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   });
 
   const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+    e.preventDefault();
     setSelectedElement(elementId);
-    const rect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const canvasRect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
+    const elementRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragging({
       id: elementId,
-      startX: e.clientX - rect.left,
-      startY: e.clientY - rect.top,
+      offsetX: e.clientX - elementRect.left,
+      offsetY: e.clientY - elementRect.top,
+      canvasRect: canvasRect,
     });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!dragging) return;
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const newX = Math.max(0, Math.min((e.clientX - rect.left) / scale, labelWidth - 5));
-    const newY = Math.max(0, Math.min((e.clientY - rect.top) / scale, labelHeight - 2));
+    const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const newXPixels = e.clientX - dragging.canvasRect.left - dragging.offsetX;
+    const newYPixels = e.clientY - dragging.canvasRect.top - dragging.offsetY;
+    const newX = Math.max(0, Math.min(newXPixels / scale, labelWidth - 2));
+    const newY = Math.max(0, Math.min(newYPixels / scale, labelHeight - 2));
 
     setElements(
       elements.map((el) =>
@@ -808,6 +814,26 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                     <option value="Monospace">Monospace</option>
                   </select>
                 </div>
+                {selectedElConfig.type === "barcode" && (
+                  <div>
+                    <Label className="text-xs">Barcode Type</Label>
+                    <select
+                      value={selectedElConfig.barcodeType || "CODE128"}
+                      onChange={(e) => updateElement(selectedElConfig.id, { barcodeType: e.target.value })}
+                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+                      data-testid="select-barcode-type"
+                    >
+                      <option value="CODE128">CODE 128</option>
+                      <option value="CODE39">CODE 39</option>
+                      <option value="EAN13">EAN-13</option>
+                      <option value="EAN8">EAN-8</option>
+                      <option value="UPC">UPC-A</option>
+                      <option value="QR">QR Code</option>
+                      <option value="PDF417">PDF417</option>
+                      <option value="DATAMATRIX">Data Matrix</option>
+                    </select>
+                  </div>
+                )}
               </div>
             )}
           </div>
