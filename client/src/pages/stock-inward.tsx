@@ -114,6 +114,10 @@ export default function StockInward() {
   const [barcodeDialogItem, setBarcodeDialogItem] = useState<PurchaseItem | null>(null);
   const [barcodeMode, setBarcodeMode] = useState<"unique" | "bulk">("unique");
 
+  // Mismatch confirmation dialog
+  const [mismatchDialogOpen, setMismatchDialogOpen] = useState(false);
+  const [mismatchError, setMismatchError] = useState<string>("");
+
   const { data: pendingPurchases } = useQuery<Purchase[]>({
     queryKey: ["/api/pending-purchases"],
   });
@@ -534,23 +538,22 @@ export default function StockInward() {
 
     // Validation checks
     if (Math.abs(totalQtyAdded - expectedQty) > 0.01) {
-      toast({
-        title: "Quantity Mismatch",
-        description: `Total quantity added (${totalQtyAdded.toFixed(0)}) does not match expected quantity (${expectedQty.toFixed(0)})`,
-        variant: "destructive",
-      });
+      setMismatchError(`Quantity Mismatch: Total quantity added (${totalQtyAdded.toFixed(0)}) does not match expected quantity (${expectedQty.toFixed(0)}). Do you want to save anyway?`);
+      setMismatchDialogOpen(true);
       return;
     }
 
     if (Math.abs(totalAmount - expectedAmount) > 0.01) {
-      toast({
-        title: "Amount Mismatch",
-        description: `Total amount (₹${totalAmount.toFixed(2)}) does not match expected amount (₹${expectedAmount.toFixed(2)})`,
-        variant: "destructive",
-      });
+      setMismatchError(`Amount Mismatch: Total amount (₹${totalAmount.toFixed(2)}) does not match expected amount (₹${expectedAmount.toFixed(2)}). Do you want to save anyway?`);
+      setMismatchDialogOpen(true);
       return;
     }
 
+    completePurchaseMutation.mutate(selectedPurchaseId!);
+  };
+
+  const handleSaveDespiteMismatch = () => {
+    setMismatchDialogOpen(false);
     completePurchaseMutation.mutate(selectedPurchaseId!);
   };
 
@@ -1201,6 +1204,24 @@ export default function StockInward() {
                   Generate {barcodeMode === "unique" ? `${barcodeDialogItem?.qty || 0} Barcodes` : "1 Bulk Barcode"}
                 </>
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mismatch Confirmation Dialog */}
+      <Dialog open={mismatchDialogOpen} onOpenChange={setMismatchDialogOpen}>
+        <DialogContent data-testid="dialog-mismatch-confirmation">
+          <DialogHeader>
+            <DialogTitle>Confirm Save</DialogTitle>
+            <DialogDescription>{mismatchError}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMismatchDialogOpen(false)} data-testid="button-cancel-save">
+              Cancel
+            </Button>
+            <Button onClick={handleSaveDespiteMismatch} data-testid="button-save-anyway">
+              Save Anyway
             </Button>
           </DialogFooter>
         </DialogContent>
