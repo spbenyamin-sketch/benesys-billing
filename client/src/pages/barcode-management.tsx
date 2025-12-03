@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ItemSearchModal } from "@/components/item-search-modal";
@@ -935,7 +935,7 @@ function PrintBarcodeDialog({ open, onOpenChange, items, selectedItems, onSelect
   });
 
   // Set default template on first load
-  React.useEffect(() => {
+  useEffect(() => {
     if (templates && templates.length > 0 && !selectedTemplateId) {
       const defaultTemplate = templates.find((t: any) => t.isDefault) || templates[0];
       setSelectedTemplateId(defaultTemplate.id);
