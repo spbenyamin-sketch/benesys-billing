@@ -361,6 +361,11 @@ export const purchases = pgTable("purchases", {
   stax12: decimal("stax_12", { precision: 12, scale: 2 }).default("0").notNull(),
   stax18: decimal("stax_18", { precision: 12, scale: 2 }).default("0").notNull(),
   stax28: decimal("stax_28", { precision: 12, scale: 2 }).default("0").notNull(),
+  itax0: decimal("itax_0", { precision: 12, scale: 2 }).default("0").notNull(),
+  itax5: decimal("itax_5", { precision: 12, scale: 2 }).default("0").notNull(),
+  itax12: decimal("itax_12", { precision: 12, scale: 2 }).default("0").notNull(),
+  itax18: decimal("itax_18", { precision: 12, scale: 2 }).default("0").notNull(),
+  itax28: decimal("itax_28", { precision: 12, scale: 2 }).default("0").notNull(),
   // Status
   status: varchar("status", { length: 20 }).default("pending").notNull(), // pending, completed
   stockInwardCompleted: boolean("stock_inward_completed").default(false).notNull(),

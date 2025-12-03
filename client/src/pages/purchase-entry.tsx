@@ -50,6 +50,11 @@ const purchaseEntrySchema = z.object({
   stax12: z.string().default("0").optional(),
   stax18: z.string().default("0").optional(),
   stax28: z.string().default("0").optional(),
+  itax0: z.string().default("0").optional(),
+  itax5: z.string().default("0").optional(),
+  itax12: z.string().default("0").optional(),
+  itax18: z.string().default("0").optional(),
+  itax28: z.string().default("0").optional(),
 });
 
 type PurchaseEntryForm = z.infer<typeof purchaseEntrySchema>;
@@ -133,32 +138,42 @@ export default function PurchaseEntry() {
       const valKey = `val${rate}` as keyof PurchaseEntryForm;
       const ctaxKey = `ctax${rate}` as keyof PurchaseEntryForm;
       const staxKey = `stax${rate}` as keyof PurchaseEntryForm;
+      const itaxKey = `itax${rate}` as keyof PurchaseEntryForm;
 
       const amount = parseFloat((watchValues[valKey] as string) || "0") || 0;
       beforeTaxAmount += amount;
 
       if (amount > 0) {
-        // Calculate CGST and SGST for this rate
-        // CGST and SGST are each half of the total tax rate
-        const cgstAmount = (amount * rate) / 200; // Half of rate: rate/2 / 100
-        const sgstAmount = (amount * rate) / 200; // Half of rate: rate/2 / 100
+        if (gstType === "interstate") {
+          // IGST is full rate (not split)
+          const igstAmount = (amount * rate) / 100;
+          form.setValue(itaxKey, igstAmount.toFixed(2) as any);
+          totalIGST += igstAmount;
+        } else {
+          // CGST and SGST are each half of the total tax rate
+          const cgstAmount = (amount * rate) / 200; // Half of rate: rate/2 / 100
+          const sgstAmount = (amount * rate) / 200; // Half of rate: rate/2 / 100
 
-        // Auto-set the calculated tax values
-        form.setValue(ctaxKey, cgstAmount.toFixed(2) as any);
-        form.setValue(staxKey, sgstAmount.toFixed(2) as any);
+          // Auto-set the calculated tax values
+          form.setValue(ctaxKey, cgstAmount.toFixed(2) as any);
+          form.setValue(staxKey, sgstAmount.toFixed(2) as any);
 
-        totalCGST += cgstAmount;
-        totalSGST += sgstAmount;
+          totalCGST += cgstAmount;
+          totalSGST += sgstAmount;
+        }
       } else {
         // Clear if amount is 0
         form.setValue(ctaxKey, "0" as any);
         form.setValue(staxKey, "0" as any);
+        form.setValue(itaxKey, "0" as any);
       }
     });
 
-    // Add IGST if interstate
+    // Add manual IGST if interstate
     const igst = parseFloat((watchValues.igst as string) || "0") || 0;
-    totalIGST = igst;
+    if (gstType === "interstate") {
+      totalIGST += igst;
+    }
 
     // Add cess
     const cess = parseFloat((watchValues.cess as string) || "0") || 0;
@@ -167,6 +182,8 @@ export default function PurchaseEntry() {
     if (gstType === "local") {
       form.setValue("cgst", totalCGST.toFixed(2) as any);
       form.setValue("sgst", totalSGST.toFixed(2) as any);
+    } else if (gstType === "interstate") {
+      form.setValue("igst", totalIGST.toFixed(2) as any);
     }
 
     // Update before tax amount
@@ -175,7 +192,7 @@ export default function PurchaseEntry() {
     // Calculate bill total amount
     const billTotal = beforeTaxAmount + (gstType === "local" ? totalCGST + totalSGST : totalIGST) + cess;
     form.setValue("billTotalAmount", billTotal.toFixed(2) as any);
-  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, watchValues.cgst, watchValues.sgst, watchValues.igst, watchValues.cess, gstType, form]);
+  }, [watchValues.val0, watchValues.val5, watchValues.val12, watchValues.val18, watchValues.val28, watchValues.igst, watchValues.cess, gstType, form]);
 
   const createPurchaseMutation = useMutation({
     mutationFn: async (data: PurchaseEntryForm) => {
@@ -530,6 +547,24 @@ export default function PurchaseEntry() {
                         </div>
                       ))}
                     </div>
+
+                    {gstType === "interstate" && (
+                      <div className="grid grid-cols-5 gap-3 mt-4">
+                        {[0, 5, 12, 18, 28].map((rate) => (
+                          <div key={`itax${rate}`}>
+                            <Label htmlFor={`itax${rate}`} className="text-xs">IGST {rate}%</Label>
+                            <Input
+                              id={`itax${rate}`}
+                              type="number"
+                              step="0.01"
+                              {...form.register(`itax${rate}` as any)}
+                              placeholder="0"
+                              data-testid={`input-itax${rate}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>
