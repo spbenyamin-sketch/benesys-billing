@@ -90,6 +90,7 @@ export default function PurchaseEntry() {
   const [gstType, setGstType] = useState<"local" | "interstate" | "exempt">("local");
   const [showPartySearch, setShowPartySearch] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [selectedPurchaseForEdit, setSelectedPurchaseForEdit] = useState<any>(null);
 
   const { data: parties, isLoading: partiesLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
@@ -313,7 +314,7 @@ export default function PurchaseEntry() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
+          <TabsList className="grid w-full grid-cols-4 max-w-lg">
             <TabsTrigger value="entry" data-testid="tab-entry">
               <Plus className="mr-2 h-4 w-4" />
               New Entry
@@ -325,6 +326,10 @@ export default function PurchaseEntry() {
             <TabsTrigger value="list" data-testid="tab-list">
               <FileText className="mr-2 h-4 w-4" />
               All Purchases
+            </TabsTrigger>
+            <TabsTrigger value="edit" data-testid="tab-edit">
+              <Package className="mr-2 h-4 w-4" />
+              Edit Items
             </TabsTrigger>
           </TabsList>
 
@@ -748,11 +753,17 @@ export default function PurchaseEntry() {
                               )}
                             </TableCell>
                             <TableCell className="text-center flex gap-2 justify-center">
-                              <Button variant="ghost" size="sm" asChild data-testid={`button-edit-${purchase.id}`}>
-                                <Link href={`/stock-inward?purchaseId=${purchase.id}`}>
-                                  <Edit className="mr-1 h-4 w-4" />
-                                  Edit
-                                </Link>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                  setSelectedPurchaseForEdit(purchase);
+                                  setActiveTab("edit");
+                                }}
+                                data-testid={`button-edit-${purchase.id}`}
+                              >
+                                <Edit className="mr-1 h-4 w-4" />
+                                Edit Items
                               </Button>
                               <Button variant="ghost" size="sm" asChild data-testid={`button-view-${purchase.id}`}>
                                 <Link href={`/purchases/${purchase.id}`}>
@@ -769,6 +780,55 @@ export default function PurchaseEntry() {
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     No purchases found. Create your first purchase entry.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="edit" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit Stock Inward Items</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {selectedPurchaseForEdit ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-4 gap-4 bg-muted p-4 rounded-lg">
+                      <div>
+                        <Label className="text-xs">Purchase No</Label>
+                        <p className="font-semibold">#{selectedPurchaseForEdit.purchaseNo}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Invoice No</Label>
+                        <p className="font-semibold">{selectedPurchaseForEdit.invoiceNo || "-"}</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Supplier</Label>
+                        <p className="font-semibold">{selectedPurchaseForEdit.partyName}</p>
+                      </div>
+                      <div className="text-right">
+                        <Label className="text-xs">Amount</Label>
+                        <p className="font-semibold">₹{parseFloat(selectedPurchaseForEdit.amount || "0").toFixed(2)}</p>
+                      </div>
+                    </div>
+                    <div className="border-t pt-4">
+                      <Button 
+                        asChild 
+                        className="w-full"
+                        size="lg"
+                        data-testid="button-go-to-stock-inward"
+                      >
+                        <Link href={`/stock-inward?purchaseId=${selectedPurchaseForEdit.id}`}>
+                          <Package className="mr-2 h-4 w-4" />
+                          Open Stock Inward to Add/Edit Items
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p>Select a purchase from the "All Purchases" tab to edit stock inward items.</p>
                   </div>
                 )}
               </CardContent>
