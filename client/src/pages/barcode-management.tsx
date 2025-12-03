@@ -875,8 +875,30 @@ interface PrintBarcodeDialogProps {
   onSelectionChange: (selected: Set<number>) => void;
 }
 
+interface TemplateData {
+  id: number;
+  name: string;
+  labelWidth: number | string;
+  labelHeight: number | string;
+  config: string;
+}
+
 function PrintBarcodeDialog({ open, onOpenChange, items, selectedItems, onSelectionChange }: PrintBarcodeDialogProps) {
   const { toast } = useToast();
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
+  const { data: templates, isLoading: templatesLoading } = useQuery({
+    queryKey: ["/api/barcode-label-templates"],
+    enabled: open,
+  });
+
+  // Set default template on first load
+  React.useEffect(() => {
+    if (templates && templates.length > 0 && !selectedTemplateId) {
+      const defaultTemplate = templates.find((t: any) => t.isDefault) || templates[0];
+      setSelectedTemplateId(defaultTemplate.id);
+    }
+  }, [templates, selectedTemplateId]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -903,6 +925,13 @@ function PrintBarcodeDialog({ open, onOpenChange, items, selectedItems, onSelect
     }
 
     const selectedItemsList = items.filter(item => selectedItems.has(item.id));
+    const selectedTemplate = templates?.find((t: any) => t.id === selectedTemplateId);
+    
+    if (!selectedTemplate) {
+      toast({ title: "No template selected", description: "Please select a template to use", variant: "destructive" });
+      return;
+    }
+
     let printHtml = `
       <html>
         <head>
@@ -912,43 +941,67 @@ function PrintBarcodeDialog({ open, onOpenChange, items, selectedItems, onSelect
             body { margin: 0; font-family: Arial, sans-serif; }
             .label { 
               display: inline-block; 
-              width: 50mm; 
-              height: 25mm; 
+              width: ${selectedTemplate.labelWidth}mm; 
+              height: ${selectedTemplate.labelHeight}mm; 
               border: 1px solid #ccc; 
-              padding: 2mm; 
               margin: 2mm; 
               page-break-inside: avoid;
               position: relative;
               overflow: hidden;
               font-size: 10px;
             }
-            .barcode { font-size: 12px; font-weight: bold; letter-spacing: 2px; }
-            .item-name { font-size: 8px; font-weight: bold; }
-            .size { font-size: 9px; font-weight: bold; }
-            .rate { font-size: 11px; font-weight: bold; color: #d32f2f; }
-            .details { font-size: 7px; }
+            .element { position: absolute; }
           </style>
         </head>
         <body>
     `;
 
+    const templateConfig = JSON.parse(selectedTemplate.config);
+
     selectedItemsList.forEach(item => {
       const qty = item.qty ? parseInt(item.qty.toString()) : 1;
       for (let i = 0; i < qty; i++) {
-        printHtml += `
-          <div class="label">
-            <div class="barcode">${item.barcode}</div>
-            <div class="item-name">${item.itname}</div>
-            <div style="display: flex; justify-content: space-between;">
-              <span class="size">${item.size || '-'}</span>
-              ${item.brandname ? `<span style="font-size: 7px;">${item.brandname}</span>` : ''}
-            </div>
-            <div class="details" style="margin-top: 2mm;">
-              <div>₹ <span class="rate">${parseFloat(item.rate).toFixed(2)}</span></div>
-              <div style="font-size: 6px; color: #666;">MRP: ₹${parseFloat(item.mrp).toFixed(2)}</div>
-            </div>
-          </div>
-        `;
+        printHtml += `<div class="label" style="position: relative; width: ${selectedTemplate.labelWidth}mm; height: ${selectedTemplate.labelHeight}mm;">`;
+        
+        templateConfig.elements.forEach((el: any) => {
+          if (!el.visible) return;
+          
+          let value = "";
+          if (el.id === "barcode") value = item.barcode;
+          else if (el.id === "itemName") value = item.itname;
+          else if (el.id === "size") value = item.size || "-";
+          else if (el.id === "rate") {
+            const decimals = el.decimals !== undefined ? el.decimals : 2;
+            value = "₹ " + parseFloat(item.rate).toFixed(decimals);
+          }
+          else if (el.id === "mrp") {
+            const decimals = el.decimals !== undefined ? el.decimals : 2;
+            value = "₹ " + parseFloat(item.mrp).toFixed(decimals);
+          }
+          else if (el.id === "brand") value = item.brandname || "";
+          else if (el.id === "quality") value = item.quality || "";
+          else if (el.id === "cost") value = parseFloat(item.cost).toFixed(2);
+
+          if (value) {
+            const fontFamily = el.fontFamily || "Arial";
+            printHtml += `
+              <div class="element" style="
+                position: absolute;
+                left: ${el.x}mm;
+                top: ${el.y}mm;
+                font-size: ${el.fontSize}px;
+                font-family: ${fontFamily};
+                width: ${el.width || 20}mm;
+                height: ${el.height || 5}mm;
+                overflow: hidden;
+                white-space: nowrap;
+                word-wrap: break-word;
+              ">${value}</div>
+            `;
+          }
+        });
+        
+        printHtml += `</div>`;
       }
     });
 
@@ -976,6 +1029,22 @@ function PrintBarcodeDialog({ open, onOpenChange, items, selectedItems, onSelect
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="font-semibold">Select Label Template</Label>
+            <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(parseInt(val))}>
+              <SelectTrigger data-testid="select-template">
+                <SelectValue placeholder="Choose a template..." />
+              </SelectTrigger>
+              <SelectContent>
+                {templates?.map((template: any) => (
+                  <SelectItem key={template.id} value={template.id.toString()}>
+                    {template.name} {template.isDefault ? "(Default)" : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex items-center space-x-2 border-b pb-3">
             <Checkbox
               id="selectAll"
