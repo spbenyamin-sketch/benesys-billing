@@ -679,8 +679,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                 style={{
                   width: `${labelWidth * scale}px`,
                   height: `${labelHeight * scale}px`,
+                  position: "relative",
                 }}
-                className="relative bg-white"
               >
                 {/* Grid background */}
                 <div
