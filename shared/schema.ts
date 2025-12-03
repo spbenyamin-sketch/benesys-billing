@@ -343,6 +343,8 @@ export const purchases = pgTable("purchases", {
   // Calculated totals (updated from stock inward)
   totalQty: decimal("total_qty", { precision: 12, scale: 2 }).default("0").notNull(),
   amount: decimal("amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  beforeTaxAmount: decimal("before_tax_amount", { precision: 12, scale: 2 }).default("0").notNull(),
+  billTotalAmount: decimal("bill_total_amount", { precision: 12, scale: 2 }).default("0").notNull(),
   // Tax breakdown by rate
   val0: decimal("val_0", { precision: 12, scale: 2 }).default("0").notNull(),
   val5: decimal("val_5", { precision: 12, scale: 2 }).default("0").notNull(),
@@ -377,6 +379,9 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+}).extend({
+  beforeTaxAmount: z.string().or(z.number()).optional(),
+  billTotalAmount: z.string().or(z.number()).optional(),
 });
 
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
