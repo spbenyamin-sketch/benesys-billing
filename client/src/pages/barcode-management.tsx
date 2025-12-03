@@ -552,6 +552,11 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const [labelWidth, setLabelWidth] = useState(50);
   const [labelHeight, setLabelHeight] = useState(25);
   const [isDefault, setIsDefault] = useState(false);
+  const [labelsPerRow, setLabelsPerRow] = useState(2);
+  const [marginTop, setMarginTop] = useState(10);
+  const [marginBottom, setMarginBottom] = useState(10);
+  const [gapHorizontal, setGapHorizontal] = useState(2);
+  const [gapVertical, setGapVertical] = useState(2);
   const scale = 6; // Larger scale for display
   
   const elementTemplates: TemplateElement[] = [
@@ -629,12 +634,12 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
       name: templateName,
       labelWidth,
       labelHeight,
-      labelsPerRow: 4,
+      labelsPerRow,
       labelsPerColumn: 10,
-      marginTop: 10,
+      marginTop,
       marginLeft: 5,
-      gapHorizontal: 2,
-      gapVertical: 2,
+      gapHorizontal,
+      gapVertical,
       config,
       isDefault,
     });
@@ -665,6 +670,43 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
               <div className="flex-1">
                 <Label className="text-xs">Height (mm)</Label>
                 <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Math.max(1, parseInt(e.target.value) || 25))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-3 mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+              <div>
+                <Label className="text-xs">Top Margin (mm)</Label>
+                <Input type="number" value={marginTop} onChange={(e) => setMarginTop(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Bottom Margin (mm)</Label>
+                <Input type="number" value={marginBottom} onChange={(e) => setMarginBottom(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Horizontal Gap (mm)</Label>
+                <Input type="number" value={gapHorizontal} onChange={(e) => setGapHorizontal(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
+              </div>
+              <div>
+                <Label className="text-xs">Vertical Gap (mm)</Label>
+                <Input type="number" value={gapVertical} onChange={(e) => setGapVertical(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <Label className="text-xs font-semibold mb-2 block">Labels Per Row</Label>
+              <div className="flex gap-2">
+                {[2, 3, 4].map((num) => (
+                  <Button
+                    key={num}
+                    size="sm"
+                    variant={labelsPerRow === num ? "default" : "outline"}
+                    onClick={() => setLabelsPerRow(num)}
+                    data-testid={`button-labels-per-row-${num}`}
+                    className="flex-1"
+                  >
+                    {num} Across
+                  </Button>
+                ))}
               </div>
             </div>
 
