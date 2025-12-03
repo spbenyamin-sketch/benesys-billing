@@ -1,363 +1,403 @@
--- Store Management & Billing System
--- Database Schema for Offline Installation
--- PostgreSQL 14+
+-- Billing & Inventory Management System - Database Schema
+-- PostgreSQL 12+
+-- Complete schema with all 17 tables
 
--- Create database (run as superuser)
--- CREATE DATABASE store_billing;
+-- Create extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Extensions
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- ============================================================================
+-- AUTH TABLES
+-- ============================================================================
 
--- ===========================================
--- SESSIONS TABLE (for auth)
--- ===========================================
 CREATE TABLE IF NOT EXISTS sessions (
-    sid VARCHAR PRIMARY KEY,
-    sess JSONB NOT NULL,
-    expire TIMESTAMP NOT NULL
+  sid varchar PRIMARY KEY,
+  sess jsonb NOT NULL,
+  expire timestamp NOT NULL
 );
-CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON sessions (expire);
 
--- ===========================================
--- USERS TABLE
--- ===========================================
+CREATE INDEX IF NOT EXISTS idx_session_expire ON sessions(expire);
+
 CREATE TABLE IF NOT EXISTS users (
-    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    username VARCHAR(100) UNIQUE,
-    password_hash VARCHAR(255),
-    email VARCHAR UNIQUE,
-    first_name VARCHAR,
-    last_name VARCHAR,
-    profile_image_url VARCHAR,
-    role VARCHAR(20) NOT NULL DEFAULT 'user',
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+  id varchar PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  username varchar(100) UNIQUE,
+  password_hash varchar(255),
+  email varchar UNIQUE,
+  first_name varchar,
+  last_name varchar,
+  profile_image_url varchar,
+  role varchar(20) DEFAULT 'user' NOT NULL,
+  page_permissions jsonb DEFAULT '[]'::jsonb NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL
 );
 
--- ===========================================
--- COMPANIES TABLE
--- ===========================================
+-- ============================================================================
+-- COMPANY TABLES
+-- ============================================================================
+
 CREATE TABLE IF NOT EXISTS companies (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(200) NOT NULL,
-    address TEXT,
-    city VARCHAR(100),
-    state VARCHAR(100),
-    gst_no VARCHAR(50),
-    phone VARCHAR(50),
-    email VARCHAR(100),
-    logo_url TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
+  id serial PRIMARY KEY,
+  name varchar(200) NOT NULL,
+  address text,
+  city varchar(100),
+  state varchar(100),
+  gst_no varchar(50),
+  phone varchar(50),
+  email varchar(100),
+  logo_url text,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
 );
 
--- ===========================================
--- USER_COMPANIES TABLE
--- ===========================================
 CREATE TABLE IF NOT EXISTS user_companies (
-    id SERIAL PRIMARY KEY,
-    user_id VARCHAR NOT NULL REFERENCES users(id),
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    is_default BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+  id serial PRIMARY KEY,
+  user_id varchar REFERENCES users(id) NOT NULL,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  is_default boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
 );
 
--- ===========================================
--- AGENTS TABLE
--- ===========================================
+-- ============================================================================
+-- MASTER DATA TABLES
+-- ============================================================================
+
 CREATE TABLE IF NOT EXISTS agents (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    code INTEGER NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    phone VARCHAR(50),
-    email VARCHAR(100),
-    address TEXT,
-    city VARCHAR(100),
-    commission DECIMAL(5,2) NOT NULL DEFAULT 0,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    is_shared BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  code integer NOT NULL,
+  name varchar(200) NOT NULL,
+  phone varchar(50),
+  email varchar(100),
+  address text,
+  city varchar(100),
+  commission decimal(5,2) DEFAULT 0 NOT NULL,
+  active boolean DEFAULT true NOT NULL,
+  is_shared boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
 );
 
--- ===========================================
--- PARTIES TABLE
--- ===========================================
 CREATE TABLE IF NOT EXISTS parties (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    code VARCHAR(50) NOT NULL,
-    short_name VARCHAR(50),
-    name VARCHAR(200) NOT NULL,
-    address TEXT,
-    city VARCHAR(100) NOT NULL,
-    pincode VARCHAR(10) NOT NULL,
-    state VARCHAR(100),
-    state_code VARCHAR(10),
-    gst_no VARCHAR(50),
-    phone VARCHAR(50),
-    has_shipping_address BOOLEAN NOT NULL DEFAULT FALSE,
-    ship_name VARCHAR(200),
-    ship_address TEXT,
-    ship_city VARCHAR(100),
-    ship_pincode VARCHAR(10),
-    ship_state VARCHAR(100),
-    ship_state_code VARCHAR(10),
-    agent_id INTEGER REFERENCES agents(id),
-    opening_debit DECIMAL(12,2) NOT NULL DEFAULT 0,
-    opening_credit DECIMAL(12,2) NOT NULL DEFAULT 0,
-    is_shared BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  code varchar(50) NOT NULL,
+  short_name varchar(50),
+  name varchar(200) NOT NULL,
+  address text,
+  city varchar(100) NOT NULL,
+  pincode varchar(10) NOT NULL,
+  state varchar(100),
+  state_code varchar(10),
+  gst_no varchar(50),
+  phone varchar(50),
+  has_shipping_address boolean DEFAULT false NOT NULL,
+  ship_name varchar(200),
+  ship_address text,
+  ship_city varchar(100),
+  ship_pincode varchar(10),
+  ship_state varchar(100),
+  ship_state_code varchar(10),
+  agent_id integer REFERENCES agents(id),
+  opening_debit decimal(12,2) DEFAULT 0 NOT NULL,
+  opening_credit decimal(12,2) DEFAULT 0 NOT NULL,
+  is_shared boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
 );
 
--- ===========================================
--- ITEMS TABLE
--- ===========================================
 CREATE TABLE IF NOT EXISTS items (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    code VARCHAR(50) NOT NULL,
-    name VARCHAR(200) NOT NULL,
-    hsn_code VARCHAR(20),
-    category VARCHAR(100),
-    pack_type VARCHAR(50) NOT NULL DEFAULT 'PCS',
-    cost DECIMAL(12,2) NOT NULL DEFAULT 0,
-    mrp DECIMAL(12,2) NOT NULL DEFAULT 0,
-    gst DECIMAL(5,2) NOT NULL DEFAULT 0,
-    cess DECIMAL(5,2) NOT NULL DEFAULT 0,
-    discount DECIMAL(5,2) NOT NULL DEFAULT 0,
-    active BOOLEAN NOT NULL DEFAULT TRUE,
-    min_stock INTEGER DEFAULT 10,
-    is_shared BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  code varchar(50) NOT NULL,
+  name varchar(300) NOT NULL,
+  hsn_code varchar(50) NOT NULL,
+  category varchar(100),
+  floor varchar(50),
+  pack_type varchar(20) DEFAULT 'PCS' NOT NULL,
+  type varchar(10) DEFAULT 'P' NOT NULL,
+  cost decimal(12,2) DEFAULT 0 NOT NULL,
+  mrp decimal(12,2) DEFAULT 0 NOT NULL,
+  selling_price decimal(12,2) DEFAULT 0 NOT NULL,
+  tax decimal(5,2) DEFAULT 0 NOT NULL,
+  cgst decimal(5,3) DEFAULT 0 NOT NULL,
+  sgst decimal(5,3) DEFAULT 0 NOT NULL,
+  active boolean DEFAULT true NOT NULL,
+  is_shared boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
 );
 
--- ===========================================
--- PURCHASES TABLE
--- ===========================================
-CREATE TABLE IF NOT EXISTS purchases (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    invoice_no INTEGER NOT NULL,
-    party_id INTEGER REFERENCES parties(id),
-    party_name VARCHAR(200),
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    bill_no VARCHAR(50),
-    bill_date DATE,
-    eway_no VARCHAR(50),
-    eway_date DATE,
-    vehicle_no VARCHAR(50),
-    gst_type INTEGER DEFAULT 0,
-    total_qty DECIMAL(12,3) NOT NULL DEFAULT 0,
-    total_value DECIMAL(12,2) NOT NULL DEFAULT 0,
-    discount_total DECIMAL(12,2) NOT NULL DEFAULT 0,
-    tax_total DECIMAL(12,2) NOT NULL DEFAULT 0,
-    cgst_total DECIMAL(12,2) NOT NULL DEFAULT 0,
-    sgst_total DECIMAL(12,2) NOT NULL DEFAULT 0,
-    round_off DECIMAL(5,2) DEFAULT 0,
-    grand_total DECIMAL(12,2) NOT NULL DEFAULT 0,
-    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-    notes TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
+CREATE TABLE IF NOT EXISTS size_master (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  name varchar(50) NOT NULL,
+  sort_order integer DEFAULT 0 NOT NULL
 );
 
--- ===========================================
--- PURCHASE_ITEMS TABLE
--- ===========================================
-CREATE TABLE IF NOT EXISTS purchase_items (
-    id SERIAL PRIMARY KEY,
-    purchase_id INTEGER NOT NULL REFERENCES purchases(id) ON DELETE CASCADE,
-    item_id INTEGER REFERENCES items(id),
-    item_code VARCHAR(50),
-    item_name VARCHAR(200) NOT NULL,
-    hsn_code VARCHAR(20),
-    barcode VARCHAR(100),
-    pack_type VARCHAR(50),
-    quantity DECIMAL(12,3) NOT NULL,
-    free_qty DECIMAL(12,3) DEFAULT 0,
-    rate DECIMAL(12,2) NOT NULL,
-    mrp DECIMAL(12,2),
-    rrate DECIMAL(12,2),
-    discount DECIMAL(12,2) DEFAULT 0,
-    discount_percent DECIMAL(5,2) DEFAULT 0,
-    amount DECIMAL(12,2) NOT NULL,
-    tax DECIMAL(5,2) DEFAULT 0,
-    tax_value DECIMAL(12,2) DEFAULT 0,
-    cgst_rate DECIMAL(5,2) DEFAULT 0,
-    cgst DECIMAL(12,2) DEFAULT 0,
-    sgst_rate DECIMAL(5,2) DEFAULT 0,
-    sgst DECIMAL(12,2) DEFAULT 0,
-    net_amount DECIMAL(12,2) NOT NULL,
-    batch VARCHAR(50),
-    expiry DATE,
-    sold_qty DECIMAL(12,3) DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
+-- ============================================================================
+-- INVENTORY TABLES
+-- ============================================================================
 
--- ===========================================
--- SALES TABLE
--- ===========================================
-CREATE TABLE IF NOT EXISTS sales (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    invoice_no INTEGER NOT NULL,
-    bill_type VARCHAR(10) NOT NULL DEFAULT 'GST',
-    sale_type VARCHAR(20),
-    payment_mode VARCHAR(20),
-    inclusive_tax BOOLEAN DEFAULT FALSE,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    party_id INTEGER REFERENCES parties(id),
-    party_name VARCHAR(200),
-    party_city VARCHAR(100),
-    party_address TEXT,
-    party_gst_no VARCHAR(50),
-    mobile VARCHAR(50),
-    gst_type INTEGER DEFAULT 0,
-    sale_value DECIMAL(12,2) NOT NULL DEFAULT 0,
-    discount_total DECIMAL(12,2) DEFAULT 0,
-    tax_value DECIMAL(12,2) DEFAULT 0,
-    cgst_total DECIMAL(12,2) DEFAULT 0,
-    sgst_total DECIMAL(12,2) DEFAULT 0,
-    round_off DECIMAL(5,2) DEFAULT 0,
-    grand_total DECIMAL(12,2) NOT NULL,
-    total_qty DECIMAL(12,3) NOT NULL DEFAULT 0,
-    amount_given DECIMAL(12,2) DEFAULT 0,
-    amount_return DECIMAL(12,2) DEFAULT 0,
-    by_cash DECIMAL(12,2) DEFAULT 0,
-    by_card DECIMAL(12,2) DEFAULT 0,
-    print_outstanding BOOLEAN DEFAULT FALSE,
-    party_outstanding DECIMAL(12,2) DEFAULT 0,
-    notes TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
-);
-
--- ===========================================
--- SALE_ITEMS TABLE
--- ===========================================
-CREATE TABLE IF NOT EXISTS sale_items (
-    id SERIAL PRIMARY KEY,
-    sale_id INTEGER NOT NULL REFERENCES sales(id) ON DELETE CASCADE,
-    item_id INTEGER REFERENCES items(id),
-    purchase_item_id INTEGER REFERENCES purchase_items(id),
-    barcode VARCHAR(100),
-    item_code VARCHAR(50),
-    item_name VARCHAR(200) NOT NULL,
-    hsn_code VARCHAR(20),
-    quantity DECIMAL(12,3) NOT NULL,
-    rate DECIMAL(12,2) NOT NULL,
-    mrp DECIMAL(12,2),
-    discount DECIMAL(12,2) DEFAULT 0,
-    discount_percent DECIMAL(5,2) DEFAULT 0,
-    amount DECIMAL(12,2) NOT NULL,
-    sale_value DECIMAL(12,2) NOT NULL,
-    tax_value DECIMAL(12,2) DEFAULT 0,
-    tax DECIMAL(5,2) DEFAULT 0,
-    cgst DECIMAL(12,2) DEFAULT 0,
-    sgst DECIMAL(12,2) DEFAULT 0,
-    cgst_rate DECIMAL(5,2) DEFAULT 0,
-    sgst_rate DECIMAL(5,2) DEFAULT 0,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
-);
-
--- ===========================================
--- PAYMENTS TABLE
--- ===========================================
-CREATE TABLE IF NOT EXISTS payments (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    receipt_no INTEGER NOT NULL,
-    date DATE NOT NULL DEFAULT CURRENT_DATE,
-    type VARCHAR(20) NOT NULL,
-    party_id INTEGER REFERENCES parties(id),
-    party_name VARCHAR(200),
-    amount DECIMAL(12,2) NOT NULL,
-    mode VARCHAR(20) DEFAULT 'CASH',
-    reference VARCHAR(100),
-    notes TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    created_by VARCHAR REFERENCES users(id)
-);
-
--- ===========================================
--- STOCK TABLE
--- ===========================================
 CREATE TABLE IF NOT EXISTS stock (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    item_id INTEGER NOT NULL REFERENCES items(id),
-    quantity DECIMAL(12,3) NOT NULL DEFAULT 0,
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  item_id integer REFERENCES items(id) NOT NULL,
+  quantity decimal(12,3) DEFAULT 0 NOT NULL,
+  last_updated timestamp DEFAULT now() NOT NULL
 );
 
--- ===========================================
--- BILL_TEMPLATES TABLE
--- ===========================================
+CREATE TABLE IF NOT EXISTS purchase_items (
+  id serial PRIMARY KEY,
+  purchase_id integer NOT NULL,
+  item_id integer REFERENCES items(id),
+  serial integer NOT NULL,
+  itname varchar(300) NOT NULL,
+  brandname varchar(200),
+  name varchar(200),
+  cost decimal(12,2) NOT NULL,
+  qty decimal(12,2) NOT NULL,
+  pcs decimal(12,2) DEFAULT 0 NOT NULL,
+  rd decimal(12,2) DEFAULT 0 NOT NULL,
+  dis decimal(5,2) DEFAULT 0 NOT NULL,
+  rd1 decimal(12,2) DEFAULT 0 NOT NULL,
+  dis1 decimal(5,2) DEFAULT 0 NOT NULL,
+  ag decimal(5,2) DEFAULT 0 NOT NULL,
+  addc decimal(12,2) DEFAULT 0 NOT NULL,
+  ncost decimal(12,2) DEFAULT 0 NOT NULL,
+  lcost decimal(12,2) DEFAULT 0 NOT NULL,
+  netcost decimal(12,2) DEFAULT 0 NOT NULL,
+  tax decimal(5,2) DEFAULT 0 NOT NULL,
+  prft decimal(5,2) DEFAULT 0 NOT NULL,
+  rrate decimal(12,2) DEFAULT 0 NOT NULL,
+  mrp decimal(12,2) DEFAULT 0 NOT NULL,
+  arate decimal(12,2) DEFAULT 0 NOT NULL,
+  brate decimal(12,2) DEFAULT 0 NOT NULL,
+  profit decimal(12,2) DEFAULT 0 NOT NULL,
+  prper decimal(5,2) DEFAULT 0 NOT NULL,
+  quality varchar(100),
+  dno1 varchar(50),
+  pattern varchar(100),
+  sleeve varchar(100),
+  sl varchar(50),
+  size1 varchar(10),
+  size2 varchar(10),
+  jc varchar(1) DEFAULT 'J',
+  fv varchar(1) DEFAULT 'F',
+  s1 integer DEFAULT 0,
+  s2 integer DEFAULT 0,
+  s3 integer DEFAULT 0,
+  s4 integer DEFAULT 0,
+  s5 integer DEFAULT 0,
+  s6 integer DEFAULT 0,
+  s7 integer DEFAULT 0,
+  s8 integer DEFAULT 0,
+  s9 integer DEFAULT 0,
+  s10 integer DEFAULT 0,
+  s11 integer DEFAULT 0,
+  s12 integer DEFAULT 0,
+  r1 decimal(12,2) DEFAULT 0,
+  r2 decimal(12,2) DEFAULT 0,
+  r3 decimal(12,2) DEFAULT 0,
+  r4 decimal(12,2) DEFAULT 0,
+  r5 decimal(12,2) DEFAULT 0,
+  r6 decimal(12,2) DEFAULT 0,
+  r7 decimal(12,2) DEFAULT 0,
+  r8 decimal(12,2) DEFAULT 0,
+  r9 decimal(12,2) DEFAULT 0,
+  r10 decimal(12,2) DEFAULT 0,
+  r11 decimal(12,2) DEFAULT 0,
+  r12 decimal(12,2) DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS stock_inward_items (
+  id serial PRIMARY KEY,
+  purchase_item_id integer REFERENCES purchase_items(id),
+  company_id integer REFERENCES companies(id) NOT NULL,
+  item_id integer REFERENCES items(id) NOT NULL,
+  quantity_total decimal(12,3) NOT NULL,
+  quantity_received decimal(12,3) DEFAULT 0 NOT NULL,
+  barcode varchar(100),
+  mrp decimal(12,2) DEFAULT 0 NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+
+-- ============================================================================
+-- SALES TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS sales (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  invoice_no integer NOT NULL,
+  bill_type varchar(10) NOT NULL,
+  sale_type varchar(20) DEFAULT 'B2C' NOT NULL,
+  payment_mode varchar(10) DEFAULT 'CASH' NOT NULL,
+  inclusive_tax boolean DEFAULT false NOT NULL,
+  date date NOT NULL,
+  time varchar(10),
+  party_id integer REFERENCES parties(id),
+  party_name varchar(200),
+  party_city varchar(100),
+  party_address text,
+  party_gst_no varchar(50),
+  gst_type integer DEFAULT 0 NOT NULL,
+  sale_value decimal(12,2) DEFAULT 0 NOT NULL,
+  discount_total decimal(12,2) DEFAULT 0 NOT NULL,
+  tax_value decimal(12,2) DEFAULT 0 NOT NULL,
+  cgst_total decimal(12,2) DEFAULT 0 NOT NULL,
+  sgst_total decimal(12,2) DEFAULT 0 NOT NULL,
+  round_off decimal(12,2) DEFAULT 0 NOT NULL,
+  grand_total decimal(12,2) DEFAULT 0 NOT NULL,
+  total_qty decimal(12,3) DEFAULT 0 NOT NULL,
+  amount_given decimal(12,2) DEFAULT 0 NOT NULL,
+  amount_return decimal(12,2) DEFAULT 0 NOT NULL,
+  by_card decimal(12,2) DEFAULT 0 NOT NULL,
+  by_cash decimal(12,2) DEFAULT 0 NOT NULL,
+  print_outstanding boolean DEFAULT false NOT NULL,
+  party_outstanding decimal(12,2) DEFAULT 0 NOT NULL,
+  mobile varchar(20),
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS sale_items (
+  id serial PRIMARY KEY,
+  sale_id integer REFERENCES sales(id) NOT NULL,
+  item_id integer REFERENCES items(id),
+  purchase_item_id integer REFERENCES purchase_items(id),
+  stock_inward_id integer REFERENCES stock_inward_items(id),
+  item_code varchar(50),
+  barcode varchar(100),
+  item_name varchar(300) NOT NULL,
+  hsn_code varchar(50),
+  quality varchar(100),
+  size varchar(50),
+  quantity decimal(12,3) NOT NULL,
+  rate decimal(12,2) NOT NULL,
+  mrp decimal(12,2) DEFAULT 0 NOT NULL,
+  discount decimal(12,2) DEFAULT 0 NOT NULL,
+  discount_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  amount decimal(12,2) NOT NULL,
+  sale_value decimal(12,2) DEFAULT 0 NOT NULL,
+  tax_value decimal(12,2) DEFAULT 0 NOT NULL,
+  tax decimal(5,2) DEFAULT 0 NOT NULL,
+  cgst decimal(12,2) DEFAULT 0 NOT NULL,
+  sgst decimal(12,2) DEFAULT 0 NOT NULL,
+  cgst_rate decimal(5,3) DEFAULT 0 NOT NULL,
+  sgst_rate decimal(5,3) DEFAULT 0 NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL
+);
+
+-- ============================================================================
+-- PURCHASE TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS purchases (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  purchase_no integer NOT NULL,
+  date date NOT NULL,
+  invoice_no varchar(50),
+  party_id integer REFERENCES parties(id),
+  party_name varchar(200),
+  city varchar(100),
+  invoice_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  discount_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  packing_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  other_charges decimal(12,2) DEFAULT 0 NOT NULL,
+  profit_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  rst_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  surcharge_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  total_qty decimal(12,2) DEFAULT 0 NOT NULL,
+  amount decimal(12,2) DEFAULT 0 NOT NULL,
+  before_tax_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  bill_total_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  val_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  status varchar(20) DEFAULT 'pending' NOT NULL,
+  stock_inward_completed boolean DEFAULT false NOT NULL,
+  details text,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
+);
+
+-- ============================================================================
+-- PAYMENT & CONFIGURATION TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS payments (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  party_id integer REFERENCES parties(id) NOT NULL,
+  payment_type varchar(20) NOT NULL,
+  mode varchar(20) DEFAULT 'CASH' NOT NULL,
+  amount decimal(12,2) NOT NULL,
+  date date NOT NULL,
+  reference_no varchar(100),
+  notes text,
+  created_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS bill_templates (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    name VARCHAR(100) NOT NULL,
-    format_type VARCHAR(20) NOT NULL DEFAULT 'A4',
-    assigned_to VARCHAR(20),
-    logo_url TEXT,
-    header_text TEXT,
-    footer_text TEXT,
-    show_tax_breakup BOOLEAN NOT NULL DEFAULT TRUE,
-    show_hsn_code BOOLEAN NOT NULL DEFAULT TRUE,
-    show_item_code BOOLEAN NOT NULL DEFAULT FALSE,
-    show_outstanding_default BOOLEAN NOT NULL DEFAULT TRUE,
-    show_cash_return BOOLEAN NOT NULL DEFAULT TRUE,
-    show_party_balance BOOLEAN NOT NULL DEFAULT FALSE,
-    show_bank_details BOOLEAN NOT NULL DEFAULT FALSE,
-    bank_details TEXT,
-    terms_and_conditions TEXT,
-    paper_size VARCHAR(20) NOT NULL DEFAULT 'A4',
-    font_size INTEGER NOT NULL DEFAULT 10,
-    is_default BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  name varchar(200) NOT NULL,
+  is_default boolean DEFAULT false NOT NULL,
+  template_data jsonb NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
 );
 
--- ===========================================
--- INVOICE COUNTERS TABLE
--- ===========================================
-CREATE TABLE IF NOT EXISTS invoice_counters (
-    id SERIAL PRIMARY KEY,
-    company_id INTEGER NOT NULL REFERENCES companies(id),
-    counter_type VARCHAR(20) NOT NULL,
-    current_value INTEGER NOT NULL DEFAULT 0,
-    prefix VARCHAR(20),
-    financial_year VARCHAR(10),
-    updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE(company_id, counter_type, financial_year)
+CREATE TABLE IF NOT EXISTS barcode_label_templates (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  name varchar(200) NOT NULL,
+  is_default boolean DEFAULT false NOT NULL,
+  template_data jsonb NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
 );
 
--- ===========================================
--- INDEXES FOR PERFORMANCE
--- ===========================================
-CREATE INDEX IF NOT EXISTS idx_parties_company ON parties(company_id);
-CREATE INDEX IF NOT EXISTS idx_items_company ON items(company_id);
-CREATE INDEX IF NOT EXISTS idx_purchases_company ON purchases(company_id);
-CREATE INDEX IF NOT EXISTS idx_sales_company ON sales(company_id);
+-- ============================================================================
+-- INDEXES
+-- ============================================================================
+
+CREATE INDEX IF NOT EXISTS idx_parties_company_id ON parties(company_id);
+CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id);
+CREATE INDEX IF NOT EXISTS idx_stock_company_id ON stock(company_id);
+CREATE INDEX IF NOT EXISTS idx_sales_company_id ON sales(company_id);
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
-CREATE INDEX IF NOT EXISTS idx_payments_company ON payments(company_id);
-CREATE INDEX IF NOT EXISTS idx_stock_company ON stock(company_id);
-CREATE INDEX IF NOT EXISTS idx_purchase_items_barcode ON purchase_items(barcode);
+CREATE INDEX IF NOT EXISTS idx_purchases_company_id ON purchases(company_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date);
+CREATE INDEX IF NOT EXISTS idx_payments_company_id ON payments(company_id);
 
--- ===========================================
--- INITIAL DATA (Optional)
--- ===========================================
--- You can add initial data like default templates, sample categories etc. here
-
-COMMENT ON DATABASE store_billing IS 'Store Management & Billing System Database';
+-- ============================================================================
+-- SETUP COMPLETE - 17 TABLES CREATED
+-- ============================================================================
