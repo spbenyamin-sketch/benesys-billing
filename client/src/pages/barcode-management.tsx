@@ -568,7 +568,36 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
     { id: "brand", type: "text", label: "Brand", x: 2, y: 20, fontSize: 6, fontFamily: "Arial", visible: false },
     { id: "quality", type: "text", label: "Quality", x: 2, y: 22, fontSize: 6, fontFamily: "Arial", visible: false },
     { id: "cost", type: "text", label: "Cost", x: 15, y: 20, fontSize: 7, fontFamily: "Arial", visible: false },
+    { id: "ncost", type: "text", label: "Net Cost", x: 2, y: 24, fontSize: 6, fontFamily: "Arial", decimals: 2, visible: false },
+    { id: "lcost", type: "text", label: "Last Cost", x: 2, y: 26, fontSize: 6, fontFamily: "Arial", decimals: 2, visible: false },
+    { id: "tax", type: "text", label: "Tax %", x: 2, y: 28, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "dno1", type: "text", label: "Design No", x: 2, y: 30, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "pattern", type: "text", label: "Pattern", x: 2, y: 32, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "sleeve", type: "text", label: "Sleeve", x: 2, y: 34, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "sizeCode", type: "text", label: "Size Code", x: 2, y: 36, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "serial", type: "text", label: "Serial", x: 2, y: 38, fontSize: 6, fontFamily: "Arial", visible: false },
+    { id: "status", type: "text", label: "Status", x: 2, y: 40, fontSize: 6, fontFamily: "Arial", visible: false },
   ];
+
+  const sampleData = {
+    barcode: "8901234567890",
+    itname: "Sample Product",
+    size: "M",
+    rate: "499.00",
+    mrp: "699.00",
+    brand: "ABC Brand",
+    quality: "Premium",
+    cost: "350.00",
+    ncost: "340.00",
+    lcost: "345.00",
+    tax: "12",
+    dno1: "DN-001",
+    pattern: "Striped",
+    sleeve: "Half",
+    sizeCode: "49",
+    serial: "001",
+    status: "Active",
+  };
 
   const [elements, setElements] = useState<TemplateElement[]>(elementTemplates);
   const [selectedElement, setSelectedElement] = useState<string | null>("barcode");
@@ -654,7 +683,56 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
           <DialogTitle>Label Designer - Visual Template Editor</DialogTitle>
         </DialogHeader>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-5 gap-4">
+          {/* Preview - Left Side */}
+          <div className="border rounded-lg p-3 bg-white flex flex-col">
+            <div className="font-semibold text-sm mb-3">Preview</div>
+            <div className="flex-1 border-2 border-dashed border-gray-300 rounded p-2 bg-gray-50 relative" style={{ aspectRatio: `${labelWidth}/${labelHeight}` }}>
+              {elements.filter(el => el.visible).map((el) => {
+                let value = "";
+                if (el.id === "barcode") value = sampleData.barcode;
+                else if (el.id === "itemName") value = sampleData.itname;
+                else if (el.id === "size") value = sampleData.size;
+                else if (el.id === "rate") value = "₹ " + parseFloat(sampleData.rate).toFixed(el.decimals ?? 2);
+                else if (el.id === "mrp") value = "₹ " + parseFloat(sampleData.mrp).toFixed(el.decimals ?? 2);
+                else if (el.id === "brand") value = sampleData.brand;
+                else if (el.id === "quality") value = sampleData.quality;
+                else if (el.id === "cost") value = parseFloat(sampleData.cost).toFixed(2);
+                else if (el.id === "ncost") value = parseFloat(sampleData.ncost).toFixed(el.decimals ?? 2);
+                else if (el.id === "lcost") value = parseFloat(sampleData.lcost).toFixed(el.decimals ?? 2);
+                else if (el.id === "tax") value = sampleData.tax + "%";
+                else if (el.id === "dno1") value = sampleData.dno1;
+                else if (el.id === "pattern") value = sampleData.pattern;
+                else if (el.id === "sleeve") value = sampleData.sleeve;
+                else if (el.id === "sizeCode") value = sampleData.sizeCode;
+                else if (el.id === "serial") value = sampleData.serial;
+                else if (el.id === "status") value = sampleData.status;
+
+                const widthPercent = labelWidth > 0 ? (el.width || 20) / labelWidth * 100 : 100;
+                const heightPercent = labelHeight > 0 ? (el.height || 5) / labelHeight * 100 : 100;
+                const xPercent = labelWidth > 0 ? el.x / labelWidth * 100 : 0;
+                const yPercent = labelHeight > 0 ? el.y / labelHeight * 100 : 0;
+
+                return (
+                  <div key={el.id} style={{
+                    position: "absolute",
+                    left: `${xPercent}%`,
+                    top: `${yPercent}%`,
+                    width: `${widthPercent}%`,
+                    height: `${heightPercent}%`,
+                    fontSize: `${Math.max(6, el.fontSize * 0.6)}px`,
+                    fontFamily: el.fontFamily || "Arial",
+                    overflow: "hidden",
+                    whiteSpace: "nowrap",
+                    border: "0.5px solid #ddd",
+                  }}>
+                    <span className="text-gray-700">{value}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Canvas - Main Area */}
           <div className="col-span-3 border rounded-lg p-4 bg-gray-50">
             <div className="flex flex-col gap-2 mb-4">
