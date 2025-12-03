@@ -103,6 +103,8 @@ export default function StockInward() {
   );
   const [barcodePrefix, setBarcodePrefix] = useState("SKR");
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [showItemSearch, setShowItemSearch] = useState(false);
+  const [selectedLineItemTempId, setSelectedLineItemTempId] = useState<string | null>(null);
   
   // Barcode generation mode dialog
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
@@ -111,6 +113,10 @@ export default function StockInward() {
 
   const { data: pendingPurchases } = useQuery<Purchase[]>({
     queryKey: ["/api/pending-purchases"],
+  });
+
+  const { data: items, isLoading: itemsLoading } = useQuery<Item[]>({
+    queryKey: ["/api/items"],
   });
 
   const getCompanyHeader = (): Record<string, string> => {
@@ -1168,6 +1174,21 @@ export default function StockInward() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Item Search Modal */}
+      {showItemSearch && items && (
+        <ItemSearchModal
+          items={items}
+          isOpen={showItemSearch}
+          onClose={() => setShowItemSearch(false)}
+          onSelectItem={(item) => {
+            form.setValue("itemId", item.id);
+            form.setValue("itname", item.name);
+            form.setValue("hsn", item.hsnCode || "");
+            setShowItemSearch(false);
+          }}
+        />
+      )}
     </div>
   );
 }
