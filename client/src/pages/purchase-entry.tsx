@@ -11,10 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, FileText, Eye, Truck, ChevronRight, Package } from "lucide-react";
+import { Plus, FileText, Eye, Truck, ChevronRight, Package, Edit } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { Link } from "wouter";
 
@@ -89,6 +90,8 @@ export default function PurchaseEntry() {
   const [gstType, setGstType] = useState<"local" | "interstate" | "exempt">("local");
   const [showPartySearch, setShowPartySearch] = useState(false);
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [editingPurchase, setEditingPurchase] = useState<any>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const { data: parties, isLoading: partiesLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
@@ -250,6 +253,40 @@ export default function PurchaseEntry() {
       toast({
         title: "Error",
         description: error.message || "Failed to create purchase entry",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePurchaseMutation = useMutation({
+    mutationFn: async (data: PurchaseEntryForm) => {
+      const res = await apiRequest("PUT", `/api/purchase-entries/${editingPurchase.id}`, {
+        ...data,
+        totalQty: data.totalQty || "0",
+        amount: data.amount || "0",
+        beforeTaxAmount: data.beforeTaxAmount || "0",
+        billTotalAmount: data.billTotalAmount || "0",
+        cgst: data.cgst || "0",
+        sgst: data.sgst || "0",
+        igst: data.igst || "0",
+        cess: data.cess || "0",
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Success", 
+        description: "Purchase Entry updated successfully." 
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pending-purchases"] });
+      setShowEditDialog(false);
+      setEditingPurchase(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update purchase entry",
         variant: "destructive",
       });
     },
@@ -745,7 +782,19 @@ export default function PurchaseEntry() {
                                 <Badge variant="secondary">Pending</Badge>
                               )}
                             </TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="text-center flex gap-2 justify-center">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => {
+                                  setEditingPurchase(purchase);
+                                  setShowEditDialog(true);
+                                }}
+                                data-testid={`button-edit-${purchase.id}`}
+                              >
+                                <Edit className="mr-1 h-4 w-4" />
+                                Edit
+                              </Button>
                               <Button variant="ghost" size="sm" asChild data-testid={`button-view-${purchase.id}`}>
                                 <Link href={`/purchases/${purchase.id}`}>
                                   <Eye className="mr-1 h-4 w-4" />
@@ -781,6 +830,107 @@ export default function PurchaseEntry() {
           onClose={() => setShowPartySearch(false)}
           title="Search & Select Supplier"
         />
+
+        {/* Edit Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Edit Purchase Entry #{editingPurchase?.purchaseNo}</DialogTitle>
+            </DialogHeader>
+            {editingPurchase && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Total Quantity</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      defaultValue={editingPurchase.totalQty || "0"}
+                      onChange={(e) => setEditingPurchase({ ...editingPurchase, totalQty: e.target.value })}
+                      data-testid="input-edit-totalQty"
+                    />
+                  </div>
+                  <div>
+                    <Label>Amount (Before Tax)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      defaultValue={editingPurchase.amount || "0"}
+                      onChange={(e) => setEditingPurchase({ ...editingPurchase, amount: e.target.value })}
+                      data-testid="input-edit-amount"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Before Tax Amount</Label>
+                    <Input
+                      type="text"
+                      disabled
+                      value={editingPurchase.beforeTaxAmount || "0"}
+                      className="bg-muted"
+                      data-testid="input-edit-beforeTaxAmount"
+                    />
+                  </div>
+                  <div>
+                    <Label>Bill Total Amount</Label>
+                    <Input
+                      type="text"
+                      disabled
+                      value={editingPurchase.billTotalAmount || "0"}
+                      className="bg-muted"
+                      data-testid="input-edit-billTotalAmount"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <Label>CGST</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      defaultValue={editingPurchase.cgst || "0"}
+                      onChange={(e) => setEditingPurchase({ ...editingPurchase, cgst: e.target.value })}
+                      data-testid="input-edit-cgst"
+                    />
+                  </div>
+                  <div>
+                    <Label>SGST</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      defaultValue={editingPurchase.sgst || "0"}
+                      onChange={(e) => setEditingPurchase({ ...editingPurchase, sgst: e.target.value })}
+                      data-testid="input-edit-sgst"
+                    />
+                  </div>
+                  <div>
+                    <Label>IGST</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      defaultValue={editingPurchase.igst || "0"}
+                      onChange={(e) => setEditingPurchase({ ...editingPurchase, igst: e.target.value })}
+                      data-testid="input-edit-igst"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 justify-end pt-4">
+                  <Button variant="outline" onClick={() => setShowEditDialog(false)} data-testid="button-edit-cancel">
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={() => updatePurchaseMutation.mutate(editingPurchase as PurchaseEntryForm)}
+                    disabled={updatePurchaseMutation.isPending}
+                    data-testid="button-edit-save"
+                  >
+                    {updatePurchaseMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
