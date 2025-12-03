@@ -61,6 +61,8 @@ interface Purchase {
   partyName: string | null;
   city: string | null;
   amount: string;
+  beforeTaxAmount?: string;
+  billTotalAmount?: string;
   totalQty: string;
   stockInwardCompleted: boolean;
 }

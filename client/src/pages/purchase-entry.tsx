@@ -184,6 +184,8 @@ export default function PurchaseEntry() {
         partyName: party?.name || data.partyName || "",
         city: party?.city || data.city || "",
         amount: data.amount || "0",
+        beforeTaxAmount: data.beforeTaxAmount || "0",
+        billTotalAmount: data.billTotalAmount || "0",
         totalQty: data.totalQty || "0",
         cgst: data.cgst || "0",
         sgst: data.sgst || "0",
@@ -448,6 +450,31 @@ export default function PurchaseEntry() {
                       </div>
                     </div>
                   )}
+
+                  <div className="grid grid-cols-2 gap-4 bg-muted p-4 rounded-lg">
+                    <div>
+                      <Label htmlFor="beforeTaxAmount" className="font-semibold">Before Tax Amount</Label>
+                      <Input
+                        id="beforeTaxAmount"
+                        type="text"
+                        {...form.register("beforeTaxAmount")}
+                        disabled
+                        className="bg-background"
+                        data-testid="input-before-tax-amount"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="billTotalAmount" className="font-semibold">Bill Total Amount</Label>
+                      <Input
+                        id="billTotalAmount"
+                        type="text"
+                        {...form.register("billTotalAmount")}
+                        disabled
+                        className="bg-background"
+                        data-testid="input-bill-total-amount"
+                      />
+                    </div>
+                  </div>
 
                   <div className="border-t pt-6">
                     <h3 className="text-lg font-semibold mb-4">Tax Rates Breakdown (Tally Import)</h3>
