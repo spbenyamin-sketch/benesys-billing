@@ -540,6 +540,7 @@ interface TemplateElement {
   fontSize: number;
   fontFamily?: string;
   barcodeType?: string;
+  decimals?: number;
   visible: boolean;
   width?: number;
   height?: number;
@@ -557,8 +558,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
     { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, fontFamily: "Arial", barcodeType: "CODE128", visible: true, width: 46, height: 8 },
     { id: "itemName", type: "text", label: "Item Name", x: 2, y: 11, fontSize: 8, fontFamily: "Arial", visible: true },
     { id: "size", type: "text", label: "Size", x: 2, y: 14, fontSize: 8, fontFamily: "Arial", visible: true },
-    { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, fontFamily: "Arial", visible: true },
-    { id: "mrp", type: "text", label: "MRP", x: 25, y: 17, fontSize: 8, fontFamily: "Arial", visible: true },
+    { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, fontFamily: "Arial", decimals: 0, visible: true },
+    { id: "mrp", type: "text", label: "MRP", x: 25, y: 17, fontSize: 8, fontFamily: "Arial", decimals: 0, visible: true },
     { id: "brand", type: "text", label: "Brand", x: 2, y: 20, fontSize: 6, fontFamily: "Arial", visible: false },
     { id: "quality", type: "text", label: "Quality", x: 2, y: 22, fontSize: 6, fontFamily: "Arial", visible: false },
     { id: "cost", type: "text", label: "Cost", x: 15, y: 20, fontSize: 7, fontFamily: "Arial", visible: false },
@@ -832,6 +833,20 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                       <option value="PDF417">PDF417</option>
                       <option value="DATAMATRIX">Data Matrix</option>
                     </select>
+                  </div>
+                )}
+                {(selectedElConfig.id === "rate" || selectedElConfig.id === "mrp" || selectedElConfig.id === "cost") && (
+                  <div>
+                    <Label className="text-xs">Decimal Places</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="4"
+                      value={selectedElConfig.decimals ?? 2}
+                      onChange={(e) => updateElement(selectedElConfig.id, { decimals: parseInt(e.target.value) || 0 })}
+                      className="text-xs"
+                      data-testid="input-decimals"
+                    />
                   </div>
                 )}
               </div>
