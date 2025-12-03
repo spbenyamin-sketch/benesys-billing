@@ -51,6 +51,7 @@ interface User {
   firstName?: string;
   lastName?: string;
   role: string;
+  pagePermissions?: string[];
   createdAt: string;
 }
 
@@ -66,6 +67,21 @@ interface UserCompany {
   company: Company;
 }
 
+const PAGE_OPTIONS = [
+  { id: "dashboard", label: "Dashboard", icon: "📊" },
+  { id: "parties", label: "Parties", icon: "👥" },
+  { id: "items", label: "Items", icon: "📦" },
+  { id: "agents", label: "Agents", icon: "🤝" },
+  { id: "sales", label: "Sales (B2B/B2C)", icon: "💼" },
+  { id: "purchases", label: "Purchases", icon: "🛒" },
+  { id: "stock", label: "Stock", icon: "📊" },
+  { id: "payments", label: "Payments", icon: "💰" },
+  { id: "reports", label: "Reports", icon: "📈" },
+  { id: "barcode-management", label: "Barcode Management", icon: "📱" },
+  { id: "bill-settings", label: "Bill Settings", icon: "⚙️" },
+  { id: "users", label: "User Management", icon: "👤" },
+];
+
 const createUserSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -73,6 +89,7 @@ const createUserSchema = z.object({
   lastName: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
   role: z.enum(["user", "admin"]),
+  pagePermissions: z.array(z.string()).optional(),
   companyIds: z.array(z.number()).optional(),
 });
 
@@ -127,6 +144,7 @@ export default function UserManagement() {
       lastName: "",
       email: "",
       role: "user",
+      pagePermissions: [],
       companyIds: [],
     },
   });
@@ -407,6 +425,52 @@ export default function UserManagement() {
                           <SelectItem value="admin">Super Admin</SelectItem>
                         </SelectContent>
                       </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="pagePermissions"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Page Access Permissions</FormLabel>
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded">
+                        {PAGE_OPTIONS.map((page) => (
+                          <FormField
+                            key={page.id}
+                            control={form.control}
+                            name="pagePermissions"
+                            render={({ field }) => {
+                              return (
+                                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(page.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([
+                                              ...(field.value || []),
+                                              page.id,
+                                            ])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== page.id
+                                              )
+                                            );
+                                      }}
+                                      data-testid={`checkbox-page-${page.id}`}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal text-xs">
+                                    {page.label}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}

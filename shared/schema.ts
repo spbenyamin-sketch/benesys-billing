@@ -41,6 +41,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role", { length: 20 }).default("user").notNull(), // user, admin, agent
+  pagePermissions: jsonb("page_permissions").default(sql`'[]'::jsonb`).notNull(), // Array of accessible page routes
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
