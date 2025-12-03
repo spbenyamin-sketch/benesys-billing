@@ -207,6 +207,11 @@ export default function PurchaseEntry() {
         stax12: data.stax12 || "0",
         stax18: data.stax18 || "0",
         stax28: data.stax28 || "0",
+        itax0: data.itax0 || "0",
+        itax5: data.itax5 || "0",
+        itax12: data.itax12 || "0",
+        itax18: data.itax18 || "0",
+        itax28: data.itax28 || "0",
       });
       return res.json();
     },
