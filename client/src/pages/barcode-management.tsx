@@ -520,12 +520,32 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const [marginLeft, setMarginLeft] = useState("5");
   const [gapH, setGapH] = useState("2");
   const [gapV, setGapV] = useState("2");
+  
+  // Basic fields
   const [showBarcode, setShowBarcode] = useState(true);
   const [showItemName, setShowItemName] = useState(true);
   const [showSize, setShowSize] = useState(true);
   const [showRate, setShowRate] = useState(true);
   const [showMrp, setShowMrp] = useState(true);
   const [showBrand, setShowBrand] = useState(false);
+  
+  // Attribute fields
+  const [showQuality, setShowQuality] = useState(false);
+  const [showPattern, setShowPattern] = useState(false);
+  const [showSleeve, setShowSleeve] = useState(false);
+  const [showDno1, setShowDno1] = useState(false);
+  
+  // Cost fields
+  const [showCost, setShowCost] = useState(false);
+  const [showNcost, setShowNcost] = useState(false);
+  const [showLcost, setShowLcost] = useState(false);
+  
+  // Additional fields
+  const [showTax, setShowTax] = useState(false);
+  const [showStatus, setShowStatus] = useState(false);
+  const [showPurchaseNo, setShowPurchaseNo] = useState(false);
+  const [showSerial, setShowSerial] = useState(false);
+  
   const [isDefault, setIsDefault] = useState(false);
 
   const { data: templates, refetch: refetchTemplates } = useQuery({
@@ -549,12 +569,23 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const handleSaveTemplate = () => {
     const config = JSON.stringify({
       elements: [
+        { type: "serial", visible: showSerial, x: 5, y: 2, fontSize: 6 },
+        { type: "purchaseNo", visible: showPurchaseNo, x: 35, y: 2, fontSize: 6 },
         { type: "barcode", visible: showBarcode, x: 5, y: 5, width: 40, height: 10 },
         { type: "itemName", visible: showItemName, x: 5, y: 16, fontSize: 8 },
+        { type: "brand", visible: showBrand, x: 5, y: 12, fontSize: 6 },
+        { type: "quality", visible: showQuality, x: 5, y: 14, fontSize: 6 },
+        { type: "pattern", visible: showPattern, x: 15, y: 14, fontSize: 6 },
+        { type: "sleeve", visible: showSleeve, x: 25, y: 14, fontSize: 6 },
+        { type: "dno1", visible: showDno1, x: 35, y: 14, fontSize: 6 },
         { type: "size", visible: showSize, x: 35, y: 16, fontSize: 8 },
+        { type: "cost", visible: showCost, x: 5, y: 18, fontSize: 7 },
+        { type: "ncost", visible: showNcost, x: 15, y: 18, fontSize: 7 },
+        { type: "lcost", visible: showLcost, x: 25, y: 18, fontSize: 7 },
+        { type: "tax", visible: showTax, x: 35, y: 18, fontSize: 7 },
         { type: "rate", visible: showRate, x: 5, y: 20, fontSize: 10 },
         { type: "mrp", visible: showMrp, x: 30, y: 20, fontSize: 10 },
-        { type: "brand", visible: showBrand, x: 5, y: 12, fontSize: 6 },
+        { type: "status", visible: showStatus, x: 5, y: 22, fontSize: 6 },
       ],
     });
 
@@ -686,98 +717,229 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
           </TabsContent>
 
           <TabsContent value="content" className="space-y-4">
-            <div className="space-y-3">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="showBarcode"
-                  checked={showBarcode}
-                  onCheckedChange={(checked) => setShowBarcode(checked as boolean)}
-                />
-                <Label htmlFor="showBarcode">Show Barcode</Label>
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-3">
+                <div className="font-semibold text-sm mb-3">Reference Fields</div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showSerial"
+                    checked={showSerial}
+                    onCheckedChange={(checked) => setShowSerial(checked as boolean)}
+                  />
+                  <Label htmlFor="showSerial">Show Serial Number</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showPurchaseNo"
+                    checked={showPurchaseNo}
+                    onCheckedChange={(checked) => setShowPurchaseNo(checked as boolean)}
+                  />
+                  <Label htmlFor="showPurchaseNo">Show Purchase Number</Label>
+                </div>
+
+                <div className="font-semibold text-sm mb-3 mt-4">Basic Info</div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showBarcode"
+                    checked={showBarcode}
+                    onCheckedChange={(checked) => setShowBarcode(checked as boolean)}
+                  />
+                  <Label htmlFor="showBarcode">Show Barcode</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showItemName"
+                    checked={showItemName}
+                    onCheckedChange={(checked) => setShowItemName(checked as boolean)}
+                  />
+                  <Label htmlFor="showItemName">Show Item Name</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showBrand"
+                    checked={showBrand}
+                    onCheckedChange={(checked) => setShowBrand(checked as boolean)}
+                  />
+                  <Label htmlFor="showBrand">Show Brand</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showSize"
+                    checked={showSize}
+                    onCheckedChange={(checked) => setShowSize(checked as boolean)}
+                  />
+                  <Label htmlFor="showSize">Show Size</Label>
+                </div>
+
+                <div className="font-semibold text-sm mb-3 mt-4">Attributes</div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showQuality"
+                    checked={showQuality}
+                    onCheckedChange={(checked) => setShowQuality(checked as boolean)}
+                  />
+                  <Label htmlFor="showQuality">Show Quality</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showPattern"
+                    checked={showPattern}
+                    onCheckedChange={(checked) => setShowPattern(checked as boolean)}
+                  />
+                  <Label htmlFor="showPattern">Show Pattern</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showSleeve"
+                    checked={showSleeve}
+                    onCheckedChange={(checked) => setShowSleeve(checked as boolean)}
+                  />
+                  <Label htmlFor="showSleeve">Show Sleeve</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showDno1"
+                    checked={showDno1}
+                    onCheckedChange={(checked) => setShowDno1(checked as boolean)}
+                  />
+                  <Label htmlFor="showDno1">Show Design Number</Label>
+                </div>
+
+                <div className="font-semibold text-sm mb-3 mt-4">Pricing</div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showCost"
+                    checked={showCost}
+                    onCheckedChange={(checked) => setShowCost(checked as boolean)}
+                  />
+                  <Label htmlFor="showCost">Show Cost Price</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showNcost"
+                    checked={showNcost}
+                    onCheckedChange={(checked) => setShowNcost(checked as boolean)}
+                  />
+                  <Label htmlFor="showNcost">Show Net Cost</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showLcost"
+                    checked={showLcost}
+                    onCheckedChange={(checked) => setShowLcost(checked as boolean)}
+                  />
+                  <Label htmlFor="showLcost">Show Last Cost</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showTax"
+                    checked={showTax}
+                    onCheckedChange={(checked) => setShowTax(checked as boolean)}
+                  />
+                  <Label htmlFor="showTax">Show Tax %</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showRate"
+                    checked={showRate}
+                    onCheckedChange={(checked) => setShowRate(checked as boolean)}
+                  />
+                  <Label htmlFor="showRate">Show Selling Rate</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showMrp"
+                    checked={showMrp}
+                    onCheckedChange={(checked) => setShowMrp(checked as boolean)}
+                  />
+                  <Label htmlFor="showMrp">Show MRP</Label>
+                </div>
+
+                <div className="font-semibold text-sm mb-3 mt-4">Status</div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showStatus"
+                    checked={showStatus}
+                    onCheckedChange={(checked) => setShowStatus(checked as boolean)}
+                  />
+                  <Label htmlFor="showStatus">Show Item Status</Label>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="showItemName"
-                  checked={showItemName}
-                  onCheckedChange={(checked) => setShowItemName(checked as boolean)}
-                />
-                <Label htmlFor="showItemName">Show Item Name</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="showBrand"
-                  checked={showBrand}
-                  onCheckedChange={(checked) => setShowBrand(checked as boolean)}
-                />
-                <Label htmlFor="showBrand">Show Brand</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="showSize"
-                  checked={showSize}
-                  onCheckedChange={(checked) => setShowSize(checked as boolean)}
-                />
-                <Label htmlFor="showSize">Show Size</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="showRate"
-                  checked={showRate}
-                  onCheckedChange={(checked) => setShowRate(checked as boolean)}
-                />
-                <Label htmlFor="showRate">Show Selling Rate</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="showMrp"
-                  checked={showMrp}
-                  onCheckedChange={(checked) => setShowMrp(checked as boolean)}
-                />
-                <Label htmlFor="showMrp">Show MRP</Label>
-              </div>
-            </div>
+            </ScrollArea>
           </TabsContent>
 
           <TabsContent value="preview">
             <div className="border rounded-lg p-4 bg-white">
               <div
-                className="border-2 border-dashed border-gray-300 relative mx-auto"
+                className="border-2 border-dashed border-gray-300 relative mx-auto overflow-hidden"
                 style={{
                   width: `${parseFloat(labelWidth) * 3}px`,
                   height: `${parseFloat(labelHeight) * 3}px`,
+                  fontSize: "11px",
                 }}
               >
+                {showSerial && (
+                  <div className="absolute top-0.5 left-0.5 text-[6px] text-gray-600">
+                    S: 1001
+                  </div>
+                )}
+                {showPurchaseNo && (
+                  <div className="absolute top-0.5 right-0.5 text-[6px] text-gray-600">
+                    P: 1
+                  </div>
+                )}
                 {showBarcode && (
-                  <div className="absolute top-1 left-1 right-1 h-8 bg-gray-200 flex items-center justify-center text-xs">
-                    |||||||||||||||
+                  <div className="absolute top-2 left-1 right-1 h-7 bg-gray-200 flex items-center justify-center text-xs">
+                    |||||||||||
                   </div>
                 )}
                 {showItemName && (
-                  <div className="absolute top-10 left-1 text-[8px] font-medium truncate max-w-full">
-                    Sample Item Name
+                  <div className="absolute top-9 left-1 text-[7px] font-medium truncate w-4/5">
+                    Sample Item
                   </div>
                 )}
                 {showBrand && (
-                  <div className="absolute top-7 left-1 text-[6px] text-gray-500">
-                    Brand Name
+                  <div className="absolute top-11 left-1 text-[6px] text-gray-500">
+                    Brand
+                  </div>
+                )}
+                {(showQuality || showPattern || showSleeve || showDno1) && (
+                  <div className="absolute top-12 left-1 text-[5px] text-gray-600 flex gap-1">
+                    {showQuality && <span>Qlt: A</span>}
+                    {showPattern && <span>Pat: Std</span>}
+                    {showSleeve && <span>Slv: S</span>}
+                    {showDno1 && <span>D#: 101</span>}
                   </div>
                 )}
                 {showSize && (
-                  <div className="absolute top-10 right-1 text-[8px] font-bold">
+                  <div className="absolute top-9 right-1 text-[8px] font-bold">
                     M
                   </div>
                 )}
-                <div className="absolute bottom-1 left-1 right-1 flex justify-between">
+                {(showCost || showNcost || showLcost || showTax) && (
+                  <div className="absolute top-13 left-1 text-[6px] text-gray-600 flex gap-1">
+                    {showCost && <span>C: 300</span>}
+                    {showNcost && <span>N: 310</span>}
+                    {showLcost && <span>L: 320</span>}
+                    {showTax && <span>T: 5%</span>}
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-1 right-1 flex justify-between items-center">
                   {showRate && (
-                    <span className="text-[10px] font-bold">Rs. 499</span>
+                    <span className="text-[9px] font-bold">Rs. 499</span>
                   )}
                   {showMrp && (
-                    <span className="text-[8px] text-gray-500 line-through">MRP: 599</span>
+                    <span className="text-[7px] text-gray-500 line-through">MRP: 599</span>
                   )}
                 </div>
+                {showStatus && (
+                  <div className="absolute bottom-0.5 right-0.5 text-[6px] px-1 bg-green-100 text-green-800">
+                    Available
+                  </div>
+                )}
               </div>
               <p className="text-center text-sm text-muted-foreground mt-2">
-                Label Preview (3x scale)
+                Label Preview (3x scale) - Showing all selected fields
               </p>
             </div>
           </TabsContent>
