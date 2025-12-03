@@ -195,7 +195,7 @@ export default function DebitNote() {
         itemName: data.itemName || "",
         hsnCode: data.hsnCode || "",
         quantity: 1,
-        rate: inclusiveTax ? parseFloat(data.brate) : parseFloat(data.brate) / (1 + parseFloat(data.tax || "0") / 100),
+        rate: inclusiveTax ? (parseFloat(data.rate) || parseFloat(data.mrp) || 0) : (parseFloat(data.rate) || parseFloat(data.mrp) || 0) / (1 + parseFloat(data.tax || "0") / 100),
         mrp: parseFloat(data.mrp) || 0,
         discount: 0,
         discountPercent: 0,

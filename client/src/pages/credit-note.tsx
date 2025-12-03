@@ -145,17 +145,7 @@ export default function CreditNote() {
       const response = await apiRequest("GET", `/api/inventory/barcode/${encodeURIComponent(barcodeInput.trim())}`);
       const data: any = await response.json();
       
-      // Check if item is already sold
-      if (data.soldAt) {
-        toast({
-          title: "Item Already Sold",
-          description: `${data.itemName} (${data.barcode}) has already been sold and cannot be scanned again`,
-          variant: "destructive",
-        });
-        setBarcodeInput("");
-        return;
-      }
-      
+      // For credit notes, allow already sold items (returns). No soldAt validation needed.
       // Unique barcode (qty=1): Can only scan once per bill
       if (data.stockQty === 1) {
         const alreadyAdded = lineItems.some(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.quantity === 1));
@@ -163,22 +153,6 @@ export default function CreditNote() {
           toast({
             title: "Barcode Already Used",
             description: `${data.itemName} (${data.barcode}) has already been added to this bill`,
-            variant: "destructive",
-          });
-          setBarcodeInput("");
-          return;
-        }
-      } else {
-        // Bundle barcode (qty > 1): Validate total quantity doesn't exceed available stock
-        const totalQtyInBill = lineItems
-          .filter(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.stockInwardId === data.stockInwardId))
-          .reduce((sum, item) => sum + parseFloat(item.quantity.toString()), 0);
-        
-        const availableStock = parseFloat(data.stockQty) || 1;
-        if (totalQtyInBill >= availableStock) {
-          toast({
-            title: "Insufficient Stock",
-            description: `Only ${availableStock} units available. Already added: ${totalQtyInBill}`,
             variant: "destructive",
           });
           setBarcodeInput("");
@@ -195,7 +169,7 @@ export default function CreditNote() {
         itemName: data.itemName || "",
         hsnCode: data.hsnCode || "",
         quantity: 1,
-        rate: inclusiveTax ? parseFloat(data.brate) : parseFloat(data.brate) / (1 + parseFloat(data.tax || "0") / 100),
+        rate: inclusiveTax ? (parseFloat(data.rate) || parseFloat(data.mrp) || 0) : (parseFloat(data.rate) || parseFloat(data.mrp) || 0) / (1 + parseFloat(data.tax || "0") / 100),
         mrp: parseFloat(data.mrp) || 0,
         discount: 0,
         discountPercent: 0,
