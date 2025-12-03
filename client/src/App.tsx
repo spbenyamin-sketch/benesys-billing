@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useSetup } from "@/hooks/useSetup";
+import { usePermissions } from "@/hooks/usePermissions";
 import { CompanyProvider, useCompany } from "@/contexts/CompanyContext";
 import { CompanySelector } from "@/components/CompanySelector";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
@@ -50,9 +51,20 @@ import SelectCompany from "@/pages/select-company";
 import BarcodeLookup from "@/pages/barcode-lookup";
 import PurchaseDetails from "@/pages/purchase-details";
 
+function ProtectedRoute({ path, component: Component }: { path: string; component: any }) {
+  const { canAccess } = usePermissions();
+  
+  if (!canAccess(path)) {
+    return null;
+  }
+  
+  return <Route path={path} component={Component} />;
+}
+
 function Router() {
   const { isAuthenticated, user } = useAuth();
   const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const { canAccess } = usePermissions();
 
   if (!isAuthenticated) {
     return null;
@@ -60,37 +72,37 @@ function Router() {
 
   return (
     <Switch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/parties" component={Parties} />
-      <Route path="/items" component={Items} />
-      <Route path="/agents" component={Agents} />
-      <Route path="/sales/b2b" component={SalesB2B} />
-      <Route path="/sales/b2c" component={SalesB2C} />
-      <Route path="/sales/estimate" component={SalesEstimate} />
-      <Route path="/sales/credit-note" component={CreditNote} />
-      <Route path="/sales/debit-note" component={DebitNote} />
-      <Route path="/sales/new" component={SalesBilling} />
-      <Route path="/bill-entry" component={BillEntry} />
-      <Route path="/sales" component={Sales} />
-      <Route path="/sales/edit/:id" component={EditSale} />
-      <Route path="/invoice/:id" component={Invoice} />
-      <Route path="/purchases/new" component={PurchaseEntry} />
-      <Route path="/purchase-entry" component={PurchaseEntry} />
-      <Route path="/stock-inward" component={StockInward} />
-      <Route path="/barcode-management" component={BarcodeManagement} />
-      <Route path="/barcode-lookup" component={BarcodeLookup} />
-      <Route path="/purchases/:id" component={PurchaseDetails} />
-      <Route path="/purchases" component={Purchases} />
-      <Route path="/payments" component={Payments} />
-      <Route path="/stock/view" component={StockView} />
-      <Route path="/stock" component={Stock} />
-      <Route path="/reports/outstanding" component={Outstanding} />
-      <Route path="/reports/sales" component={SalesReport} />
-      <Route path="/reports/purchases" component={PurchaseReport} />
-      <Route path="/reports/items" component={ItemsReport} />
-      <Route path="/reports/categories" component={CategoriesReport} />
-      <Route path="/reports/payments" component={PaymentsReport} />
-      <Route path="/reports/ledger/:id" component={Ledger} />
+      <ProtectedRoute path="/" component={Dashboard} />
+      <ProtectedRoute path="/parties" component={Parties} />
+      <ProtectedRoute path="/items" component={Items} />
+      <ProtectedRoute path="/agents" component={Agents} />
+      <ProtectedRoute path="/sales/b2b" component={SalesB2B} />
+      <ProtectedRoute path="/sales/b2c" component={SalesB2C} />
+      <ProtectedRoute path="/sales/estimate" component={SalesEstimate} />
+      <ProtectedRoute path="/sales/credit-note" component={CreditNote} />
+      <ProtectedRoute path="/sales/debit-note" component={DebitNote} />
+      <ProtectedRoute path="/sales/new" component={SalesBilling} />
+      <ProtectedRoute path="/bill-entry" component={BillEntry} />
+      <ProtectedRoute path="/sales" component={Sales} />
+      <ProtectedRoute path="/sales/edit/:id" component={EditSale} />
+      <ProtectedRoute path="/invoice/:id" component={Invoice} />
+      <ProtectedRoute path="/purchases/new" component={PurchaseEntry} />
+      <ProtectedRoute path="/purchase-entry" component={PurchaseEntry} />
+      <ProtectedRoute path="/stock-inward" component={StockInward} />
+      <ProtectedRoute path="/barcode-management" component={BarcodeManagement} />
+      <ProtectedRoute path="/barcode-lookup" component={BarcodeLookup} />
+      <ProtectedRoute path="/purchases/:id" component={PurchaseDetails} />
+      <ProtectedRoute path="/purchases" component={Purchases} />
+      <ProtectedRoute path="/payments" component={Payments} />
+      <ProtectedRoute path="/stock/view" component={StockView} />
+      <ProtectedRoute path="/stock" component={Stock} />
+      <ProtectedRoute path="/reports/outstanding" component={Outstanding} />
+      <ProtectedRoute path="/reports/sales" component={SalesReport} />
+      <ProtectedRoute path="/reports/purchases" component={PurchaseReport} />
+      <ProtectedRoute path="/reports/items" component={ItemsReport} />
+      <ProtectedRoute path="/reports/categories" component={CategoriesReport} />
+      <ProtectedRoute path="/reports/payments" component={PaymentsReport} />
+      <ProtectedRoute path="/reports/ledger/:id" component={Ledger} />
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}
       {isSuperAdmin && <Route path="/companies" component={Companies} />}
       {isSuperAdmin && <Route path="/bill-settings" component={BillSettings} />}

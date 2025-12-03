@@ -87,6 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: z.string().optional(),
         email: z.string().email().optional().or(z.literal("")),
         role: z.enum(['user', 'admin']),
+        pagePermissions: z.array(z.string()).optional(),
         companyIds: z.array(z.number()).optional(),
       });
 
@@ -100,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const passwordHash = await bcrypt.hash(validated.password, 10);
       
-      // Create user
+      // Create user with page permissions
       const newUser = await storage.createUser({
         username: validated.username,
         passwordHash,
@@ -108,6 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: validated.lastName,
         email: validated.email,
         role: validated.role,
+        pagePermissions: validated.pagePermissions || [],
       });
 
       // Assign companies if provided
