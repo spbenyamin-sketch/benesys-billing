@@ -118,7 +118,7 @@ echo Starting in 3 seconds...
 timeout /t 3 /nobreak
 
 set NODE_ENV=development
-npm run dev
+npx tsx server/index-dev.ts
 
 if errorlevel 1 (
     echo.
@@ -248,7 +248,7 @@ if not errorlevel 1 (
     call pm2 restart billing-system
 ) else (
     echo Starting new PM2 instance...
-    call pm2 start "npm run start" --name "billing-system"
+    call pm2 start "set NODE_ENV=production && node dist/index.js" --name "billing-system" --interpreter "cmd"
 )
 
 if errorlevel 1 (
