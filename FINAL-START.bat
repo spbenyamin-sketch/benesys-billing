@@ -84,7 +84,7 @@ echo.
 
 REM Setup database schema
 echo [4/5] Setting up database schema...
-call npm run db:push
+call npm run db:push -- --force
 if errorlevel 1 (
     echo.
     echo ========================================
@@ -189,7 +189,7 @@ echo.
 
 REM Setup database schema
 echo [3/6] Setting up database schema...
-call npm run db:push
+call npm run db:push -- --force
 if errorlevel 1 (
     echo.
     echo ========================================
