@@ -1,14 +1,17 @@
-# Billing & Inventory Management System - Offline Installation Guide
+# Billing & Inventory Management System - Complete Installation Guide
 
-Complete installation guide for running the Billing & Inventory Management System on your local machine with PostgreSQL.
+Complete offline installation guide for running the Billing & Inventory Management System on your local machine with PostgreSQL. Includes localhost setup, LAN deployment, and webserver configuration.
 
 ## Table of Contents
 1. [System Requirements](#system-requirements)
 2. [Installation Steps](#installation-steps)
 3. [Database Setup](#database-setup)
 4. [Running the Application](#running-the-application)
-5. [Operations Guide](#operations-guide)
-6. [Troubleshooting](#troubleshooting)
+5. [Localhost Access](#localhost-access)
+6. [Network & Web Server Deployment](#network--web-server-deployment)
+7. [PM2 Setup (24/7 Running)](#pm2-setup-247-running)
+8. [Operations Guide](#operations-guide)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -18,6 +21,7 @@ Complete installation guide for running the Billing & Inventory Management Syste
 - **Operating System**: Windows 10+, macOS 10.14+, or Ubuntu 18.04+
 - **RAM**: 4GB minimum, 8GB recommended
 - **Storage**: 2GB free disk space
+- **Internet**: For downloading dependencies (first time only)
 
 ### Software Requirements
 - **Node.js**: v18.0.0 or higher
@@ -30,9 +34,11 @@ Complete installation guide for running the Billing & Inventory Management Syste
 ## Installation Steps
 
 ### Step 1: Install Node.js
+
 **Windows/macOS:**
 - Download from: https://nodejs.org/ (Choose LTS version)
 - Run the installer and follow the prompts
+- Verify installation: `node --version && npm --version`
 
 **Ubuntu/Linux:**
 ```bash
@@ -43,15 +49,20 @@ sudo apt install nodejs npm
 ### Step 2: Install PostgreSQL
 
 **Windows:**
-- Download from: https://www.postgresql.org/download/windows/
-- Run installer, remember the password you set for the `postgres` user
-- Default port is `5432`
+1. Download from: https://www.postgresql.org/download/windows/
+2. Run installer
+3. **Important:** Remember the password you set for the `postgres` user
+4. Default port is `5432`
+5. Verify installation: `psql --version`
 
 **macOS:**
 ```bash
 # Using Homebrew
 brew install postgresql@15
 brew services start postgresql@15
+
+# Verify
+psql --version
 ```
 
 **Ubuntu/Linux:**
@@ -59,19 +70,31 @@ brew services start postgresql@15
 sudo apt update
 sudo apt install postgresql postgresql-contrib
 sudo systemctl start postgresql
+
+# Verify
+psql --version
 ```
 
 ### Step 3: Clone/Extract Project Files
+
+**Using Git:**
 ```bash
-# Clone the repository or extract the ZIP file
 git clone <your-repo-url> billing-system
 cd billing-system
 ```
 
+**Or Extract ZIP:**
+1. Download project ZIP file
+2. Extract to your desired location
+3. Open terminal/PowerShell in that folder
+
 ### Step 4: Install Dependencies
+
 ```bash
 npm install
 ```
+
+This installs all required packages (React, Express, Drizzle ORM, etc.)
 
 ---
 
@@ -79,19 +102,27 @@ npm install
 
 ### Step 1: Create .env File
 
-Create a `.env` file in your project root folder with:
+Create a `.env` file in your project root with:
 ```
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/billing_system
 NODE_ENV=development
+SESSION_SECRET=your-secret-key-change-in-production
 ```
 
-**Replace `YOUR_PASSWORD`** with your PostgreSQL password (from installation step).
+**Replace `YOUR_PASSWORD`** with your PostgreSQL password (from Step 2 installation).
 
-**Windows Users:** Use Notepad to create the file:
+**Windows Users - Creating .env with Notepad:**
 1. Right-click in project folder → New → Text Document
 2. Paste the content above
 3. Rename to `.env` (with the dot prefix)
-4. File type: All Files (*.*)
+4. Change file type to "All Files (*.*)"
+
+**Example .env File:**
+```
+DATABASE_URL=postgresql://postgres:mypassword@localhost:5432/billing_system
+NODE_ENV=development
+SESSION_SECRET=dev-secret-key-12345
+```
 
 ### Step 2: Create Database
 
@@ -100,14 +131,15 @@ NODE_ENV=development
 psql -U postgres -c "CREATE DATABASE billing_system;"
 ```
 
-**macOS/Linux:**
+**macOS/Linux (Terminal):**
 ```bash
 psql -U postgres -c "CREATE DATABASE billing_system;"
 ```
 
-If psql command not found on Windows, add PostgreSQL to PATH (see Troubleshooting section).
+If `psql` command not found on Windows, see Troubleshooting section.
 
 ### Step 3: Run Database Migrations
+
 ```bash
 npm run db:push
 ```
@@ -119,6 +151,7 @@ You should see:
 ```
 
 ### Step 4: Verify Database Setup
+
 ```bash
 psql -U postgres -d billing_system -c "\dt"
 ```
@@ -134,9 +167,9 @@ You should see all 17 tables listed:
 
 ## Running the Application
 
-### Windows (Recommended - Use FINAL-START.bat)
+### Option 1: Windows (Recommended - FINAL-START.bat)
 
-The easiest way to start on Windows:
+**The easiest way to start on Windows:**
 
 1. Go to your project folder (e.g., `E:\VfpNextConverter`)
 2. **Double-click: `FINAL-START.bat`**
@@ -151,19 +184,50 @@ cd your-project-folder
 **FINAL-START.bat automatically:**
 - Creates `.env` if missing
 - Sets up environment variables
+- Installs dependencies
+- Runs database sync
 - Starts the server on port 5000
 
-### macOS/Linux - Development Mode
+### Option 2: Development Mode (All Platforms)
+
 ```bash
 npm run dev
 ```
 
-The application will start on http://localhost:5000
+The application will start on http://localhost:5000 with hot reload enabled.
 
-### Production Build (All Platforms)
+Perfect for development and testing.
+
+### Option 3: Production Build (All Platforms)
+
 ```bash
+# Build for production
 npm run build
+
+# Start production server
 npm run start
+```
+
+This creates optimized builds for better performance.
+
+### Option 4: Production with PM2 (24/7 Running)
+
+See [PM2 Setup](#pm2-setup-247-running) section below.
+
+---
+
+## Localhost Access
+
+### On Same Machine
+
+After starting the server, open your browser and go to:
+```
+http://localhost:5000
+```
+
+Or:
+```
+http://127.0.0.1:5000
 ```
 
 ### Verify Server Started
@@ -173,23 +237,282 @@ You should see output like:
 11:22:21 AM [express] serving on port 5000
 ```
 
-Then open your browser: **http://localhost:5000**
+If you see any errors, check the Troubleshooting section.
+
+### First-Time Setup
+
+1. Open http://localhost:5000
+2. You'll see the Setup Page
+3. Enter your first admin username and password
+4. Click "Setup"
+5. You'll be logged in to the dashboard!
+
+---
+
+## Network & Web Server Deployment
+
+### Access From Other Machines on Same Network (LAN)
+
+Your app is accessible to other computers/phones on the same network!
+
+#### Step 1: Find Your Computer's IP Address
+
+**Windows:**
+```powershell
+ipconfig
+```
+Look for "IPv4 Address" (usually 192.168.x.x or 10.x.x.x)
+
+**macOS/Linux:**
+```bash
+ifconfig
+```
+Look for "inet" address
+
+#### Step 2: Access From Other Machines
+
+On another computer/phone on the same network, open:
+```
+http://YOUR_COMPUTER_IP:5000
+```
+
+**Example:**
+- Your computer IP: `192.168.1.100`
+- Access from phone/tablet: `http://192.168.1.100:5000`
+
+**Troubleshooting LAN Access:**
+- Ensure both machines are on the same network
+- Check Windows Firewall allows port 5000
+- Disable VPN on both machines if present
+
+---
+
+### Setup Nginx as Reverse Proxy (Port 80)
+
+Nginx is a lightweight webserver that can proxy requests to your Node.js app.
+
+#### Install Nginx
+
+**Windows:**
+1. Download: http://nginx.org/en/download.html
+2. Extract to: `C:\nginx`
+
+**macOS:**
+```bash
+brew install nginx
+```
+
+**Linux:**
+```bash
+sudo apt install nginx
+```
+
+#### Configure Nginx
+
+Create/edit the Nginx configuration file:
+
+**Windows:** `C:\nginx\conf\nginx.conf`
+**macOS/Linux:** `/etc/nginx/sites-available/default` (edit with `sudo`)
+
+Replace the `http` block with:
+
+```nginx
+http {
+    # Default MIME types
+    include mime.types;
+    default_type application/octet-stream;
+
+    sendfile on;
+    keepalive_timeout 65;
+
+    # Your app upstream
+    upstream billing_app {
+        server localhost:5000;
+    }
+
+    server {
+        listen 80;
+        server_name localhost;  # Change to your domain or IP if needed
+
+        # Frontend static files
+        location / {
+            proxy_pass http://billing_app;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+        }
+
+        # API requests
+        location /api/ {
+            proxy_pass http://billing_app;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
+```
+
+#### Start Nginx
+
+**Windows:**
+```powershell
+cd C:\nginx
+nginx.exe
+```
+
+**macOS:**
+```bash
+brew services start nginx
+```
+
+**Linux:**
+```bash
+sudo systemctl start nginx
+```
+
+#### Access Through Nginx
+
+Now your app is accessible without port number:
+
+- Local: `http://localhost`
+- Network: `http://YOUR_COMPUTER_IP`
+
+Stop Nginx:
+- **Windows:** `nginx -s stop`
+- **macOS:** `brew services stop nginx`
+- **Linux:** `sudo systemctl stop nginx`
+
+---
+
+### Setup Apache as Reverse Proxy
+
+**Windows (WampServer/XAMPP):**
+
+Edit Apache config:
+```apache
+<VirtualHost *:80>
+    ServerName localhost
+    
+    ProxyPreserveHost On
+    ProxyPass / http://localhost:5000/
+    ProxyPassReverse / http://localhost:5000/
+</VirtualHost>
+```
+
+Enable required modules:
+```apache
+a2enmod proxy
+a2enmod proxy_http
+```
+
+Restart Apache.
+
+---
+
+## PM2 Setup (24/7 Running)
+
+PM2 keeps your app running in background, auto-restarts on crashes, and survives server restarts.
+
+### Step 1: Install PM2 Globally
+
+```bash
+npm install -g pm2
+```
+
+### Step 2: Build for Production
+
+```bash
+npm run build
+```
+
+### Step 3: Start with PM2
+
+```bash
+pm2 start "npm run start" --name "billing-system"
+```
+
+### Step 4: Monitor Your App
+
+```bash
+# View running processes
+pm2 list
+
+# View logs
+pm2 logs billing-system
+
+# View specific log entries
+pm2 logs billing-system --lines 100
+```
+
+### Step 5: Enable Auto-Restart on Boot (Optional)
+
+**Windows (Run as Administrator):**
+```powershell
+pm2 install pm2-windows-startup
+pm2 save
+```
+
+**macOS/Linux:**
+```bash
+pm2 startup
+pm2 save
+```
+
+After this, your app will auto-start when you restart your computer!
+
+### Common PM2 Commands
+
+```bash
+# Stop app
+pm2 stop billing-system
+
+# Start app
+pm2 start billing-system
+
+# Restart app
+pm2 restart billing-system
+
+# Delete from PM2
+pm2 delete billing-system
+
+# Stop all apps
+pm2 stop all
+
+# Start all apps
+pm2 start all
+
+# View process details
+pm2 info billing-system
+
+# Watch app for changes (development)
+pm2 start "npm run dev" --watch
+```
 
 ---
 
 ## Operations Guide
 
 ### Initial Setup (First Time)
+
 1. Open http://localhost:5000 in your browser
-2. Click "Setup" to initialize the system
-3. Create your first company with:
-   - Company Name
-   - GST Number
-   - Address & Contact Details
-4. Create an Admin User:
-   - Username: (your choice)
-   - Password: (minimum 6 characters)
-   - Role: Super Admin
+2. You'll see the Setup Page
+3. Create your first admin user:
+   - Username: (your choice, e.g., `admin`)
+   - Password: (minimum 6 characters, e.g., `admin123`)
+   - Click **Setup**
+4. You're now logged in!
+5. Create your first company:
+   - Go to Settings > Companies
+   - Company Name, GST Number, Address, etc.
+   - Save
 
 ### 1. User Management
 **Location**: Settings > User Management (Admin Only)
@@ -199,22 +522,10 @@ Then open your browser: **http://localhost:5000**
 - Password: Minimum 6 characters
 - Role: Super Admin or Normal User
 - **Page Permissions**: Select which pages the user can access
-  - Dashboard: View business overview
-  - Parties: Manage customers/suppliers
-  - Items: Manage products/inventory
-  - Agents: Manage sales agents
-  - Sales (B2B/B2C): Create sales invoices
-  - Purchases: Record purchase entries
-  - Stock: Manage inventory levels
-  - Payments: Record payment receipts
-  - Reports: View business reports
-  - Barcode Management: Design label templates
-  - Bill Settings: Configure invoice templates
-  - User Management: Manage other users
-
-**Edit User:**
-- Click on user in the list to edit role or permissions
-- Only Super Admins can manage users
+  - Dashboard, Parties, Items, Agents
+  - Sales, Purchases, Stock, Payments
+  - Reports, Barcode Management
+  - Bill Settings, User Management
 
 ### 2. Company Setup
 **Location**: Settings > Companies (Admin Only)
@@ -225,9 +536,6 @@ Then open your browser: **http://localhost:5000**
 - Address, City, State
 - Email & Phone Number
 - Logo URL (Optional)
-
-**Switch Company:**
-- Use Company Selector in the sidebar to switch between companies
 
 ### 3. Party Master (Customer/Supplier)
 **Location**: Sidebar > Parties
@@ -241,14 +549,6 @@ Then open your browser: **http://localhost:5000**
 - GST Number: For B2B transactions
 - Agent: Assign sales agent
 
-**Shipping Address:**
-- Enable "Has Shipping Address" to add different delivery location
-- Useful for online orders
-
-**Opening Balance:**
-- Opening Debit: Amount customer owes to you
-- Opening Credit: Amount you owe to customer
-
 ### 4. Item Master (Product)
 **Location**: Sidebar > Items
 
@@ -258,12 +558,10 @@ Then open your browser: **http://localhost:5000**
 - Name: Product name
 - Category: Product category
 - Pack Type: PCS, KG, LTR, MTR, BOX, PKT, SET, DZ, GM, ML
-- Type: P=Piece, M=Measured
 - Cost: Your cost price
-- MRP: Maximum Retail Price (rounded)
-- Selling Price: Your selling price (rounded)
+- MRP: Maximum Retail Price
+- Selling Price: Your selling price
 - Tax: Total GST (5%, 12%, 18%, or 28%)
-- CGST & SGST: Calculated automatically
 
 ### 5. Stock Management
 **Location**: Sidebar > Stock
@@ -276,52 +574,27 @@ Then open your browser: **http://localhost:5000**
 1. Go to Sidebar > Stock > Stock Inward
 2. Click "New Stock Entry"
 3. Select Purchase Entry
-4. Add items with:
-   - Quantity
-   - Cost per unit
-   - MRP & Selling Price
+4. Add items with quantity, cost, MRP
 5. Save - Stock updates automatically
-
-**Stock Outward:**
-- Automatically updated when you make Sales
 
 ### 6. Sales Management
 **Location**: Sidebar > Sales
 
-#### B2B Sales (With GST Invoice)
+**B2B Sales (With GST Invoice):**
 1. Click "New B2B Sale"
 2. Select Customer (Party)
 3. Choose Payment Mode: Cash/Card/Credit
-4. Add Items:
-   - Scan barcode or select from list
-   - Quantity
-   - Rate (inclusive/exclusive of tax)
-   - Discount (if any)
-5. System auto-calculates:
-   - Item amount
-   - Tax (CGST + SGST)
-   - Total
+4. Add Items (with quantity & rate)
+5. System auto-calculates tax
 6. Click Print/Save
 
-#### B2C Sales (Retail)
+**B2C Sales (Retail):**
 1. Click "New B2C Sale"
 2. Enter Customer Mobile (Optional)
 3. Payment Mode: Cash/Card/Credit
-4. Add Items (same as B2B)
+4. Add Items
 5. Auto-generate Invoice Number
 6. Print receipt
-
-#### Sales Estimate
-1. Create quote without finalizing as sale
-2. Can be converted to actual sale later
-
-#### Credit Note (Return from Customer)
-- Issue when customer returns goods
-- Reduces customer outstanding
-
-#### Debit Note (Claim to Supplier)
-- Issue when supplier charges incorrect amount
-- You can claim credit
 
 ### 7. Purchase Entry
 **Location**: Sidebar > Purchases
@@ -329,20 +602,11 @@ Then open your browser: **http://localhost:5000**
 **Create Purchase Entry:**
 1. Click "New Purchase"
 2. Select Supplier (Party)
-3. Enter Invoice Number (from supplier)
-4. Add Items:
-   - Item name/code
-   - Quantity
-   - Cost per unit
-   - Discount % (if any)
+3. Enter Invoice Number
+4. Add Items with quantity & cost
 5. System calculates tax breakup
 6. Save Entry
-
-**Stock Inward (Phase 2):**
-- After creating purchase, go to "Stock Inward"
-- Allocate received quantities to size ranges (if applicable)
-- Mark as completed
-- Stock updates automatically
+7. Go to Stock Inward to allocate received quantities
 
 ### 8. Payment Recording
 **Location**: Sidebar > Payments
@@ -352,14 +616,7 @@ Then open your browser: **http://localhost:5000**
 2. Select Customer Party
 3. Payment Mode: Cash/Check/Card/Transfer
 4. Amount
-5. Save
-- Outstanding reduces automatically
-
-**Record Payment Made (To Supplier):**
-1. Click "New Payment"
-2. Select Supplier Party
-3. Amount
-4. Save
+5. Save - Outstanding reduces automatically
 
 ### 9. Barcode Management
 **Location**: Sidebar > Barcode Management
@@ -367,11 +624,7 @@ Then open your browser: **http://localhost:5000**
 **Create Label Template:**
 1. Design barcode labels with drag-and-drop
 2. Select barcode type: CODE 128, QR Code, EAN-13, PDF417, etc.
-3. Configure fields:
-   - Item Name
-   - Rate/MRP
-   - Barcode Number
-   - Custom fields
+3. Configure fields: Item Name, Rate/MRP, Barcode Number
 4. Set layout: 2x4, 3x4, 4x4 labels per page
 5. Configure margins & gaps
 6. Save template
@@ -391,7 +644,7 @@ Then open your browser: **http://localhost:5000**
 - **Sales Report**: Sales summary by date/type
 - **Purchase Report**: Purchase history
 - **Items Report**: Item-wise sales analysis
-- **Categories Report**: Category-wise performance
+- **Categories Report**: Category performance
 - **Payments Report**: Payment receipts
 - **Ledger**: Party-wise detailed transactions
 
@@ -434,17 +687,15 @@ Then open your browser: **http://localhost:5000**
 
 ### Issue: "DATABASE_URL must be set" Error
 
-This means the `.env` file is not being found or loaded properly.
-
 **Windows Solution:**
-1. Verify `.env` file exists in your project root folder
-2. Check file content:
+1. Verify `.env` file exists in your project root folder (NOT in a subfolder)
+2. Check file content - should have exactly:
    ```
    DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/billing_system
    NODE_ENV=development
    ```
 3. Make sure `YOUR_PASSWORD` matches your PostgreSQL password (no quotes)
-4. **Use FINAL-START.bat** - it will auto-create .env if missing
+4. Use `FINAL-START.bat` - it will auto-create .env if missing
 5. Restart by running FINAL-START.bat again
 
 **Linux/macOS:**
@@ -512,7 +763,7 @@ kill -9 <PID>
 
 ### Issue: Dependency Installation Error
 
-**Windows & All Platforms:**
+**All Platforms:**
 ```bash
 # Clear cache and reinstall
 rm -r node_modules
@@ -523,165 +774,106 @@ npm cache clean --force
 npm install
 ```
 
-### Issue: Database Schema Mismatch
+### Issue: Database Connection Timeout
 
-```bash
-# Force sync - this is safe to run
-npm run db:push --force
-```
-
-### Issue: Cannot Create Company/User
-
-**Checklist:**
-1. ✓ You're logged in as Super Admin (username/password you created)
-2. ✓ Database tables exist: Run `npm run db:push`
-3. ✓ Check browser console (Press F12 → Console tab) for errors
-4. ✓ Refresh browser page (Ctrl+Shift+R or Cmd+Shift+R)
+**Solution:**
+1. Ensure PostgreSQL is running (see above)
+2. Check DATABASE_URL format is correct:
+   ```
+   postgresql://postgres:PASSWORD@localhost:5432/billing_system
+   ```
+3. Test connection:
+   ```bash
+   psql -U postgres -c "SELECT 1"
+   ```
+4. If testing fails, your password is wrong or PostgreSQL isn't running
 
 ### Issue: Application Won't Start (Windows)
 
 Try these in order:
+1. Check .env file exists and is readable
+2. Run: `npm run db:push --force`
+3. Delete `node_modules` and run: `npm install`
+4. Use `FINAL-START.bat` (handles everything automatically)
+5. Check if port 5000 is already in use (see above)
 
-1. **Check .env file:**
-   - File must exist in project root
-   - Content must have DATABASE_URL with your password
-   - Password cannot have special characters (or must be in quotes in URL)
+### Issue: Pages Load but Nothing Shows
 
-2. **Force database sync:**
-   ```
-   npm run db:push --force
-   ```
+**Solution:**
+1. Press `F12` to open browser Developer Console
+2. Check for error messages in red
+3. Take a screenshot of the error
+4. Verify user is logged in (look for username in top-right)
+5. Check database has data: `psql -U postgres -d billing_system -c "SELECT COUNT(*) FROM users;"`
 
-3. **Clean and reinstall:**
-   ```
-   rm -r node_modules
-   npm install
-   npm run db:push
-   ```
+### Issue: PM2 App Won't Start
 
-4. **Use FINAL-START.bat:**
-   - Double-click FINAL-START.bat in your project folder
-   - It handles all environment setup automatically
-
-5. **Check PostgreSQL:**
-   - Open Services (Win+R → services.msc)
-   - Look for "postgresql-x64-15" or similar
-   - Ensure it's running (status = Started)
-
-### Issue: .env file not created/recognized
-
-**Windows Users - Create .env manually:**
-
-1. Open Notepad
-2. Paste this (replace password):
-   ```
-   DATABASE_URL=postgresql://postgres:MyPassword123@localhost:5432/billing_system
-   NODE_ENV=development
-   ```
-3. File → Save As
-4. Filename: `.env` (with the dot)
-5. File type: All Files (*.*)
-6. Location: Your project root folder (NOT a subfolder)
-7. Click Save
-
-**Verify file was created:**
-- Go to your project folder
-- You should see `.env` file (hidden by default on Windows)
-- Enable "Show hidden files" in View options if you can't see it
-
----
-
-## File Structure
-
-```
-billing-system/
-├── client/                       # Frontend React app
-│   └── src/
-│       ├── pages/              # All page components (15+ pages)
-│       └── components/         # Reusable components
-├── server/                      # Backend Express server
-│   ├── routes.ts               # API endpoints
-│   ├── storage.ts              # Database operations
-│   ├── db.ts                   # Database connection
-│   ├── localAuth.ts            # Authentication
-│   ├── index-dev.ts            # Development server entry
-│   └── index-prod.ts           # Production server entry
-├── shared/                      # Shared code
-│   └── schema.ts               # Database schema & types
-├── .env                        # Environment config (YOU CREATE THIS)
-├── FINAL-START.bat             # Windows startup script (double-click to start)
-├── OFFLINE_INSTALLATION_GUIDE.md  # This file
-├── README.md                   # Project overview
-├── database-schema.sql         # SQL schema dump (reference only)
-├── package.json                # Dependencies
-└── vite.config.ts              # Build configuration
-```
-
-### Important Files to Know
-
-| File | Purpose |
-|------|---------|
-| `.env` | Your database connection string (YOU CREATE) |
-| `FINAL-START.bat` | **Windows only** - Double-click to start app |
-| `npm run dev` | macOS/Linux command to start app |
-| `server/db.ts` | Database connection - loads from .env |
-| `shared/schema.ts` | 17 database tables definition |
-| `database-schema.sql` | Reference SQL (for manual setup if needed) |
-
----
-
-## Support & Customization
-
-### Common Customizations
-
-**Change Invoice Template:**
-1. Go to Settings > Bill Settings
-2. Edit company bill settings
-3. Configure invoice header/footer
-4. Save
-
-**Add Custom Fields to Items:**
-Modify `shared/schema.ts` and run `npm run db:push`
-
-**Change Tax Rates:**
-1. Edit Item master
-2. Update CGST/SGST values
-3. Automatically applies to new sales
-
----
-
-## Security Notes
-
-1. **Change Default Password**: After first login
-2. **Backup Database**: Regularly backup PostgreSQL database
-3. **User Permissions**: Assign minimal required permissions
-4. **API Access**: Backend API authenticated with session tokens
-
----
-
-## Database Backup & Restore
-
-**Backup:**
 ```bash
-pg_dump -U postgres -d billing_system > backup.sql
-```
+# Check logs
+pm2 logs billing-system
 
-**Restore:**
-```bash
-psql -U postgres -d billing_system < backup.sql
+# Check if port 5000 is already in use
+netstat -ano | findstr :5000
+
+# Delete and restart
+pm2 delete billing-system
+pm2 start "npm run start" --name "billing-system"
 ```
 
 ---
 
-## Next Steps
+## Complete Setup Checklist
 
-1. ✓ Database setup complete
-2. ✓ Application running
-3. → Create your first company
-4. → Add parties (customers/suppliers)
-5. → Set up products/items
-6. → Configure stock levels
-7. → Start recording sales & purchases
-8. → Generate reports
+- [ ] Node.js installed and verified
+- [ ] PostgreSQL installed and running
+- [ ] `.env` file created with correct DATABASE_URL
+- [ ] `npm install` completed
+- [ ] `npm run db:push` completed successfully
+- [ ] Server started (npm run dev or FINAL-START.bat)
+- [ ] http://localhost:5000 opens in browser
+- [ ] Setup page appears (or you're logged in)
+- [ ] First admin user created
+- [ ] First company created
+- [ ] Can create parties/items/sales
 
-**You're ready to manage your billing & inventory!**
+**If all checkboxes are checked, your system is ready to use!**
+
+---
+
+## Quick Reference Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Setup database
+npm run db:push
+
+# Start development
+npm run dev
+
+# Build production
+npm run build
+
+# Start production
+npm run start
+
+# Check database
+psql -U postgres -d billing_system -c "\dt"
+
+# Install PM2
+npm install -g pm2
+
+# Start with PM2
+pm2 start "npm run start" --name "billing-system"
+
+# View PM2 logs
+pm2 logs billing-system
+
+# Stop PM2 app
+pm2 stop billing-system
+```
+
+---
+
+**Your billing & inventory system is ready for local deployment!**

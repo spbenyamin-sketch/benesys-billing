@@ -38,87 +38,355 @@ Professional B2B/B2C billing software with GST support, inventory management, ba
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start - Three Methods
 
-### Step 1: Install PostgreSQL
+### Method 1: Windows (Easiest - One Click)
 
-**Windows**: 
+**Prerequisites:**
+- PostgreSQL installed and running
+- Node.js installed
+
+**Steps:**
+1. Go to your project folder
+2. **Double-click:** `FINAL-START.bat`
+3. Wait for setup to complete
+4. Open browser: **http://localhost:5000**
+
+The batch file automatically:
+- Creates `.env` if missing
+- Installs dependencies
+- Sets up database
+- Starts server
+
+---
+
+### Method 2: Windows/macOS/Linux (Command Line)
+
+#### Step 1: Install PostgreSQL
+
+**Windows:**
 - Download: https://www.postgresql.org/download/windows/
 - Run installer, remember your `postgres` password
 - Default port: 5432
 
-**macOS**: 
+**macOS:**
 ```bash
 brew install postgresql@15 && brew services start postgresql@15
 ```
 
-**Linux**: 
+**Linux:**
 ```bash
 sudo apt install postgresql postgresql-contrib
 sudo systemctl start postgresql
 ```
 
-### Step 2: Clone & Setup
+#### Step 2: Clone & Setup
+
 ```bash
-# Clone repository
-git clone <repo-url>
+# Clone or extract project
+git clone <repo-url> billing-system
 cd billing-system
 
 # Install dependencies
 npm install
-
-# Create database
-psql -U postgres -c "CREATE DATABASE billing_system;"
 ```
 
-### Step 3: Create .env File
+#### Step 3: Create .env File
 
-Create a `.env` file in your project root with:
+In your project root, create `.env` file with:
 ```
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/billing_system
 NODE_ENV=development
+SESSION_SECRET=your-secret-key-change-in-production
 ```
 
 Replace `YOUR_PASSWORD` with your PostgreSQL password.
 
-### Step 4: Setup Database
+#### Step 4: Setup Database
+
 ```bash
 npm run db:push
 ```
 
-### Step 5: Start Application
+#### Step 5: Start Application
 
-**Windows (Easiest - Double-click):**
-- Double-click `FINAL-START.bat` in your project folder
-
-**Windows (PowerShell):**
-```powershell
-cd your-project-folder
-.\FINAL-START.bat
-```
-
-**macOS/Linux:**
+**Development Mode:**
 ```bash
 npm run dev
 ```
 
-### Step 6: Access Application
-Open http://localhost:5000 in your browser
+**Production Mode:**
+```bash
+npm run build
+npm run start
+```
+
+#### Step 6: Access Application
+
+Open your browser: **http://localhost:5000**
 
 ---
 
-## 📚 Complete Operations Guide
+### Method 3: Production Deployment with PM2 (Recommended for 24/7 Running)
 
-See [OFFLINE_INSTALLATION_GUIDE.md](./OFFLINE_INSTALLATION_GUIDE.md) for:
-- Detailed installation instructions for all OS
-- Complete operations guide for all features
-- Database schema overview
-- Troubleshooting help
-- Backup & restore procedures
+PM2 keeps your app running in background, auto-restarts on crashes, and survives server restarts.
+
+#### Step 1: Install PM2 Globally
+
+```bash
+npm install -g pm2
+```
+
+#### Step 2: Build for Production
+
+```bash
+npm run build
+```
+
+#### Step 3: Start with PM2
+
+```bash
+pm2 start "npm run start" --name "billing-system"
+```
+
+#### Step 4: Enable Auto-Restart on Boot (Optional)
+
+**Windows (Run as Administrator):**
+```powershell
+pm2 install pm2-windows-startup
+pm2 save
+```
+
+**macOS/Linux:**
+```bash
+pm2 startup
+pm2 save
+```
+
+#### Step 5: Monitor Your App
+
+```bash
+# View running processes
+pm2 list
+
+# View logs
+pm2 logs billing-system
+
+# Stop app
+pm2 stop billing-system
+
+# Start app
+pm2 start billing-system
+
+# Restart app
+pm2 restart billing-system
+
+# Stop all
+pm2 stop all
+```
 
 ---
 
-## 🏗️ Database Schema
+## 🌐 Web Server Deployment
+
+### Option A: Local Network (LAN) Access
+
+#### Using Express (Built-in)
+
+Your app is already accessible on your local network!
+
+**Find Your Computer's IP Address:**
+
+**Windows:**
+```powershell
+ipconfig
+# Look for "IPv4 Address" (usually 192.168.x.x or 10.x.x.x)
+```
+
+**macOS/Linux:**
+```bash
+ifconfig
+# Look for inet address
+```
+
+**Access from Other Machines:**
+- On another computer/phone on the same network:
+- Open browser: `http://YOUR_COMPUTER_IP:5000`
+
+**Example:**
+- Your computer IP: `192.168.1.100`
+- Access from phone/tablet: `http://192.168.1.100:5000`
+
+---
+
+### Option B: Deploy to Web Server (Nginx/Apache)
+
+#### Setup Nginx as Reverse Proxy
+
+**Install Nginx:**
+
+**Windows:**
+- Download: http://nginx.org/en/download.html
+- Extract to: `C:\nginx`
+
+**macOS:**
+```bash
+brew install nginx
+```
+
+**Linux:**
+```bash
+sudo apt install nginx
+```
+
+#### Configure Nginx
+
+Edit Nginx config file:
+
+**Windows:** `C:\nginx\conf\nginx.conf`
+**macOS/Linux:** `/etc/nginx/sites-available/default`
+
+Replace content with:
+```nginx
+server {
+    listen 80;
+    server_name localhost;  # Or your domain name
+
+    location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+#### Start Nginx
+
+**Windows:**
+```powershell
+cd C:\nginx
+nginx.exe
+```
+
+**macOS:**
+```bash
+brew services start nginx
+```
+
+**Linux:**
+```bash
+sudo systemctl start nginx
+```
+
+#### Access Through Nginx
+
+- Local: `http://localhost`
+- Network: `http://YOUR_COMPUTER_IP`
+
+---
+
+### Option C: Cloud Deployment (For Remote Access)
+
+#### Deploy to Replit
+
+1. Push code to GitHub
+2. Go to https://replit.com
+3. Import from GitHub
+4. Add environment variables (DATABASE_URL, SESSION_SECRET)
+5. Deploy with one-click publishing
+
+#### Deploy to Heroku/Railway/Render
+
+1. Create account on platform
+2. Connect GitHub repository
+3. Set environment variables
+4. Deploy
+
+---
+
+## 📝 Complete Setup Examples
+
+### Example 1: Windows Single-Machine Setup
+
+```powershell
+# 1. Install PostgreSQL (one-time)
+# Download and install from postgresql.org
+
+# 2. Clone project
+git clone <repo-url>
+cd billing-system
+
+# 3. Install dependencies
+npm install
+
+# 4. Create .env file (use Notepad)
+# Content:
+# DATABASE_URL=postgresql://postgres:password@localhost:5432/billing_system
+# NODE_ENV=development
+
+# 5. Setup database
+npm run db:push
+
+# 6. Start with FINAL-START.bat
+.\FINAL-START.bat
+
+# Result: App at http://localhost:5000
+```
+
+### Example 2: Linux Multi-Machine Setup
+
+```bash
+# 1. Install PostgreSQL & Node.js
+sudo apt update
+sudo apt install postgresql nodejs npm nginx
+
+# 2. Clone project
+git clone <repo-url>
+cd billing-system
+npm install
+
+# 3. Create .env
+echo "DATABASE_URL=postgresql://postgres:password@localhost:5432/billing_system" > .env
+echo "NODE_ENV=production" >> .env
+
+# 4. Setup database
+npm run db:push
+
+# 5. Build production
+npm run build
+
+# 6. Install PM2
+npm install -g pm2
+
+# 7. Start with PM2
+pm2 start "npm run start" --name "billing-system"
+
+# 8. Configure Nginx (see nginx section)
+
+# Result: App accessible on network
+```
+
+### Example 3: Windows Network Setup (Small Office)
+
+```powershell
+# Same as Example 1, but use your computer's IP
+# Get IP: ipconfig
+
+# Share app with team:
+# 1. Run FINAL-START.bat
+# 2. Teammates access: http://YOUR_IP:5000
+# 3. Use PM2 to keep running 24/7
+
+pm2 start "npm run start" --name "billing-system"
+pm2 save
+```
+
+---
+
+## 📊 Database Schema
 
 ### 17 Core Tables
 - **users** - User accounts with role-based access
@@ -300,6 +568,7 @@ billing-system/
 │   └── schema.ts           # Database schema & types
 ├── OFFLINE_INSTALLATION_GUIDE.md  # Full setup guide
 ├── database-schema.sql      # SQL schema dump
+├── FINAL-START.bat         # Windows auto-start script
 └── package.json            # Dependencies
 ```
 
@@ -379,10 +648,22 @@ This software is proprietary. All rights reserved.
 
 ## 🚀 Getting Started Now
 
-1. **Install**: Follow "Quick Start" above
-2. **Setup**: Run `npm run db:push`
-3. **Start**: Run `npm run dev`
-4. **Access**: Open http://localhost:5000
-5. **Create**: Your first company and start billing!
+### Quick Start (Choose One):
+
+**Option 1 - Windows (Easiest):**
+1. Double-click `FINAL-START.bat`
+2. Open http://localhost:5000
+
+**Option 2 - Command Line:**
+1. `npm install`
+2. `npm run db:push`
+3. `npm run dev`
+4. Open http://localhost:5000
+
+**Option 3 - Production (24/7):**
+1. `npm install -g pm2`
+2. `npm run build`
+3. `pm2 start "npm run start" --name "billing-system"`
+4. Open http://localhost:5000
 
 **Ready to manage your billing & inventory? Start now!**
