@@ -87,14 +87,9 @@ export default async function runApp(
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   
-  // Use 127.0.0.1 for Windows compatibility (0.0.0.0 and localhost not supported on Windows)
-  const host = process.platform === 'win32' ? '127.0.0.1' : '0.0.0.0';
-  
-  server.listen({
-    port,
-    host,
-    reusePort: true,
-  }, () => {
+  // Windows fix: Don't specify host, let Node.js handle it
+  // This avoids IPv6 and socket issues on Windows
+  server.listen(port, () => {
     log(`serving on port ${port}`);
   });
 }
