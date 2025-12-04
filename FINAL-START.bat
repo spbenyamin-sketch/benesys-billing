@@ -5,7 +5,18 @@ REM Includes PM2 setup for production 24/7 running
 
 cd /d E:\VfpNextConverter
 
+REM Kill any process already using port 5000 from previous runs
 echo.
+echo ========================================
+echo Cleaning up old processes on port 5000...
+echo ========================================
+echo.
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| find ":5000" 2^>nul') do (
+    taskkill /PID %%a /F 2>nul
+)
+echo Port 5000 cleanup complete.
+echo.
+
 echo ========================================
 echo Billing System - Complete Setup & Start
 echo ========================================
@@ -47,7 +58,7 @@ REM Create .env if missing
 if not exist .env (
     echo [1/5] Creating .env file...
     (
-        echo DATABASE_URL=postgresql://postgres:postgres@localhost:5432/billing_system
+        echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
         echo NODE_ENV=development
     ) > .env
     echo .env created successfully!
@@ -175,7 +186,7 @@ REM Create .env if missing
 if not exist .env (
     echo [1/6] Creating .env file...
     (
-        echo DATABASE_URL=postgresql://postgres:postgres@localhost:5432/billing_system
+        echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
         echo NODE_ENV=production
     ) > .env
     echo .env created successfully!
