@@ -40,13 +40,25 @@ Professional B2B/B2C billing software with GST support, inventory management, ba
 
 ## 🚀 Quick Start
 
-### 1. Install PostgreSQL
+### Step 1: Install PostgreSQL
 
-**Windows**: https://www.postgresql.org/download/windows/
-**macOS**: `brew install postgresql@15 && brew services start postgresql@15`
-**Linux**: `sudo apt install postgresql postgresql-contrib`
+**Windows**: 
+- Download: https://www.postgresql.org/download/windows/
+- Run installer, remember your `postgres` password
+- Default port: 5432
 
-### 2. Clone & Setup
+**macOS**: 
+```bash
+brew install postgresql@15 && brew services start postgresql@15
+```
+
+**Linux**: 
+```bash
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+```
+
+### Step 2: Clone & Setup
 ```bash
 # Clone repository
 git clone <repo-url>
@@ -57,15 +69,40 @@ npm install
 
 # Create database
 psql -U postgres -c "CREATE DATABASE billing_system;"
+```
 
-# Run setup
+### Step 3: Create .env File
+
+Create a `.env` file in your project root with:
+```
+DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/billing_system
+NODE_ENV=development
+```
+
+Replace `YOUR_PASSWORD` with your PostgreSQL password.
+
+### Step 4: Setup Database
+```bash
 npm run db:push
+```
 
-# Start development server
+### Step 5: Start Application
+
+**Windows (Easiest - Double-click):**
+- Double-click `FINAL-START.bat` in your project folder
+
+**Windows (PowerShell):**
+```powershell
+cd your-project-folder
+.\FINAL-START.bat
+```
+
+**macOS/Linux:**
+```bash
 npm run dev
 ```
 
-### 3. Access Application
+### Step 6: Access Application
 Open http://localhost:5000 in your browser
 
 ---
@@ -270,24 +307,58 @@ billing-system/
 
 ## 🐛 Troubleshooting
 
+### Windows: "DATABASE_URL must be set" Error
+**Solution:**
+1. Create `.env` file in project root (NOT in a subfolder)
+2. Add these lines exactly:
+   ```
+   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/billing_system
+   NODE_ENV=development
+   ```
+3. Replace `YOUR_PASSWORD` with your actual PostgreSQL password
+4. Use `FINAL-START.bat` to start (it will auto-create .env if missing)
+
+### Windows: PostgreSQL psql command not found
+**Solution:**
+1. Add PostgreSQL to your PATH:
+   - Press `Win + X` → System
+   - Advanced system settings → Environment Variables
+   - Add: `C:\Program Files\PostgreSQL\15\bin` to PATH
+   - Restart your computer
+
 ### Port 5000 Already in Use
-```bash
-# Kill process using port 5000 and restart
-npm run dev
+**Solution:**
+```powershell
+# Windows PowerShell:
+netstat -ano | findstr :5000
+# Kill the process and restart
+
+# macOS/Linux:
+lsof -i :5000
 ```
 
 ### Database Connection Error
 - Ensure PostgreSQL is running
-- Check DATABASE_URL in .env file
-- Verify credentials
+- Check DATABASE_URL in .env file:
+  ```
+  psql -U postgres -l
+  ```
+- Verify password is correct (test: `psql -U postgres -c "SELECT 1"`)
 
 ### Cannot Create Company/User
 - Ensure you're logged in as Super Admin
-- Check database tables exist (run `npm run db:push`)
+- Check database tables exist:
+  ```
+  npm run db:push
+  ```
+- Check browser console (F12) for error messages
 
-### Import/Export Issues
-- Check file format (CSV for import)
-- Verify required columns present
+### Application Won't Start (Windows)
+Try these in order:
+1. Check .env file exists and is readable
+2. Run: `npm run db:push --force`
+3. Delete `node_modules` and run: `npm install`
+4. Use `FINAL-START.bat` (handles environment setup automatically)
 
 ---
 
