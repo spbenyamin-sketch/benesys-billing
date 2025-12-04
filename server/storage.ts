@@ -251,25 +251,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async needsInitialSetup(): Promise<boolean> {
-    // Fast check: just count users with passwords instead of fetching all
+    // Simple check: just see if any users exist at all
     try {
-      const result = await db
-        .select({ count: sql<number>`count(*)` })
+      const allUsers = await db.select({ id: users.id }).from(users).limit(1);
+      // If no users exist, we need setup
+      if (allUsers.length === 0) {
+        return true;
+      }
+      // If users exist, check if any have password (for local auth)
+      const usersWithPassword = await db
+        .select({ id: users.id })
         .from(users)
         .where(isNotNull(users.passwordHash))
         .limit(1);
       
-      const count = result[0]?.count || 0;
-      return count === 0;
+      // Setup needed only if users exist but none have passwords
+      return usersWithPassword.length === 0;
     } catch (error) {
-      // If query fails, try fallback method
-      try {
-        const allUsers = await db.select({ id: users.id }).from(users).limit(1);
-        return allUsers.length === 0;
-      } catch {
-        // Default to needs setup if database is not accessible
-        return true;
-      }
+      console.error("Error checking setup status:", error);
+      // If database is unavailable, assume setup is needed
+      return true;
     }
   }
 

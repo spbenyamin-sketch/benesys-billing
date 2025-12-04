@@ -28,6 +28,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
 
+  // ==================== SETUP ROUTES (No Auth Required) ====================
+  app.get('/api/check-setup', async (req: any, res) => {
+    try {
+      const needsSetup = await storage.needsInitialSetup();
+      res.json({ needsSetup });
+    } catch (error) {
+      console.error("Error checking setup:", error);
+      res.status(500).json({ message: "Failed to check setup status" });
+    }
+  });
+
+  app.post('/api/setup', async (req: any, res) => {
+    try {
+      // Check if setup is already complete
+      const needsSetup = await storage.needsInitialSetup();
+      if (!needsSetup) {
+        return res.status(400).json({ message: "System is already set up" });
+      }
+
+      const { username, password } = req.body;
+
+      // Validate input
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Create super admin user
+      const user = await storage.createUser({
+        username,
+        passwordHash,
+        role: 'superadmin',
+        firstName: 'Super',
+        lastName: 'Admin',
+      });
+
+      res.json({
+        message: "Setup complete! Super admin account created successfully.",
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+        },
+      });
+    } catch (error) {
+      console.error("Error during setup:", error);
+      res.status(500).json({ message: "Failed to complete setup: " + (error instanceof Error ? error.message : "Unknown error") });
+    }
+  });
+
   // ==================== AUTH ROUTES ====================
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
