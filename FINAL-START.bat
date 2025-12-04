@@ -58,9 +58,9 @@ if errorlevel 1 (
 )
 echo.
 
-REM Setup database
+REM Setup database (force sync to fix any schema conflicts)
 echo [4/5] Setting up database...
-call npm run db:push
+call npm run db:push -- --force
 if errorlevel 1 (
     echo Warning: Database setup had an issue, continuing anyway...
 )
