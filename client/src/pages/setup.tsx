@@ -50,6 +50,8 @@ export default function Setup() {
   async function onSubmit(data: SetupForm) {
     setIsLoading(true);
     try {
+      console.log("[SETUP] Starting setup with username:", data.username);
+      
       const response = await fetch("/api/setup", {
         method: "POST",
         headers: {
@@ -61,19 +63,28 @@ export default function Setup() {
         }),
       });
 
+      console.log("[SETUP] Response status:", response.status, "ok:", response.ok);
+      
+      const responseData = await response.json();
+      console.log("[SETUP] Response data:", responseData);
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Setup failed");
+        throw new Error(responseData.message || "Setup failed");
       }
 
+      console.log("[SETUP] Setup successful, redirecting...");
+      
       toast({
         title: "Setup Complete",
         description: "Super admin account created successfully!",
       });
 
       // Reload to trigger auth check
-      window.location.href = "/";
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
     } catch (error: any) {
+      console.error("[SETUP] Setup error:", error);
       toast({
         title: "Setup Failed",
         description: error.message || "Failed to create admin account",
