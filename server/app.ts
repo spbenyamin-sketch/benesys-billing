@@ -87,8 +87,8 @@ export default async function runApp(
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   
-  // Use localhost for Windows compatibility (0.0.0.0 not supported on Windows)
-  const host = process.platform === 'win32' ? 'localhost' : '0.0.0.0';
+  // Use 127.0.0.1 for Windows compatibility (0.0.0.0 and localhost not supported on Windows)
+  const host = process.platform === 'win32' ? '127.0.0.1' : '0.0.0.0';
   
   server.listen({
     port,

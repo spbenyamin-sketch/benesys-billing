@@ -58,12 +58,26 @@ if errorlevel 1 (
 )
 echo.
 
-REM Setup database (force sync to fix any schema conflicts)
+REM Setup database
 echo [4/5] Setting up database...
-call npm run db:push -- --force
+call npm run db:push
 if errorlevel 1 (
-    echo Warning: Database setup had an issue, continuing anyway...
+    echo.
+    echo ========================================
+    echo ERROR: Database setup failed!
+    echo ========================================
+    echo.
+    echo Make sure PostgreSQL is running:
+    echo - Start PostgreSQL service on Windows
+    echo - Check that database "billing_system" exists
+    echo.
+    pause
+    exit /b 1
 )
+echo.
+echo ========================================
+echo NO ERRORS - Database setup complete
+echo ========================================
 echo.
 
 REM Start server
@@ -71,7 +85,7 @@ echo ========================================
 echo [5/5] Starting Application Server...
 echo ========================================
 echo.
-echo Web Browser: http://localhost:5000
+echo Web Browser: http://127.0.0.1:5000
 echo Database: PostgreSQL on localhost:5432
 echo.
 echo Press Ctrl+C to stop the server
@@ -82,5 +96,18 @@ timeout /t 3 /nobreak
 set NODE_ENV=development
 npx tsx server/index-dev.ts
 
+if errorlevel 1 (
+    echo.
+    echo ========================================
+    echo ERROR: Server failed to start!
+    echo ========================================
+    echo.
+) else (
+    echo.
+    echo ========================================
+    echo NO ERRORS - SERVER STARTED SUCCESSFULLY
+    echo ========================================
+    echo.
+)
 pause
 
