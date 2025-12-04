@@ -45,7 +45,7 @@ import {
   type InsertAgent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, lt, sql, or, notNull } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql, or, isNotNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -256,7 +256,7 @@ export class DatabaseStorage implements IStorage {
       const result = await db
         .select({ count: sql<number>`count(*)` })
         .from(users)
-        .where(notNull(users.passwordHash))
+        .where(isNotNull(users.passwordHash))
         .limit(1);
       
       const count = result[0]?.count || 0;
