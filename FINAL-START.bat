@@ -85,7 +85,7 @@ echo ========================================
 echo [5/5] Starting Application Server...
 echo ========================================
 echo.
-echo Web Browser: http://127.0.0.1:5000
+echo Web Browser: http://localhost:5000
 echo Database: PostgreSQL on localhost:5432
 echo.
 echo Press Ctrl+C to stop the server
