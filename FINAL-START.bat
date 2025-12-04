@@ -82,18 +82,26 @@ if errorlevel 1 (
 )
 echo.
 
-REM Setup database
-echo [4/5] Setting up database...
+REM Create database if it doesn't exist
+echo [4/5] Creating database (if needed)...
+REM First ensure psql can connect - try to create the database
+(
+    echo CREATE DATABASE billing_system;
+) | psql -U postgres -h localhost -p 5432 postgres 2>nul
+REM If it fails (database already exists), that's OK - continue anyway
+
+REM Setup database schema
+echo [4b/5] Setting up database schema...
 call npm run db:push
 if errorlevel 1 (
     echo.
     echo ========================================
-    echo ERROR: Database setup failed!
+    echo ERROR: Database schema setup failed!
     echo ========================================
     echo.
     echo Make sure PostgreSQL is running:
-    echo - Start PostgreSQL service on Windows
-    echo - Check that database "billing_system" exists
+    echo - Start PostgreSQL service on Windows (Services.msc)
+    echo - Check that default user "postgres" with password "postgres" exists
     echo.
     pause
     exit /b 1
@@ -186,25 +194,33 @@ if errorlevel 1 (
 )
 echo.
 
-REM Setup database
-echo [3/6] Setting up database...
+REM Create database if it doesn't exist
+echo [3/6] Creating database (if needed)...
+REM First ensure psql can connect - try to create the database
+(
+    echo CREATE DATABASE billing_system;
+) | psql -U postgres -h localhost -p 5432 postgres 2>nul
+REM If it fails (database already exists), that's OK - continue anyway
+
+REM Setup database schema
+echo [3b/6] Setting up database schema...
 call npm run db:push
 if errorlevel 1 (
     echo.
     echo ========================================
-    echo ERROR: Database setup failed!
+    echo ERROR: Database schema setup failed!
     echo ========================================
     echo.
     echo Make sure PostgreSQL is running:
-    echo - Start PostgreSQL service on Windows
-    echo - Check that database "billing_system" exists
+    echo - Start PostgreSQL service on Windows (Services.msc)
+    echo - Check that default user "postgres" with password "postgres" exists
     echo.
     pause
     exit /b 1
 )
 echo.
 echo ========================================
-echo NO ERRORS - Database setup complete
+echo NO ERRORS - Database created and schema setup complete
 echo ========================================
 echo.
 
