@@ -86,12 +86,18 @@ REM Create database if missing
 echo [4/5] Creating database...
 setlocal enabledelayedexpansion
 set PGPASSWORD=ABC123
-createdb -U postgres -h localhost -p 5432 billing_system 2>nul
-REM Ignore error if database already exists - continue anyway
+
+REM Try creating database using psql
+(
+    echo CREATE DATABASE IF NOT EXISTS billing_system;
+) | psql -U postgres -h localhost -p 5432 -d postgres 2>&1 | find /V "already exists" > nul
+
+echo Database check complete.
+echo.
 
 REM Setup database schema
 echo [4b/5] Setting up database schema...
-call npm run db:push -- --force
+call npm run db:push
 if errorlevel 1 (
     echo.
     echo ========================================
@@ -100,8 +106,8 @@ if errorlevel 1 (
     echo.
     echo Troubleshooting:
     echo 1. Make sure PostgreSQL is running (Services.msc)
-    echo 2. Make sure database "billing_system" exists
-    echo 3. Check .env has correct DATABASE_URL
+    echo 2. Run DROP-DATABASE.bat to clean up
+    echo 3. Then try FINAL-START.bat again
     echo.
     pause
     exit /b 1
@@ -198,12 +204,18 @@ REM Create database if missing
 echo [3/6] Creating database...
 setlocal enabledelayedexpansion
 set PGPASSWORD=ABC123
-createdb -U postgres -h localhost -p 5432 billing_system 2>nul
-REM Ignore error if database already exists - continue anyway
+
+REM Try creating database using psql
+(
+    echo CREATE DATABASE IF NOT EXISTS billing_system;
+) | psql -U postgres -h localhost -p 5432 -d postgres 2>&1 | find /V "already exists" > nul
+
+echo Database check complete.
+echo.
 
 REM Setup database schema
 echo [3b/6] Setting up database schema...
-call npm run db:push -- --force
+call npm run db:push
 if errorlevel 1 (
     echo.
     echo ========================================
@@ -212,8 +224,8 @@ if errorlevel 1 (
     echo.
     echo Troubleshooting:
     echo 1. Make sure PostgreSQL is running (Services.msc)
-    echo 2. Make sure database "billing_system" exists
-    echo 3. Check .env has correct DATABASE_URL
+    echo 2. Run DROP-DATABASE.bat to clean up
+    echo 3. Then try FINAL-START.bat again
     echo.
     pause
     exit /b 1
