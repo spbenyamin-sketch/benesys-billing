@@ -1,10 +1,7 @@
 import "dotenv/config";
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import { drizzle } from 'drizzle-orm/node-postgres';
+import pg from 'pg';
 import * as schema from "@shared/schema";
-
-neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -12,5 +9,17 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const { Pool } = pg;
+
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
+// Handle pool connection errors
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+});
+
 export const db = drizzle({ client: pool, schema });
