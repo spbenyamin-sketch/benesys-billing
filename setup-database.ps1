@@ -18,4 +18,12 @@ $env:PGPASSWORD = $DB_PASSWORD_TEXT
 psql -U $DB_USER -c "CREATE DATABASE $DB_NAME;" 2>$null
 
 npm run db:push
-Write-Host "✓ Setup Complete!"
+Write-Host ""
+Write-Host "========================================"
+Write-Host "Setup Complete! [SUCCESS]"
+Write-Host "========================================"
+Write-Host ""
+Write-Host "Next steps:"
+Write-Host "1. Run: npm run dev"
+Write-Host "2. Open http://localhost:5000 in your browser"
+Write-Host "3. Complete the initial setup"
