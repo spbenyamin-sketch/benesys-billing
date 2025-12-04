@@ -82,8 +82,15 @@ if errorlevel 1 (
 )
 echo.
 
+REM Create database if missing
+echo [4/5] Creating database...
+setlocal enabledelayedexpansion
+set PGPASSWORD=ABC123
+createdb -U postgres -h localhost -p 5432 billing_system 2>nul
+REM Ignore error if database already exists - continue anyway
+
 REM Setup database schema
-echo [4/5] Setting up database schema...
+echo [4b/5] Setting up database schema...
 call npm run db:push -- --force
 if errorlevel 1 (
     echo.
@@ -91,17 +98,17 @@ if errorlevel 1 (
     echo ERROR: Database schema setup failed!
     echo ========================================
     echo.
-    echo Make sure PostgreSQL is running and database exists:
-    echo - Check Services.msc for "PostgreSQL" (should be Running)
-    echo - Database "billing_system" should already be created
-    echo - User "postgres" with password set in .env
+    echo Troubleshooting:
+    echo 1. Make sure PostgreSQL is running (Services.msc)
+    echo 2. Make sure database "billing_system" exists
+    echo 3. Check .env has correct DATABASE_URL
     echo.
     pause
     exit /b 1
 )
 echo.
 echo ========================================
-echo NO ERRORS - Database setup complete
+echo NO ERRORS - Database ready!
 echo ========================================
 echo.
 
@@ -187,8 +194,15 @@ if errorlevel 1 (
 )
 echo.
 
+REM Create database if missing
+echo [3/6] Creating database...
+setlocal enabledelayedexpansion
+set PGPASSWORD=ABC123
+createdb -U postgres -h localhost -p 5432 billing_system 2>nul
+REM Ignore error if database already exists - continue anyway
+
 REM Setup database schema
-echo [3/6] Setting up database schema...
+echo [3b/6] Setting up database schema...
 call npm run db:push -- --force
 if errorlevel 1 (
     echo.
@@ -196,17 +210,17 @@ if errorlevel 1 (
     echo ERROR: Database schema setup failed!
     echo ========================================
     echo.
-    echo Make sure PostgreSQL is running and database exists:
-    echo - Check Services.msc for "PostgreSQL" (should be Running)
-    echo - Database "billing_system" should already be created
-    echo - User "postgres" with password set in .env
+    echo Troubleshooting:
+    echo 1. Make sure PostgreSQL is running (Services.msc)
+    echo 2. Make sure database "billing_system" exists
+    echo 3. Check .env has correct DATABASE_URL
     echo.
     pause
     exit /b 1
 )
 echo.
 echo ========================================
-echo NO ERRORS - Database schema setup complete
+echo NO ERRORS - Database ready!
 echo ========================================
 echo.
 
