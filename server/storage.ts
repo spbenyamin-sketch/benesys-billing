@@ -45,7 +45,7 @@ import {
   type InsertAgent,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, lt, sql, or } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql, or, notNull } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -251,13 +251,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async needsInitialSetup(): Promise<boolean> {
-    const allUsers = await this.getAllUsers();
-    // If no users exist, need setup
-    if (allUsers.length === 0) return true;
-    
-    // If users exist but none have passwords (old Replit Auth users), need setup
-    const hasUserWithPassword = allUsers.some(user => user.passwordHash);
-    return !hasUserWithPassword;
+    // Fast check: just count users with passwords instead of fetching all
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+        .where(notNull(users.passwordHash))
+        .limit(1);
+      
+      const count = result[0]?.count || 0;
+      return count === 0;
+    } catch (error) {
+      // If query fails, try fallback method
+      try {
+        const allUsers = await db.select({ id: users.id }).from(users).limit(1);
+        return allUsers.length === 0;
+      } catch {
+        // Default to needs setup if database is not accessible
+        return true;
+      }
+    }
   }
 
   async getUserCompanies(userId: string): Promise<any[]> {
