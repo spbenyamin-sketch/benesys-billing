@@ -76,13 +76,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         lastName: 'Admin',
       });
 
-      res.json({
-        message: "Setup complete! Super admin account created successfully.",
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-        },
+      // Login the user by creating a session
+      req.logIn(user, (err: any) => {
+        if (err) {
+          console.error("Error logging in user:", err);
+          return res.status(500).json({ message: "User created but login failed" });
+        }
+
+        // Assign to default company
+        storage.assignUserToDefaultCompany(user.id).catch((err: any) => {
+          console.error("Error assigning company:", err);
+        });
+
+        res.json({
+          message: "Setup complete! Super admin account created successfully.",
+          user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+          },
+        });
       });
     } catch (error) {
       console.error("Error during setup:", error);
