@@ -98,10 +98,8 @@ echo [4/5] Creating database...
 setlocal enabledelayedexpansion
 set PGPASSWORD=ABC123
 
-REM Try creating database using psql
-(
-    echo CREATE DATABASE IF NOT EXISTS billing_system;
-) | psql -U postgres -h localhost -p 5432 -d postgres 2>&1 | find /V "already exists" > nul
+REM Use SQL file instead of pipe (more reliable on Windows)
+psql -U postgres -h localhost -p 5432 -d postgres -f CREATE-DATABASE.sql >nul 2>&1
 
 echo Database check complete.
 echo.
@@ -216,10 +214,8 @@ echo [3/6] Creating database...
 setlocal enabledelayedexpansion
 set PGPASSWORD=ABC123
 
-REM Try creating database using psql
-(
-    echo CREATE DATABASE IF NOT EXISTS billing_system;
-) | psql -U postgres -h localhost -p 5432 -d postgres 2>&1 | find /V "already exists" > nul
+REM Use SQL file instead of pipe (more reliable on Windows)
+psql -U postgres -h localhost -p 5432 -d postgres -f CREATE-DATABASE.sql >nul 2>&1
 
 echo Database check complete.
 echo.
