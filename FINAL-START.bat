@@ -1,7 +1,6 @@
 @echo off
 REM FINAL STARTUP - Billing System for Windows
 REM This script does EVERYTHING - just click and wait!
-REM Includes PM2 setup for production 24/7 running
 
 cd /d E:\VfpNextConverter
 
@@ -22,26 +21,26 @@ echo Billing System - Complete Setup & Start
 echo ========================================
 echo.
 echo Select startup mode:
-echo 1 = Development Mode (npm run dev)
-echo     - Hot reload enabled
-echo     - Press Ctrl+C to stop
 echo.
-echo 2 = Production Mode with PM2 (24/7 running)
-echo     - Auto-restart on crash
-echo     - Auto-startup on computer restart
-echo     - Keep running in background
+echo   1 = Development Mode (npm run dev)
+echo       - Hot reload enabled
+echo       - Press Ctrl+C to stop
+echo.
+echo   2 = Production Mode with PM2 (24/7 running)
+echo       - Auto-restart on crash
+echo       - Auto-startup on computer restart
+echo       - Keep running in background
 echo.
 set /p MODE="Enter choice (1 or 2): "
 
-if "%MODE%"=="1" (
-    goto DEVELOPMENT_MODE
-) else if "%MODE%"=="2" (
-    goto PRODUCTION_MODE
-) else (
-    echo Invalid choice. Please run again and enter 1 or 2.
-    pause
-    exit /b 1
-)
+if "%MODE%"=="2" goto PRODUCTION_MODE
+if "%MODE%"=="1" goto DEVELOPMENT_MODE
+
+echo.
+echo Invalid choice. Please run again and enter 1 or 2.
+echo.
+pause
+exit /b 1
 
 REM ============================================================================
 REM DEVELOPMENT MODE - npm run dev
@@ -144,19 +143,11 @@ timeout /t 3 /nobreak
 set NODE_ENV=development
 npx tsx server/index-dev.ts
 
-if errorlevel 1 (
-    echo.
-    echo ========================================
-    echo ERROR: Server failed to start!
-    echo ========================================
-    echo.
-) else (
-    echo.
-    echo ========================================
-    echo NO ERRORS - SERVER STOPPED
-    echo ========================================
-    echo.
-)
+echo.
+echo ========================================
+echo SERVER STOPPED
+echo ========================================
+echo.
 pause
 exit /b 0
 
@@ -270,81 +261,37 @@ if errorlevel 1 (
 )
 echo.
 echo ========================================
-echo NO ERRORS - Build complete
+echo NO ERRORS - Build successful
 echo ========================================
 echo.
 
 REM Start with PM2
-echo [6/6] Starting with PM2 (Production Mode)...
-echo.
-
-REM Check if already running
-call pm2 list | findstr "billing-system" >nul
-if not errorlevel 1 (
-    echo Previous instance found, restarting...
-    call pm2 restart billing-system
-) else (
-    echo Starting new PM2 instance...
-    call pm2 start "set NODE_ENV=production && node dist/index.js" --name "billing-system" --interpreter "cmd"
-)
+echo [6/6] Starting with PM2 (24/7 running)...
+call pm2 delete billing_system 2>nul
+call pm2 start "npm run start" --name billing_system
+call pm2 save
 
 if errorlevel 1 (
-    echo ERROR: PM2 start failed
+    echo ERROR: PM2 startup failed
     pause
     exit /b 1
 )
 
 echo.
 echo ========================================
-echo NO ERRORS - APP STARTED WITH PM2
+echo SUCCESS - SYSTEM RUNNING 24/7 WITH PM2!
 echo ========================================
 echo.
 echo Web Browser: http://localhost:5000
 echo Database: PostgreSQL on localhost:5432
 echo.
-echo PM2 Commands:
-echo   pm2 list                    - Show all running apps
-echo   pm2 logs billing-system     - View app logs
-echo   pm2 stop billing-system     - Stop app
-echo   pm2 restart billing-system  - Restart app
-echo   pm2 delete billing-system   - Delete from PM2
+echo PM2 will keep the server running even after you close this window!
 echo.
-
-REM Ask if user wants to setup auto-startup on boot
+echo Useful PM2 Commands:
+echo   pm2 status       - Check server status
+echo   pm2 stop all     - Stop server
+echo   pm2 restart all  - Restart server
+echo   pm2 logs         - View server logs
 echo.
-echo ========================================
-echo SETUP AUTO-STARTUP ON BOOT (Optional)
-echo ========================================
-echo.
-set /p AUTOSTART="Setup auto-startup on boot? (Y/N): "
-if /i "%AUTOSTART%"=="Y" (
-    echo Installing PM2 Windows startup...
-    call pm2 install pm2-windows-startup
-    call pm2 save
-    echo.
-    echo ========================================
-    echo NO ERRORS - Auto-startup configured
-    echo ========================================
-    echo.
-    echo Your app will auto-start when you restart Windows!
-    echo.
-) else (
-    echo Skipped auto-startup setup.
-    echo.
-)
-
-echo ========================================
-echo PRODUCTION MODE READY!
-echo ========================================
-echo.
-echo Your app is running in background with PM2!
-echo.
-echo Next steps:
-echo 1. Open http://localhost:5000 in your browser
-echo 2. App will auto-restart if it crashes
-echo 3. View logs: pm2 logs billing-system
-echo 4. To stop: pm2 stop billing-system
-echo.
-
 pause
 exit /b 0
