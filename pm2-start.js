@@ -1,28 +1,23 @@
 #!/usr/bin/env node
 
 // PM2 Production Start Wrapper - Windows Compatible
-// Uses child_process to spawn Node with proper ES module support
+// Ensures proper environment setup for production server
 
-const { spawn } = require('child_process');
-const path = require('path');
-
-// Set production environment
+// Set NODE_ENV to production
 process.env.NODE_ENV = 'production';
 
-// Spawn the production server with Node directly
-const server = spawn('node', [path.join(__dirname, 'dist/index.js')], {
-  stdio: 'inherit',
-  cwd: __dirname,
-  env: { ...process.env, NODE_ENV: 'production' }
-});
+// Set default PORT if not already set
+if (!process.env.PORT) {
+  process.env.PORT = '5000';
+}
 
-// Handle process termination
-server.on('exit', (code) => {
-  console.log(`Server exited with code ${code}`);
-  process.exit(code);
-});
+// Load .env file if dotenv is available
+try {
+  require('dotenv').config();
+} catch (e) {
+  console.log('dotenv not available, using environment variables');
+}
 
-server.on('error', (err) => {
-  console.error('Failed to start server:', err);
-  process.exit(1);
-});
+// Start the production server
+// The server will bind to 0.0.0.0:5000 for all interfaces
+require('./dist/index.js');

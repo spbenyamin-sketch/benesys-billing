@@ -87,9 +87,9 @@ export default async function runApp(
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   
-  // Windows fix: Don't specify host, let Node.js handle it
-  // This avoids IPv6 and socket issues on Windows
-  server.listen(port, () => {
-    log(`serving on port ${port}`);
+  // Production: Bind to 0.0.0.0 to accept connections from all interfaces
+  // This is required for PM2 on Windows to work properly
+  server.listen(port, '0.0.0.0', () => {
+    log(`serving on http://0.0.0.0:${port}`);
   });
 }
