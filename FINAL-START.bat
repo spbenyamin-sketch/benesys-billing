@@ -262,22 +262,31 @@ echo.
 REM Start with PM2
 :PRODUCTION_START_PM2
 echo [7/7] Starting with PM2 (24/7 running)...
+echo.
 
 REM Check if dist folder exists
+echo Verifying build files...
 if not exist "dist\" (
     echo ERROR: dist folder not found! Build failed or incomplete.
     echo Please run: npm run build
     pause
     exit /b 1
 )
+echo ✓ dist folder found
 
 REM Check if dist/index.js exists
 if not exist "dist\index.js" (
     echo ERROR: dist/index.js not found! Build is incomplete.
-    echo Please run: npm run build
-    pause
-    exit /b 1
+    echo Running build again...
+    call npm run build
+    if not exist "dist\index.js" (
+        echo ERROR: Build failed completely. Check errors above.
+        pause
+        exit /b 1
+    )
 )
+echo ✓ dist/index.js found
+echo.
 
 call pm2 delete billing_system 2>nul
 echo Starting billing_system with PM2...
