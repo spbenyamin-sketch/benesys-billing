@@ -1,7 +1,6 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -13,71 +12,72 @@ import { LogIn } from "lucide-react";
 
 export default function Login() {
   const { toast } = useToast();
-  const usernameRef = useRef<HTMLInputElement>(null);
-  const passwordRef = useRef<HTMLInputElement>(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const username = usernameRef.current?.value || "";
-    const password = passwordRef.current?.value || "";
-
-    console.log("[LOGIN] Form submitted - username:", username, "password length:", password.length);
+    console.log("[LOGIN] ========== FORM SUBMITTED ==========");
+    console.log("[LOGIN] Username state:", username);
+    console.log("[LOGIN] Password state:", password);
+    console.log("[LOGIN] Username length:", username.length);
+    console.log("[LOGIN] Password length:", password.length);
 
     if (!username.trim() || !password.trim()) {
-      console.log("[LOGIN] Empty credentials");
+      console.log("[LOGIN] VALIDATION FAILED - Empty fields");
       toast({
-        title: "Error",
-        description: "Please enter both username and password",
+        title: "Validation Error",
+        description: "Username and password are required",
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    console.log("[LOGIN] Starting login request...");
-    
+    console.log("[LOGIN] Sending login request to /api/login");
+
     try {
+      const loginPayload = { username, password };
+      console.log("[LOGIN] Payload:", loginPayload);
+
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(loginPayload),
         credentials: "include",
       });
 
-      console.log("[LOGIN] Got response, status:", response.status);
-      const data = await response.json();
+      console.log("[LOGIN] Response received - status:", response.status);
+      const responseData = await response.json();
+      console.log("[LOGIN] Response body:", responseData);
 
       if (!response.ok) {
-        console.log("[LOGIN] Login failed:", data.message);
-        toast({
-          title: "Login Failed",
-          description: data.message || "Invalid username or password",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
+        console.error("[LOGIN] Login failed with status:", response.status);
+        throw new Error(responseData.message || "Login failed");
       }
 
-      console.log("[LOGIN] Login successful! User:", data.user);
-      
-      // Clear session storage and redirect
+      console.log("[LOGIN] ✅ LOGIN SUCCESSFUL!");
+      console.log("[LOGIN] User:", responseData.user);
+
+      // Clear storage
       sessionStorage.removeItem("hasSelectedCompany");
       localStorage.removeItem("currentCompanyId");
-      
-      // Force redirect to home
+
+      console.log("[LOGIN] Redirecting to home page...");
       window.location.href = "/";
     } catch (error: any) {
-      console.error("[LOGIN] Fetch error:", error);
+      console.error("[LOGIN] ❌ ERROR:", error.message);
       toast({
-        title: "Login Error",
-        description: error.message || "Network error occurred",
+        title: "Login Failed",
+        description: error.message || "Invalid credentials",
         variant: "destructive",
       });
+    } finally {
       setIsLoading(false);
+      console.log("[LOGIN] ========== REQUEST COMPLETE ==========");
     }
   };
 
@@ -101,32 +101,44 @@ export default function Login() {
               <label htmlFor="username" className="block text-sm font-medium mb-2">
                 Username
               </label>
-              <Input
-                ref={usernameRef}
+              <input
                 id="username"
                 type="text"
                 placeholder="Enter your username"
-                data-testid="input-username"
+                value={username}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  console.log("[INPUT] Username changed to:", val);
+                  setUsername(val);
+                }}
                 disabled={isLoading}
                 autoComplete="username"
-                defaultValue=""
+                data-testid="input-username"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2">
                 Password
               </label>
-              <Input
-                ref={passwordRef}
+              <input
                 id="password"
                 type="password"
                 placeholder="Enter your password"
-                data-testid="input-password"
+                value={password}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  console.log("[INPUT] Password changed (length):", val.length);
+                  setPassword(val);
+                }}
                 disabled={isLoading}
                 autoComplete="current-password"
-                defaultValue=""
+                data-testid="input-password"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
             <Button
               type="submit"
               className="w-full"
@@ -135,6 +147,10 @@ export default function Login() {
             >
               {isLoading ? "Logging in..." : "Login"}
             </Button>
+
+            <div className="text-xs text-gray-500 mt-4">
+              Test credentials: admin / admin@123
+            </div>
           </form>
         </CardContent>
       </Card>
