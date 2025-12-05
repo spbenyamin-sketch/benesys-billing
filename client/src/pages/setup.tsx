@@ -61,6 +61,7 @@ export default function Setup() {
           username: data.username,
           password: data.password,
         }),
+        credentials: "include",
       });
 
       console.log("[SETUP] Response status:", response.status, "ok:", response.ok);
