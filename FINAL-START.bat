@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM FINAL STARTUP - Billing System for Windows
-REM This script does EVERYTHING - just click and wait!
+REM Smart setup - skips database creation if already set up
 
 cd /d E:\VfpNextConverter
 
@@ -55,6 +55,25 @@ echo DEVELOPMENT MODE SELECTED
 echo ========================================
 echo.
 
+REM Check if setup is already complete
+echo Checking if system is already set up...
+for /f "delims=" %%i in ('node check-setup.js 2^>nul') do set SETUP_STATUS=%%i
+
+if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
+    echo.
+    echo ========================================
+    echo SETUP ALREADY COMPLETE!
+    echo ========================================
+    echo.
+    echo Skipping database and schema setup...
+    echo Starting server directly...
+    echo.
+    goto DEVELOPMENT_START_SERVER
+)
+
+echo Setup needed. Proceeding with full setup...
+echo.
+
 REM ALWAYS recreate .env with development settings
 echo [1/5] Setting up environment (.env file)...
 (
@@ -62,11 +81,6 @@ echo [1/5] Setting up environment (.env file)...
     echo NODE_ENV=development
 ) > .env
 echo .env configured for Development Mode
-echo.
-
-REM Show configuration
-echo Current configuration:
-type .env
 echo.
 
 REM Install dependencies
@@ -98,11 +112,12 @@ echo Database schema ready.
 echo.
 
 REM Start server in development mode
+:DEVELOPMENT_START_SERVER
 echo ========================================
 echo [5/5] STARTING SERVER ON PORT 5000...
 echo ========================================
 echo.
-echo SERVICE STATUS: STARTING...
+echo SERVICE STATUS: RUNNING...
 echo Web Browser: http://localhost:5000
 echo Database: PostgreSQL on localhost:5432
 echo.
@@ -132,6 +147,25 @@ echo ========================================
 echo PRODUCTION MODE WITH PM2 SELECTED
 echo ========================================
 echo.
+
+REM Check if setup is already complete
+echo Checking if system is already set up...
+for /f "delims=" %%i in ('node check-setup.js 2^>nul') do set SETUP_STATUS=%%i
+
+if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
+    echo.
+    echo ========================================
+    echo SETUP ALREADY COMPLETE!
+    echo ========================================
+    echo.
+    echo Skipping database and schema setup...
+    echo Starting PM2 directly...
+    echo.
+    goto PRODUCTION_START_PM2
+)
+
+echo Setup needed. Proceeding with full setup...
+echo.
 echo This will:
 echo 1. Configure environment for production
 echo 2. Install all dependencies
@@ -150,11 +184,6 @@ echo [1/7] Setting up environment (.env file)...
     echo NODE_ENV=production
 ) > .env
 echo .env configured for Production Mode
-echo.
-
-REM Show configuration
-echo Current configuration:
-type .env
 echo.
 
 REM Install dependencies
@@ -212,6 +241,7 @@ echo Build complete.
 echo.
 
 REM Start with PM2
+:PRODUCTION_START_PM2
 echo [7/7] Starting with PM2 (24/7 running)...
 call pm2 delete billing_system 2>nul
 call pm2 start "npm run start" --name billing_system >nul 2>&1
