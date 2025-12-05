@@ -21,17 +21,22 @@ async function createDatabase() {
     console.log('Connected!');
 
     console.log('Creating database: billing_system');
-    await client.query('CREATE DATABASE IF NOT EXISTS billing_system');
-    console.log('✓ Database created successfully!');
+    try {
+      // Try to create database (PostgreSQL doesn't support IF NOT EXISTS for CREATE DATABASE)
+      await client.query('CREATE DATABASE billing_system');
+      console.log('✓ Database created successfully!');
+    } catch (createError) {
+      // Check if database already exists (error code 42P04)
+      if (createError.code === '42P04') {
+        console.log('✓ Database already exists (OK)');
+      } else {
+        throw createError;
+      }
+    }
 
     await client.end();
     process.exit(0);
   } catch (error) {
-    if (error.message.includes('already exists')) {
-      console.log('✓ Database already exists');
-      await client.end();
-      process.exit(0);
-    }
     console.error('✗ ERROR:', error.message);
     process.exit(1);
   }
