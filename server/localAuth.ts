@@ -113,17 +113,37 @@ export async function setupAuth(app: Express) {
 
   // Login route
   app.post("/api/login", (req, res, next) => {
+    console.log("[AUTH] ========== LOGIN REQUEST RECEIVED ==========");
+    console.log("[AUTH] Body:", JSON.stringify(req.body));
+    console.log("[AUTH] Username:", req.body?.username);
+    
+    if (!req.body?.username || !req.body?.password) {
+      console.log("[AUTH] Missing username or password");
+      return res.status(400).json({ message: "Username and password required" });
+    }
+    
     passport.authenticate("local", (err: any, user: any, info: any) => {
+      console.log("[AUTH] Passport authenticate callback");
+      console.log("[AUTH] Error:", err);
+      console.log("[AUTH] User found:", !!user);
+      console.log("[AUTH] Info:", info);
+      
       if (err) {
+        console.error("[AUTH] Authentication error:", err);
         return res.status(500).json({ message: "Login error" });
       }
       if (!user) {
+        console.log("[AUTH] No user found - invalid credentials");
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
+      
+      console.log("[AUTH] User authenticated, creating session...");
       req.login(user, (err) => {
         if (err) {
+          console.error("[AUTH] Session creation error:", err);
           return res.status(500).json({ message: "Login error" });
         }
+        console.log("[AUTH] ✅ LOGIN SUCCESSFUL! User:", user.username);
         return res.json({ user });
       });
     })(req, res, next);

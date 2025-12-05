@@ -8,92 +8,99 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LogIn } from "lucide-react";
+import { LogIn, Loader2 } from "lucide-react";
 
 export default function Login() {
   const { toast } = useToast();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    console.log("[LOGIN] ========== FORM SUBMITTED ==========");
-    console.log("[LOGIN] Username state:", username);
-    console.log("[LOGIN] Password state:", password);
+  const doLogin = async () => {
+    console.log("[LOGIN] ========== BUTTON CLICKED ==========");
+    console.log("[LOGIN] Username:", username);
+    console.log("[LOGIN] Password length:", password.length);
 
-    if (!username.trim() || !password.trim()) {
-      console.log("[LOGIN] VALIDATION FAILED - Empty fields");
-      toast({
-        title: "Validation Error",
-        description: "Username and password are required",
-        variant: "destructive",
-      });
+    setErrorMessage("");
+
+    if (!username.trim()) {
+      setErrorMessage("Username is required");
+      return;
+    }
+    if (!password.trim()) {
+      setErrorMessage("Password is required");
       return;
     }
 
     setIsLoading(true);
-    console.log("[LOGIN] Sending login request to /api/login");
+    console.log("[LOGIN] Starting fetch to /api/login...");
 
     try {
-      const loginPayload = { username, password };
-      console.log("[LOGIN] Payload:", JSON.stringify(loginPayload));
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-      console.log("[LOGIN] Calling fetch()...");
-      
-      const response = await fetch("http://localhost:5000/api/login", {
+      const response = await fetch("/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json",
         },
-        body: JSON.stringify(loginPayload),
+        body: JSON.stringify({ username: username.trim(), password }),
         credentials: "include",
+        signal: controller.signal,
       });
 
-      console.log("[LOGIN] ✅ Fetch completed! Status:", response.status);
-      
-      let responseData;
-      try {
-        responseData = await response.json();
-        console.log("[LOGIN] Response body:", responseData);
-      } catch (parseErr) {
-        console.error("[LOGIN] Failed to parse response JSON:", parseErr);
-        throw new Error("Server returned invalid response");
-      }
+      clearTimeout(timeoutId);
+      console.log("[LOGIN] Response received! Status:", response.status);
+
+      const data = await response.json();
+      console.log("[LOGIN] Response data:", data);
 
       if (!response.ok) {
-        console.error("[LOGIN] Login failed - server returned error");
-        console.error("[LOGIN] Status:", response.status);
-        console.error("[LOGIN] Message:", responseData.message);
-        throw new Error(responseData.message || `Login failed (${response.status})`);
+        throw new Error(data.message || `Login failed (${response.status})`);
       }
 
-      console.log("[LOGIN] ✅✅✅ LOGIN SUCCESSFUL!");
-      console.log("[LOGIN] User:", responseData.user);
+      console.log("[LOGIN] SUCCESS! User:", data.user?.username);
 
-      // Clear storage
+      // Clear storage and redirect
       sessionStorage.removeItem("hasSelectedCompany");
       localStorage.removeItem("currentCompanyId");
 
-      console.log("[LOGIN] Redirecting to home page...");
-      
-      // Use window.location to force a reload
+      toast({
+        title: "Login Successful",
+        description: "Redirecting to dashboard...",
+      });
+
+      // Redirect after a short delay
       setTimeout(() => {
         window.location.href = "/";
-      }, 100);
+      }, 500);
+
     } catch (error: any) {
-      console.error("[LOGIN] ❌ ERROR CAUGHT:", error);
-      console.error("[LOGIN] Error message:", error.message);
-      console.error("[LOGIN] Error stack:", error.stack);
+      console.error("[LOGIN] ERROR:", error);
       
-      setIsLoading(false);
-      
+      let message = "Login failed";
+      if (error.name === "AbortError") {
+        message = "Request timed out. Please try again.";
+      } else if (error.message) {
+        message = error.message;
+      }
+
+      setErrorMessage(message);
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid credentials or network error",
+        description: message,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !isLoading) {
+      doLogin();
     }
   };
 
@@ -112,7 +119,7 @@ export default function Login() {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium mb-2">
                 Username
@@ -122,14 +129,13 @@ export default function Login() {
                 type="text"
                 placeholder="Enter your username"
                 value={username}
-                onChange={(e) => {
-                  setUsername(e.target.value);
-                  console.log("[INPUT] Username changed to:", e.target.value);
-                }}
+                onChange={(e) => setUsername(e.target.value)}
+                onKeyPress={handleKeyPress}
                 disabled={isLoading}
                 autoComplete="username"
+                autoFocus
                 data-testid="input-username"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
               />
             </div>
 
@@ -142,30 +148,42 @@ export default function Login() {
                 type="password"
                 placeholder="Enter your password"
                 value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  console.log("[INPUT] Password changed (length):", e.target.value.length);
-                }}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
                 disabled={isLoading}
                 autoComplete="current-password"
                 data-testid="input-password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
               />
             </div>
 
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-md text-sm dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                {errorMessage}
+              </div>
+            )}
+
             <Button
-              type="submit"
+              type="button"
               className="w-full"
               disabled={isLoading}
+              onClick={doLogin}
               data-testid="button-login"
             >
-              {isLoading ? "Logging in..." : "Login"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Logging in...
+                </>
+              ) : (
+                "Login"
+              )}
             </Button>
 
-            <div className="text-xs text-gray-500 mt-4 bg-gray-100 p-2 rounded">
-              Test: admin / admin@123
+            <div className="text-xs text-center text-muted-foreground mt-4 p-2 bg-muted rounded">
+              Default: admin / admin@123
             </div>
-          </form>
+          </div>
         </CardContent>
       </Card>
     </div>
