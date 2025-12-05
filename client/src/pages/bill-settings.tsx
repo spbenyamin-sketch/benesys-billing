@@ -72,6 +72,7 @@ const ASSIGNMENT_OPTIONS = [
   { value: "b2c", label: "B2C Retail Sale" },
   { value: "estimate", label: "Estimate/Quotation" },
   { value: "credit_note", label: "Credit Note" },
+  { value: "debit_note", label: "Debit Note" },
 ];
 
 const defaultFormData = {
@@ -119,10 +120,12 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
       autoPrintB2C: true,
       autoPrintEstimate: false,
       autoPrintCreditNote: false,
+      autoPrintDebitNote: false,
       printCopiesB2B: 2,
       printCopiesB2C: 1,
       printCopiesEstimate: 1,
       printCopiesCreditNote: 2,
+      printCopiesDebitNote: 2,
       showPrintConfirmation: true,
       defaultPrinterName: "",
     };
@@ -215,6 +218,21 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                   checked={settings.autoPrintCreditNote}
                   onCheckedChange={(checked) => setSettings({ ...settings, autoPrintCreditNote: checked })}
                   data-testid="switch-auto-print-credit-note"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="autoPrintDebitNote" className="font-normal">Debit Note</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Template: {getAssignedTemplate("debit_note")?.name || "Not assigned"}
+                  </p>
+                </div>
+                <Switch
+                  id="autoPrintDebitNote"
+                  checked={settings.autoPrintDebitNote}
+                  onCheckedChange={(checked) => setSettings({ ...settings, autoPrintDebitNote: checked })}
+                  data-testid="switch-auto-print-debit-note"
                 />
               </div>
             </div>
@@ -320,6 +338,23 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 onValueChange={(value) => setSettings({ ...settings, printCopiesCreditNote: parseInt(value) })}
               >
                 <SelectTrigger id="copiesCreditNote" data-testid="select-copies-credit-note">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="copiesDebitNote">Debit Note</Label>
+              <Select
+                value={settings.printCopiesDebitNote.toString()}
+                onValueChange={(value) => setSettings({ ...settings, printCopiesDebitNote: parseInt(value) })}
+              >
+                <SelectTrigger id="copiesDebitNote" data-testid="select-copies-debit-note">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

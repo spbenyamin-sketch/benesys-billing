@@ -5,10 +5,12 @@ export interface PrintSettings {
   autoPrintB2C: boolean;
   autoPrintEstimate: boolean;
   autoPrintCreditNote: boolean;
+  autoPrintDebitNote: boolean;
   printCopiesB2B: number;
   printCopiesB2C: number;
   printCopiesEstimate: number;
   printCopiesCreditNote: number;
+  printCopiesDebitNote: number;
   showPrintConfirmation: boolean;
   defaultPrinterName: string;
 }
@@ -18,10 +20,12 @@ const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   autoPrintB2C: true,
   autoPrintEstimate: false,
   autoPrintCreditNote: false,
+  autoPrintDebitNote: false,
   printCopiesB2B: 2,
   printCopiesB2C: 1,
   printCopiesEstimate: 1,
   printCopiesCreditNote: 2,
+  printCopiesDebitNote: 2,
   showPrintConfirmation: true,
   defaultPrinterName: "",
 };
@@ -75,6 +79,8 @@ export function usePrintSettings() {
         return settings.autoPrintEstimate;
       case "CN":
         return settings.autoPrintCreditNote;
+      case "DN":
+        return settings.autoPrintDebitNote;
       default:
         return false;
     }
@@ -90,6 +96,8 @@ export function usePrintSettings() {
         return settings.printCopiesEstimate;
       case "CN":
         return settings.printCopiesCreditNote;
+      case "DN":
+        return settings.printCopiesDebitNote;
       default:
         return 1;
     }
