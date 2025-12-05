@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // Simple Node.js script to create PostgreSQL database
-// Uses pg driver that's already installed
+// Uses ES modules with import syntax
 
-const { Client } = require('pg');
+import pg from 'pg';
+
+const { Client } = pg;
 
 async function createDatabase() {
   const client = new Client({
