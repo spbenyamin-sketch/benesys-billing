@@ -66,9 +66,19 @@ if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
     echo ========================================
     echo.
     echo Skipping database and schema setup...
-    echo Rebuilding frontend assets...
     echo.
-    call npm run build >nul 2>&1
+    
+    REM Ensure .env has correct development settings with SAME session secret
+    echo Updating .env for Development Mode...
+    (
+        echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
+        echo PORT=5000
+        echo NODE_ENV=development
+        echo SESSION_SECRET=billing-system-production-secret-key-2024
+    ) > .env
+    echo .env updated for Development Mode
+    echo.
+    
     echo Starting server directly...
     echo.
     goto DEVELOPMENT_START_SERVER
@@ -101,12 +111,12 @@ echo.
     echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
     echo PORT=5000
     echo NODE_ENV=development
-    echo SESSION_SECRET=dev-secret-key-change-in-production
+    echo SESSION_SECRET=billing-system-production-secret-key-2024
 ) > .env
 
 echo .env configured for Development Mode
 echo Database: postgresql://postgres:***@localhost:5432/billing_system
-echo SESSION_SECRET: dev-secret-key-change-in-production
+echo SESSION_SECRET: billing-system-production-secret-key-2024
 echo.
 
 REM Verify .env was created
@@ -193,8 +203,29 @@ if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
     echo SETUP ALREADY COMPLETE!
     echo ========================================
     echo.
-    echo Skipping database and schema setup...
-    echo Starting PM2 directly...
+    echo Skipping database setup...
+    echo.
+    
+    REM ALWAYS ensure .env has production settings when running production mode
+    echo Updating .env for Production Mode...
+    (
+        echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
+        echo PORT=5000
+        echo NODE_ENV=production
+        echo SESSION_SECRET=billing-system-production-secret-key-2024
+    ) > .env
+    echo .env updated for Production Mode
+    echo.
+    
+    REM ALWAYS rebuild for production to ensure latest code
+    echo Rebuilding for production...
+    call npm run build
+    if errorlevel 1 (
+        echo ERROR: Build failed
+        pause
+        exit /b 1
+    )
+    echo Build complete.
     echo.
     goto PRODUCTION_START_PM2
 )
