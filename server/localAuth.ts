@@ -57,7 +57,12 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // Allow cookies over HTTP for localhost development/testing
+      // Only enforce HTTPS in production AND when not on localhost
+      secure: process.env.NODE_ENV === "production" && 
+              process.env.HOSTNAME !== "localhost" && 
+              process.env.HOSTNAME !== "127.0.0.1",
+      sameSite: "lax",
       maxAge: sessionTtl,
     },
   });
