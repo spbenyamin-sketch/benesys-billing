@@ -219,14 +219,21 @@ echo.
 
 REM Install PM2 globally
 echo [5/7] Installing PM2 globally...
-call npm install -g pm2 >nul 2>&1
-if errorlevel 1 (
-    echo ERROR: PM2 installation failed
-    echo Make sure you have administrator privileges
-    pause
-    exit /b 1
+echo Checking if PM2 is already installed...
+call pm2 -v >nul 2>&1
+if errorlevel 0 (
+    echo PM2 is already installed
+) else (
+    echo Installing PM2...
+    call npm install -g pm2 >nul 2>&1
+    if errorlevel 1 (
+        echo ERROR: PM2 installation failed
+        echo Make sure you have administrator privileges
+        pause
+        exit /b 1
+    )
+    echo PM2 installed successfully.
 )
-echo PM2 installed.
 echo.
 
 REM Build for production
@@ -254,7 +261,17 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Check PM2 status
 echo.
+echo ========================================
+echo PM2 STATUS CHECK:
+echo ========================================
+echo.
+call pm2 status
+echo.
+call pm2 list
+echo.
+
 echo ========================================
 echo SERVICE STATUS: RUNNING 24/7 WITH PM2!
 echo ========================================
