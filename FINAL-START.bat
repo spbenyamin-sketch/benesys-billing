@@ -244,7 +244,8 @@ REM Start with PM2
 :PRODUCTION_START_PM2
 echo [7/7] Starting with PM2 (24/7 running)...
 call pm2 delete billing_system 2>nul
-call pm2 start "npm run start" --name billing_system >nul 2>&1
+REM Use Windows-compatible syntax for production mode
+call pm2 start "cmd /c set NODE_ENV=production && node dist/index.js" --name billing_system >nul 2>&1
 call pm2 save >nul 2>&1
 
 if errorlevel 1 (
