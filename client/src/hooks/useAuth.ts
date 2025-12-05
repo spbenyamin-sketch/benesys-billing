@@ -13,6 +13,9 @@ export function useAuth() {
   const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
     retry: false,
+    staleTime: 0, // Always treat as stale - always fetch fresh
+    refetchOnMount: "stale", // Refetch on mount if stale
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   return {
