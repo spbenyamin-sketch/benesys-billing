@@ -95,11 +95,12 @@ echo.
 
 REM Create database if missing
 echo [4/5] Creating database...
-setlocal enabledelayedexpansion
-set PGPASSWORD=ABC123
 
-REM Use SQL file instead of pipe (more reliable on Windows)
-psql -U postgres -h localhost -p 5432 -d postgres -f CREATE-DATABASE.sql >nul 2>&1
+REM Use Node.js to create database (most reliable)
+call node create-db.js
+if errorlevel 1 (
+    echo Warning: Database creation may have failed. Continuing anyway...
+)
 
 echo Database check complete.
 echo.
@@ -211,11 +212,12 @@ echo.
 
 REM Create database if missing
 echo [3/6] Creating database...
-setlocal enabledelayedexpansion
-set PGPASSWORD=ABC123
 
-REM Use SQL file instead of pipe (more reliable on Windows)
-psql -U postgres -h localhost -p 5432 -d postgres -f CREATE-DATABASE.sql >nul 2>&1
+REM Use Node.js to create database (most reliable)
+call node create-db.js
+if errorlevel 1 (
+    echo Warning: Database creation may have failed. Continuing anyway...
+)
 
 echo Database check complete.
 echo.
