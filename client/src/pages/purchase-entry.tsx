@@ -22,7 +22,7 @@ import { Link } from "wouter";
 const purchaseEntrySchema = z.object({
   date: z.string().min(1, "Date required"),
   invoiceNo: z.string().min(1, "Invoice number required"),
-  partyId: z.number().nullable().optional(),
+  partyId: z.number({ errorMap: () => ({ message: "Supplier/Party is required" }) }),
   partyName: z.string().optional(),
   city: z.string().optional(),
   beforeTaxAmount: z.string().optional(),
@@ -260,6 +260,16 @@ export default function PurchaseEntry() {
 
 
   const handleSubmit = (data: PurchaseEntryForm) => {
+    // Validate supplier/party is selected
+    if (!data.partyId) {
+      toast({
+        title: "Supplier/Party Required",
+        description: "Please select a supplier or party before creating the purchase entry",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Validate bill amount tally
     const beforeTaxAmount = parseFloat(data.beforeTaxAmount || "0") || 0;
     const billTotalAmount = parseFloat(data.billTotalAmount || "0") || 0;
@@ -370,7 +380,7 @@ export default function PurchaseEntry() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="party">Supplier / Party</Label>
+                      <Label htmlFor="party">Supplier / Party *</Label>
                       <Button
                         type="button"
                         variant="outline"
@@ -385,6 +395,9 @@ export default function PurchaseEntry() {
                           <span className="text-muted-foreground text-sm">Click to search supplier...</span>
                         )}
                       </Button>
+                      {form.formState.errors.partyId && (
+                        <p className="text-sm text-destructive mt-1">{form.formState.errors.partyId.message}</p>
+                      )}
                     </div>
                   </div>
 
@@ -610,7 +623,7 @@ export default function PurchaseEntry() {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={createPurchaseMutation.isPending}
+                      disabled={createPurchaseMutation.isPending || !selectedPartyId}
                       data-testid="button-save"
                     >
                       <Plus className="mr-2 h-4 w-4" />
