@@ -250,16 +250,40 @@ echo.
 REM Start with PM2
 :PRODUCTION_START_PM2
 echo [7/7] Starting with PM2 (24/7 running)...
-call pm2 delete billing_system 2>nul
-REM Use Windows-compatible syntax for production mode
-call pm2 start "cmd /c set NODE_ENV=production && node dist/index.js" --name billing_system >nul 2>&1
-call pm2 save >nul 2>&1
 
-if errorlevel 1 (
-    echo ERROR: PM2 startup failed
+REM Check if dist folder exists
+if not exist "dist\" (
+    echo ERROR: dist folder not found! Build failed or incomplete.
+    echo Please run: npm run build
     pause
     exit /b 1
 )
+
+REM Check if dist/index.js exists
+if not exist "dist\index.js" (
+    echo ERROR: dist/index.js not found! Build is incomplete.
+    echo Please run: npm run build
+    pause
+    exit /b 1
+)
+
+call pm2 delete billing_system 2>nul
+echo Starting billing_system with PM2...
+
+REM Use Windows-compatible syntax for production mode (show output for debugging)
+call pm2 start "cmd /c set NODE_ENV=production && node dist/index.js" --name billing_system
+call pm2 save
+
+if errorlevel 1 (
+    echo ERROR: PM2 startup failed
+    echo Checking logs...
+    call pm2 logs billing_system --lines 20
+    pause
+    exit /b 1
+)
+
+REM Wait a moment for app to start
+timeout /t 2 /nobreak
 
 REM Check PM2 status
 echo.
