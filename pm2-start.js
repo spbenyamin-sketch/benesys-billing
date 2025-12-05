@@ -1,17 +1,28 @@
 #!/usr/bin/env node
 
 // PM2 Production Start Wrapper - Windows Compatible
-// This wrapper properly loads the production server with NODE_ENV set
+// Uses child_process to spawn Node with proper ES module support
 
+const { spawn } = require('child_process');
+const path = require('path');
+
+// Set production environment
 process.env.NODE_ENV = 'production';
 
-// Load environment variables
-try {
-  const dotenv = require('dotenv');
-  dotenv.config();
-} catch (e) {
-  console.log('dotenv not available, skipping .env loading');
-}
+// Spawn the production server with Node directly
+const server = spawn('node', [path.join(__dirname, 'dist/index.js')], {
+  stdio: 'inherit',
+  cwd: __dirname,
+  env: { ...process.env, NODE_ENV: 'production' }
+});
 
-// Start the production server
-require('./dist/index.js');
+// Handle process termination
+server.on('exit', (code) => {
+  console.log(`Server exited with code ${code}`);
+  process.exit(code);
+});
+
+server.on('error', (err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});
