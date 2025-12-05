@@ -6,6 +6,27 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import { storage } from "./storage";
 
+export async function ensureSessionsTable() {
+  try {
+    const { pool } = await import("./db");
+    // Create sessions table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        sid varchar NOT NULL COLLATE "default",
+        sess json NOT NULL,
+        expire timestamp(6) NOT NULL,
+        PRIMARY KEY (sid)
+      ) WITH (OIDS=FALSE);
+      
+      CREATE INDEX IF NOT EXISTS "IDX_sessions_expire" on "sessions" ("expire");
+    `);
+    console.log("✅ Sessions table ready");
+  } catch (error) {
+    console.error("⚠️  Warning: Could not ensure sessions table:", error);
+    // Don't fail startup - sessions might still work
+  }
+}
+
 export function getSession() {
   // Validate SESSION_SECRET
   const sessionSecret = process.env.SESSION_SECRET;
@@ -43,6 +64,9 @@ export function getSession() {
 }
 
 export async function setupAuth(app: Express) {
+  // Ensure sessions table exists first
+  await ensureSessionsTable();
+  
   app.set("trust proxy", 1);
   app.use(getSession());
   app.use(passport.initialize());
