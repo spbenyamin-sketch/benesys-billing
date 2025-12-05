@@ -18,11 +18,10 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
     console.log("[LOGIN] ========== FORM SUBMITTED ==========");
     console.log("[LOGIN] Username state:", username);
     console.log("[LOGIN] Password state:", password);
-    console.log("[LOGIN] Username length:", username.length);
-    console.log("[LOGIN] Password length:", password.length);
 
     if (!username.trim() || !password.trim()) {
       console.log("[LOGIN] VALIDATION FAILED - Empty fields");
@@ -39,9 +38,11 @@ export default function Login() {
 
     try {
       const loginPayload = { username, password };
-      console.log("[LOGIN] Payload:", loginPayload);
+      console.log("[LOGIN] Payload:", JSON.stringify(loginPayload));
 
-      const response = await fetch("/api/login", {
+      console.log("[LOGIN] Calling fetch()...");
+      
+      const response = await fetch("http://localhost:5000/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -50,16 +51,25 @@ export default function Login() {
         credentials: "include",
       });
 
-      console.log("[LOGIN] Response received - status:", response.status);
-      const responseData = await response.json();
-      console.log("[LOGIN] Response body:", responseData);
-
-      if (!response.ok) {
-        console.error("[LOGIN] Login failed with status:", response.status);
-        throw new Error(responseData.message || "Login failed");
+      console.log("[LOGIN] ✅ Fetch completed! Status:", response.status);
+      
+      let responseData;
+      try {
+        responseData = await response.json();
+        console.log("[LOGIN] Response body:", responseData);
+      } catch (parseErr) {
+        console.error("[LOGIN] Failed to parse response JSON:", parseErr);
+        throw new Error("Server returned invalid response");
       }
 
-      console.log("[LOGIN] ✅ LOGIN SUCCESSFUL!");
+      if (!response.ok) {
+        console.error("[LOGIN] Login failed - server returned error");
+        console.error("[LOGIN] Status:", response.status);
+        console.error("[LOGIN] Message:", responseData.message);
+        throw new Error(responseData.message || `Login failed (${response.status})`);
+      }
+
+      console.log("[LOGIN] ✅✅✅ LOGIN SUCCESSFUL!");
       console.log("[LOGIN] User:", responseData.user);
 
       // Clear storage
@@ -67,17 +77,23 @@ export default function Login() {
       localStorage.removeItem("currentCompanyId");
 
       console.log("[LOGIN] Redirecting to home page...");
-      window.location.href = "/";
+      
+      // Use window.location to force a reload
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 100);
     } catch (error: any) {
-      console.error("[LOGIN] ❌ ERROR:", error.message);
+      console.error("[LOGIN] ❌ ERROR CAUGHT:", error);
+      console.error("[LOGIN] Error message:", error.message);
+      console.error("[LOGIN] Error stack:", error.stack);
+      
+      setIsLoading(false);
+      
       toast({
         title: "Login Failed",
-        description: error.message || "Invalid credentials",
+        description: error.message || "Invalid credentials or network error",
         variant: "destructive",
       });
-    } finally {
-      setIsLoading(false);
-      console.log("[LOGIN] ========== REQUEST COMPLETE ==========");
     }
   };
 
@@ -107,9 +123,8 @@ export default function Login() {
                 placeholder="Enter your username"
                 value={username}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  console.log("[INPUT] Username changed to:", val);
-                  setUsername(val);
+                  setUsername(e.target.value);
+                  console.log("[INPUT] Username changed to:", e.target.value);
                 }}
                 disabled={isLoading}
                 autoComplete="username"
@@ -128,9 +143,8 @@ export default function Login() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  console.log("[INPUT] Password changed (length):", val.length);
-                  setPassword(val);
+                  setPassword(e.target.value);
+                  console.log("[INPUT] Password changed (length):", e.target.value.length);
                 }}
                 disabled={isLoading}
                 autoComplete="current-password"
@@ -148,8 +162,8 @@ export default function Login() {
               {isLoading ? "Logging in..." : "Login"}
             </Button>
 
-            <div className="text-xs text-gray-500 mt-4">
-              Test credentials: admin / admin@123
+            <div className="text-xs text-gray-500 mt-4 bg-gray-100 p-2 rounded">
+              Test: admin / admin@123
             </div>
           </form>
         </CardContent>

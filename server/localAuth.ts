@@ -186,6 +186,20 @@ export async function setupAuth(app: Express) {
       res.status(500).json({ message: "Setup failed" });
     }
   });
+
+  // Reset database (clear all users to force setup again)
+  app.post("/api/reset-db", async (req, res) => {
+    try {
+      const { pool } = await import("./db");
+      await pool.query("DELETE FROM users;");
+      await pool.query("DELETE FROM sessions;");
+      console.log("✅ Database reset - setup required");
+      res.json({ message: "Database reset successfully. Please run setup again." });
+    } catch (error) {
+      console.error("Reset error:", error);
+      res.status(500).json({ message: "Reset failed" });
+    }
+  });
 }
 
 export const isAuthenticated: RequestHandler = (req, res, next) => {
