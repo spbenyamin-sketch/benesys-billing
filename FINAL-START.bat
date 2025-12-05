@@ -290,15 +290,17 @@ echo.
 
 call pm2 delete billing_system 2>nul
 echo Starting billing_system with PM2...
+echo.
 
-REM Use Node directly with start-prod.js wrapper for better Windows compatibility
-call pm2 start start-prod.js --name billing_system --node-args="" -- 
+REM Start using the npm start script which handles NODE_ENV=production
+call pm2 start npm --name billing_system -- start
 call pm2 save
 
 if errorlevel 1 (
     echo ERROR: PM2 startup failed
-    echo Checking logs...
-    call pm2 logs billing_system --lines 20
+    echo.
+    echo Checking PM2 logs...
+    call pm2 logs billing_system --lines 30
     pause
     exit /b 1
 )
