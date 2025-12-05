@@ -146,6 +146,11 @@ export default function Login() {
                 className="w-full"
                 disabled={isLoading}
                 data-testid="button-login"
+                onClick={(e) => {
+                  console.log("[LOGIN] Button clicked!");
+                  console.log("[LOGIN] Form values:", form.getValues());
+                  console.log("[LOGIN] Form state:", form.formState);
+                }}
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
