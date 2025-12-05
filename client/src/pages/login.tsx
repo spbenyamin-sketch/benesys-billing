@@ -44,6 +44,8 @@ export default function Login() {
   async function onSubmit(data: LoginForm) {
     setIsLoading(true);
     try {
+      console.log("[LOGIN] Attempting login with username:", data.username);
+      
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -53,18 +55,31 @@ export default function Login() {
         credentials: "include",
       });
 
+      console.log("[LOGIN] Response status:", response.status, "ok:", response.ok);
+      
       if (!response.ok) {
         const error = await response.json();
+        console.error("[LOGIN] Login error:", error);
         throw new Error(error.message || "Login failed");
       }
+
+      console.log("[LOGIN] Login successful!");
 
       // Clear session storage on fresh login so company selection page shows
       sessionStorage.removeItem("hasSelectedCompany");
       localStorage.removeItem("currentCompanyId");
 
+      // Clear query cache to invalidate cached 401 responses
+      const { queryClient } = await import("@/lib/queryClient");
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      await queryClient.invalidateQueries({ queryKey: ["/api/user-companies"] });
+
+      console.log("[LOGIN] Cache invalidated, redirecting...");
+
       // Reload to trigger auth check
       window.location.href = "/";
     } catch (error: any) {
+      console.error("[LOGIN] Submit error:", error);
       toast({
         title: "Login Failed",
         description: error.message || "Invalid username or password",
