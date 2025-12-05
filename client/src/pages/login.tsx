@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,15 +13,20 @@ import { LogIn } from "lucide-react";
 
 export default function Login() {
   const { toast } = useToast();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const usernameRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("[LOGIN] Form submitted with username:", username);
+    
+    const username = usernameRef.current?.value || "";
+    const password = passwordRef.current?.value || "";
+
+    console.log("[LOGIN] Form submitted - username:", username, "password length:", password.length);
 
     if (!username.trim() || !password.trim()) {
+      console.log("[LOGIN] Empty credentials");
       toast({
         title: "Error",
         description: "Please enter both username and password",
@@ -31,8 +36,9 @@ export default function Login() {
     }
 
     setIsLoading(true);
+    console.log("[LOGIN] Starting login request...");
+    
     try {
-      console.log("[LOGIN] Sending POST /api/login request...");
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
@@ -42,30 +48,35 @@ export default function Login() {
         credentials: "include",
       });
 
-      console.log("[LOGIN] Response received, status:", response.status);
+      console.log("[LOGIN] Got response, status:", response.status);
       const data = await response.json();
-      console.log("[LOGIN] Response data:", data);
 
       if (!response.ok) {
-        throw new Error(data.message || "Login failed");
+        console.log("[LOGIN] Login failed:", data.message);
+        toast({
+          title: "Login Failed",
+          description: data.message || "Invalid username or password",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
       }
 
-      console.log("[LOGIN] Login successful! Redirecting...");
+      console.log("[LOGIN] Login successful! User:", data.user);
+      
       // Clear session storage and redirect
       sessionStorage.removeItem("hasSelectedCompany");
       localStorage.removeItem("currentCompanyId");
       
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 300);
+      // Force redirect to home
+      window.location.href = "/";
     } catch (error: any) {
-      console.error("[LOGIN] Error:", error);
+      console.error("[LOGIN] Fetch error:", error);
       toast({
-        title: "Login Failed",
-        description: error.message || "Invalid username or password",
+        title: "Login Error",
+        description: error.message || "Network error occurred",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -91,14 +102,14 @@ export default function Login() {
                 Username
               </label>
               <Input
+                ref={usernameRef}
                 id="username"
                 type="text"
                 placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
                 data-testid="input-username"
                 disabled={isLoading}
                 autoComplete="username"
+                defaultValue=""
               />
             </div>
             <div>
@@ -106,14 +117,14 @@ export default function Login() {
                 Password
               </label>
               <Input
+                ref={passwordRef}
                 id="password"
                 type="password"
                 placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 data-testid="input-password"
                 disabled={isLoading}
                 autoComplete="current-password"
+                defaultValue=""
               />
             </div>
             <Button
