@@ -1,18 +1,7 @@
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import {
   Card,
   CardContent,
@@ -22,63 +11,55 @@ import {
 } from "@/components/ui/card";
 import { LogIn } from "lucide-react";
 
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
-
 export default function Login() {
   const { toast } = useToast();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [formError, setFormError] = useState<string>("");
 
-  const form = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-    mode: "onSubmit", // Only validate on submit, not on change
-  });
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("[LOGIN] Form submitted with username:", username);
 
-  async function onSubmit(data: LoginForm) {
+    if (!username.trim() || !password.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both username and password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
-      console.log("[LOGIN] Attempting login with username:", data.username);
-      
+      console.log("[LOGIN] Sending POST /api/login request...");
       const response = await fetch("/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ username, password }),
         credentials: "include",
       });
 
-      console.log("[LOGIN] Response status:", response.status, "ok:", response.ok);
-      
+      console.log("[LOGIN] Response received, status:", response.status);
+      const data = await response.json();
+      console.log("[LOGIN] Response data:", data);
+
       if (!response.ok) {
-        const error = await response.json();
-        console.error("[LOGIN] Login error:", error);
-        throw new Error(error.message || "Login failed");
+        throw new Error(data.message || "Login failed");
       }
 
-      console.log("[LOGIN] Login successful! User:", await response.json());
-
-      // Clear session storage on fresh login so company selection page shows
+      console.log("[LOGIN] Login successful! Redirecting...");
+      // Clear session storage and redirect
       sessionStorage.removeItem("hasSelectedCompany");
       localStorage.removeItem("currentCompanyId");
-
-      console.log("[LOGIN] Redirecting to home...");
-
-      // Small delay to ensure session is set, then reload
+      
       setTimeout(() => {
         window.location.href = "/";
-      }, 500);
+      }, 300);
     } catch (error: any) {
-      console.error("[LOGIN] Submit error:", error);
+      console.error("[LOGIN] Error:", error);
       toast({
         title: "Login Failed",
         description: error.message || "Invalid username or password",
@@ -87,7 +68,7 @@ export default function Login() {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
@@ -104,60 +85,46 @@ export default function Login() {
           </div>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        placeholder="Enter your username"
-                        data-testid="input-username"
-                        autoComplete="username"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Enter your password"
-                        data-testid="input-password"
-                        autoComplete="current-password"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {formError && (
-                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                  {formError}
-                </div>
-              )}
-              <Button
-                type="submit"
-                className="w-full"
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label htmlFor="username" className="block text-sm font-medium mb-2">
+                Username
+              </label>
+              <Input
+                id="username"
+                type="text"
+                placeholder="Enter your username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                data-testid="input-username"
                 disabled={isLoading}
-                data-testid="button-login"
-              >
-                {isLoading ? "Logging in..." : "Login"}
-              </Button>
-            </form>
-          </Form>
+                autoComplete="username"
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium mb-2">
+                Password
+              </label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                data-testid="input-password"
+                disabled={isLoading}
+                autoComplete="current-password"
+              />
+            </div>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading}
+              data-testid="button-login"
+            >
+              {isLoading ? "Logging in..." : "Login"}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
