@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./localAuth";
 import { validateCompanyAccess } from "./companyMiddleware";
+import { runMigrations } from "./db";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import {
@@ -25,6 +26,14 @@ function isAdminRole(role: string | undefined | null): boolean {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Run database migrations first (handles schema updates)
+  try {
+    await runMigrations();
+  } catch (error) {
+    console.error('Failed to run migrations:', error);
+    process.exit(1);
+  }
+
   // Setup Replit Auth
   await setupAuth(app);
 

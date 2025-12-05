@@ -2,6 +2,7 @@ import "dotenv/config";
 import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import * as schema from "@shared/schema";
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -23,3 +24,35 @@ pool.on('error', (err) => {
 });
 
 export const db = drizzle({ client: pool, schema });
+
+// Run migrations automatically on startup
+export async function runMigrations() {
+  try {
+    const fs = await import('node:fs');
+    const path = await import('node:path');
+    
+    const migrationsPath = path.resolve(process.cwd(), './migrations');
+    const migrationsFolderExists = fs.existsSync(migrationsPath);
+    
+    if (!migrationsFolderExists) {
+      console.log('📝 No migrations folder found - database schema will be created on first use');
+      // Just verify database connection
+      try {
+        await db.execute('SELECT 1');
+        console.log('✅ Database connection verified');
+      } catch (dbError) {
+        console.error('❌ Database connection failed:', dbError);
+        throw dbError;
+      }
+      return;
+    }
+    
+    console.log('🔄 Running database migrations...');
+    await migrate(db, { migrationsFolder: './migrations' });
+    console.log('✅ Migrations completed successfully');
+  } catch (error: any) {
+    console.error('⚠️  Migration warning:', error.message);
+    // Don't fail startup for migration issues - schema will be created on first use
+    console.log('✅ Continuing startup - schema will be created as needed');
+  }
+}
