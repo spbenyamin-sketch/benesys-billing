@@ -66,6 +66,9 @@ if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
     echo ========================================
     echo.
     echo Skipping database and schema setup...
+    echo Rebuilding frontend assets...
+    echo.
+    call npm run build >nul 2>&1
     echo Starting server directly...
     echo.
     goto DEVELOPMENT_START_SERVER
@@ -238,12 +241,21 @@ echo.
 
 REM Build for production
 echo [6/7] Building for production...
-call npm run build >nul 2>&1
+echo This may take 1-2 minutes on first build...
+echo.
+call npm run build
 if errorlevel 1 (
+    echo.
+    echo ========================================
     echo ERROR: Build failed
+    echo ========================================
+    echo.
+    echo Check the errors above and fix them, then run FINAL-START.bat again
+    echo.
     pause
     exit /b 1
 )
+echo.
 echo Build complete.
 echo.
 
