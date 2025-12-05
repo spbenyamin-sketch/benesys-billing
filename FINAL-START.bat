@@ -292,8 +292,8 @@ call pm2 delete billing_system 2>nul
 echo Starting billing_system with PM2...
 echo.
 
-REM Start using the npm start script which handles NODE_ENV=production
-call pm2 start npm --name billing_system -- start
+REM Start using pm2-start.js wrapper (Windows compatible)
+call pm2 start pm2-start.js --name billing_system
 call pm2 save
 
 if errorlevel 1 (

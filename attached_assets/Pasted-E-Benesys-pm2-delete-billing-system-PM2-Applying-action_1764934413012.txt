@@ -1,0 +1,86 @@
+E:\Benesys>pm2 delete billing_system
+[PM2] Applying action deleteProcessId on app [billing_system](ids: [ 0 ])
+[PM2] [billing_system](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+
+E:\Benesys>pm2 start npm --name billing_system -- start
+[PM2] Starting C:\PROGRAM FILES\NODEJS\NPM.CMD in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ billing_system     │ fork     │ 1    │ stopped   │ 0%       │ 0b       │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+
+E:\Benesys>pm2 delete billing_system
+[PM2] Applying action deleteProcessId on app [billing_system](ids: [ 0 ])
+[PM2] [billing_system](0) ✓
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+
+E:\Benesys>pm2 start npm --name billing_system -- start
+[PM2] Starting C:\PROGRAM FILES\NODEJS\NPM.CMD in fork_mode (1 instance)
+[PM2] Done.
+┌────┬────────────────────┬──────────┬──────┬───────────┬──────────┬──────────┐
+│ id │ name               │ mode     │ ↺    │ status    │ cpu      │ memory   │
+├────┼────────────────────┼──────────┼──────┼───────────┼──────────┼──────────┤
+│ 0  │ billing_system     │ fork     │ 1    │ stopped   │ 0%       │ 0b       │
+└────┴────────────────────┴──────────┴──────┴───────────┴──────────┴──────────┘
+
+E:\Benesys>pm2 logs billing_system --lines 50
+[TAILING] Tailing last 50 lines for [billing_system] process (change the value with --lines option)
+C:\Users\admin\.pm2\logs\billing-system-out.log last 50 lines:
+C:\Users\admin\.pm2\logs\billing-system-error.log last 50 lines:
+0|billing_ |
+0|billing_ | Node.js v24.11.1
+0|billing_ | C:\PROGRAM FILES\NODEJS\NPM.CMD:1
+0|billing_ | :: Created by npm, please don't edit manually.
+0|billing_ | ^
+0|billing_ |
+0|billing_ | SyntaxError: Unexpected token ':'
+0|billing_ |     at wrapSafe (node:internal/modules/cjs/loader:1692:18)
+0|billing_ |     at Module._compile (node:internal/modules/cjs/loader:1735:20)
+0|billing_ |     at Object..js (node:internal/modules/cjs/loader:1893:10)
+0|billing_ |     at Module.load (node:internal/modules/cjs/loader:1481:32)
+0|billing_ |     at Module._load (node:internal/modules/cjs/loader:1300:12)
+0|billing_ |     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+0|billing_ |     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+0|billing_ |     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+0|billing_ |     at node:internal/main/run_main_module:33:47
+0|billing_ |
+0|billing_ | Node.js v24.11.1
+0|billing_ | C:\PROGRAM FILES\NODEJS\NPM.CMD:1
+0|billing_ | :: Created by npm, please don't edit manually.
+0|billing_ | ^
+0|billing_ |
+0|billing_ | SyntaxError: Unexpected token ':'
+0|billing_ |     at wrapSafe (node:internal/modules/cjs/loader:1692:18)
+0|billing_ |     at Module._compile (node:internal/modules/cjs/loader:1735:20)
+0|billing_ |     at Object..js (node:internal/modules/cjs/loader:1893:10)
+0|billing_ |     at Module.load (node:internal/modules/cjs/loader:1481:32)
+0|billing_ |     at Module._load (node:internal/modules/cjs/loader:1300:12)
+0|billing_ |     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+0|billing_ |     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+0|billing_ |     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+0|billing_ |     at node:internal/main/run_main_module:33:47
+0|billing_ |
+0|billing_ | Node.js v24.11.1
+0|billing_ | C:\PROGRAM FILES\NODEJS\NPM.CMD:1
+0|billing_ | :: Created by npm, please don't edit manually.
+0|billing_ | ^
+0|billing_ |
+0|billing_ | SyntaxError: Unexpected token ':'
+0|billing_ |     at wrapSafe (node:internal/modules/cjs/loader:1692:18)
+0|billing_ |     at Module._compile (node:internal/modules/cjs/loader:1735:20)
+0|billing_ |     at Object..js (node:internal/modules/cjs/loader:1893:10)
+0|billing_ |     at Module.load (node:internal/modules/cjs/loader:1481:32)
+0|billing_ |     at Module._load (node:internal/modules/cjs/loader:1300:12)
+0|billing_ |     at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+0|billing_ |     at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+0|billing_ |     at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+0|billing_ |     at node:internal/main/run_main_module:33:47
+0|billing_ |
+0|billing_ | Node.js v24.11.1
