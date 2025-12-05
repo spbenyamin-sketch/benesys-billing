@@ -282,8 +282,8 @@ if not exist "dist\index.js" (
 call pm2 delete billing_system 2>nul
 echo Starting billing_system with PM2...
 
-REM Use Windows-compatible syntax for production mode (show output for debugging)
-call pm2 start "cmd /c set NODE_ENV=production && node dist/index.js" --name billing_system
+REM Use Node directly with start-prod.js wrapper for better Windows compatibility
+call pm2 start start-prod.js --name billing_system --node-args="" -- 
 call pm2 save
 
 if errorlevel 1 (
