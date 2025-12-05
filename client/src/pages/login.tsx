@@ -63,21 +63,18 @@ export default function Login() {
         throw new Error(error.message || "Login failed");
       }
 
-      console.log("[LOGIN] Login successful!");
+      console.log("[LOGIN] Login successful! User:", await response.json());
 
       // Clear session storage on fresh login so company selection page shows
       sessionStorage.removeItem("hasSelectedCompany");
       localStorage.removeItem("currentCompanyId");
 
-      // Clear query cache to invalidate cached 401 responses
-      const { queryClient } = await import("@/lib/queryClient");
-      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      await queryClient.invalidateQueries({ queryKey: ["/api/user-companies"] });
+      console.log("[LOGIN] Redirecting to home...");
 
-      console.log("[LOGIN] Cache invalidated, redirecting...");
-
-      // Reload to trigger auth check
-      window.location.href = "/";
+      // Small delay to ensure session is set, then reload
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     } catch (error: any) {
       console.error("[LOGIN] Submit error:", error);
       toast({
