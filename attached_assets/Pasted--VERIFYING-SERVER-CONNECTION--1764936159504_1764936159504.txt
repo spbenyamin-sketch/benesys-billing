@@ -1,0 +1,36 @@
+========================================
+VERIFYING SERVER CONNECTION:
+========================================
+
+ΓÜá Warning: Server may not be responding yet
+Checking error logs...
+[TAILING] Tailing last 20 lines for [billing_system] process (change the value with --lines option)
+C:\Users\admin\.pm2\logs\billing-system-error.log last 20 lines:
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_ | FATAL: SESSION_SECRET environment variable is required in production
+
+0|billing_system  | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_system  | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_system  | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_system  | FATAL: SESSION_SECRET environment variable is required in production
+0|billing_system  | FATAL: SESSION_SECRET environment variable is required in production
+
+

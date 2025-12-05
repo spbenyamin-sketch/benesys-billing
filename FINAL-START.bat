@@ -101,10 +101,12 @@ echo.
     echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system_db
     echo PORT=5000
     echo NODE_ENV=development
+    echo SESSION_SECRET=dev-secret-key-change-in-production
 ) > .env
 
 echo .env configured for Development Mode
 echo Database: postgresql://postgres:***@localhost:5432/billing_system_db
+echo SESSION_SECRET: dev-secret-key-change-in-production
 echo.
 
 REM Verify .env was created
@@ -234,10 +236,15 @@ echo.
     echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system_db
     echo PORT=5000
     echo NODE_ENV=production
+    echo SESSION_SECRET=billing-system-production-secret-key-2024
 ) > .env
 
 echo .env configured for Production Mode
 echo Database: postgresql://postgres:***@localhost:5432/billing_system_db
+echo SESSION_SECRET: billing-system-production-secret-key-2024
+echo.
+echo NOTE: For security in production, change SESSION_SECRET to a random value
+echo Edit .env file to customize
 echo.
 
 REM Verify .env was created
