@@ -350,8 +350,8 @@ export default function DebitNote() {
   );
 
   const roundOff = Math.round(totals.grandTotal) - totals.grandTotal;
-  const finalTotal = Math.round(totals.grandTotal);
-  const amountReturn = amountGiven - finalTotal;
+  const finalTotal = Math.max(0, Math.round(totals.grandTotal)); // Ensure never goes negative
+  const amountReturn = Math.max(0, amountGiven - finalTotal); // Ensure never goes negative
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -720,8 +720,8 @@ export default function DebitNote() {
                               data-testid={`input-disc-${item.tempId}`}
                             />
                           </TableCell>
-                          <TableCell className="text-right font-medium">
-                            ₹{item.amount.toFixed(2)}
+                          <TableCell className="text-right font-medium text-red-600 dark:text-red-400">
+                            -₹{item.amount.toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <Button
@@ -754,32 +754,32 @@ export default function DebitNote() {
                 <span className="font-medium">{totals.quantity.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Sale Value:</span>
-                <span className="font-medium">₹{totals.saleValue.toFixed(2)}</span>
+                <span className="text-muted-foreground">Sale Value (Reduction):</span>
+                <span className="font-medium text-red-600 dark:text-red-400">-₹{totals.saleValue.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Discount:</span>
                 <span className="font-medium">₹{totals.discountTotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Tax:</span>
-                <span className="font-medium">₹{totals.taxValue.toFixed(2)}</span>
+                <span className="text-muted-foreground">Tax (Reduction):</span>
+                <span className="font-medium text-red-600 dark:text-red-400">-₹{totals.taxValue.toFixed(2)}</span>
               </div>
               {gstType === 0 && (
                 <>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>CGST:</span>
-                    <span>₹{totals.cgstTotal.toFixed(2)}</span>
+                    <span>CGST (Reduction):</span>
+                    <span className="text-red-600 dark:text-red-400">-₹{totals.cgstTotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>SGST:</span>
-                    <span>₹{totals.sgstTotal.toFixed(2)}</span>
+                    <span>SGST (Reduction):</span>
+                    <span className="text-red-600 dark:text-red-400">-₹{totals.sgstTotal.toFixed(2)}</span>
                   </div>
                 </>
               )}
-              <div className="border-t pt-3 flex justify-between font-semibold">
-                <span>Total:</span>
-                <span>₹{finalTotal.toFixed(2)}</span>
+              <div className="border-t pt-3 flex justify-between font-semibold bg-red-50 dark:bg-red-900/20 p-2 rounded text-red-700 dark:text-red-300">
+                <span>Total Deduction:</span>
+                <span>-₹{Math.max(0, finalTotal).toFixed(2)}</span>
               </div>
             </CardContent>
           </Card>
