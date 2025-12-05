@@ -38,7 +38,12 @@ export default function Login() {
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const payload = { username: username.trim(), password };
+      console.log("[LOGIN] Sending fetch with payload:", JSON.stringify(payload));
+      console.log("[LOGIN] Current URL:", window.location.href);
+      console.log("[LOGIN] Request details - method: POST, path: /api/login, credentials: include");
 
       const response = await fetch("/api/login", {
         method: "POST",
@@ -46,13 +51,15 @@ export default function Login() {
           "Content-Type": "application/json",
           "Accept": "application/json",
         },
-        body: JSON.stringify({ username: username.trim(), password }),
+        body: JSON.stringify(payload),
         credentials: "include",
         signal: controller.signal,
       });
 
       clearTimeout(timeoutId);
-      console.log("[LOGIN] Response received! Status:", response.status);
+      console.log("[LOGIN] ✅ Fetch returned! Status:", response.status);
+      console.log("[LOGIN] Response headers - content-type:", response.headers.get("content-type"));
+      console.log("[LOGIN] Response cookies should be set (credentials: include)");
 
       const data = await response.json();
       console.log("[LOGIN] Response data:", data);
