@@ -79,11 +79,41 @@ echo.
 
 REM ALWAYS recreate .env with development settings
 echo [1/5] Setting up environment (.env file)...
+
+REM Check if PostgreSQL is running on port 5432
+echo Verifying PostgreSQL connection...
+netstat -aon 2>nul | find ":5432" >nul
+if errorlevel 1 (
+    echo.
+    echo WARNING: PostgreSQL does not appear to be running on port 5432
+    echo Make sure PostgreSQL is started before continuing
+    echo.
+    set /p CONTINUE="Continue anyway? (y/n): "
+    if /i not "!CONTINUE!"=="y" (
+        pause
+        exit /b 1
+    )
+)
+echo PostgreSQL check complete.
+echo.
+
 (
-    echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
+    echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system_db
+    echo PORT=5000
     echo NODE_ENV=development
 ) > .env
+
 echo .env configured for Development Mode
+echo Database: postgresql://postgres:***@localhost:5432/billing_system_db
+echo.
+
+REM Verify .env was created
+if not exist ".env" (
+    echo ERROR: Failed to create .env file
+    pause
+    exit /b 1
+)
+echo .env file verified
 echo.
 
 REM Install dependencies
@@ -182,11 +212,41 @@ echo.
 
 REM ALWAYS recreate .env with production settings
 echo [1/7] Setting up environment (.env file)...
+
+REM Check if PostgreSQL is running on port 5432
+echo Verifying PostgreSQL connection...
+netstat -aon 2>nul | find ":5432" >nul
+if errorlevel 1 (
+    echo.
+    echo WARNING: PostgreSQL does not appear to be running on port 5432
+    echo Make sure PostgreSQL is started before continuing
+    echo.
+    set /p CONTINUE="Continue anyway? (y/n): "
+    if /i not "!CONTINUE!"=="y" (
+        pause
+        exit /b 1
+    )
+)
+echo PostgreSQL check complete.
+echo.
+
 (
-    echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
+    echo DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system_db
+    echo PORT=5000
     echo NODE_ENV=production
 ) > .env
+
 echo .env configured for Production Mode
+echo Database: postgresql://postgres:***@localhost:5432/billing_system_db
+echo.
+
+REM Verify .env was created
+if not exist ".env" (
+    echo ERROR: Failed to create .env file
+    pause
+    exit /b 1
+)
+echo .env file verified
 echo.
 
 REM Install dependencies
@@ -286,10 +346,35 @@ if not exist "dist\index.js" (
     )
 )
 echo ✓ dist/index.js found
+
+REM Check if dist/public folder exists (frontend assets)
+if not exist "dist\public\" (
+    echo ERROR: dist/public folder not found! Frontend build is missing.
+    echo Running full build again...
+    call npm run build
+    if not exist "dist\public\" (
+        echo ERROR: Frontend build failed. Check errors above.
+        pause
+        exit /b 1
+    )
+)
+echo ✓ dist/public folder found
+
+REM Check if .env file exists
+if not exist ".env" (
+    echo ERROR: .env file not found! Environment not configured.
+    pause
+    exit /b 1
+)
+echo ✓ .env file found
 echo.
 
+REM Delete old PM2 process
 call pm2 delete billing_system 2>nul
+timeout /t 1 /nobreak
+
 echo Starting billing_system with PM2...
+echo This will start the server on http://localhost:5000
 echo.
 
 REM Start using pm2-start.js wrapper (Windows compatible)
@@ -305,10 +390,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM Wait a moment for app to start
-timeout /t 2 /nobreak
+REM Wait for app to fully start
+echo Waiting for server to start...
+timeout /t 3 /nobreak
 
-REM Check PM2 status
+REM Check PM2 status multiple times (it may be "stopped" initially)
 echo.
 echo ========================================
 echo PM2 STATUS CHECK:
@@ -316,11 +402,38 @@ echo ========================================
 echo.
 call pm2 status
 echo.
+
+REM Wait a bit more and check again
+timeout /t 2 /nobreak
 call pm2 list
+
+REM Check if server is actually running
+echo.
+echo ========================================
+echo VERIFYING SERVER CONNECTION:
+echo ========================================
 echo.
 
+REM Try to connect to the server
+for /f "tokens=5" %%a in ('netstat -aon 2^>nul ^| find ":5000" 2^>nul') do (
+    echo ✓ Server is listening on port 5000
+    goto SERVER_READY
+)
+
+echo ⚠ Warning: Server may not be responding yet
+echo Checking error logs...
+call pm2 logs billing_system --err --lines 20
+echo.
+echo Troubleshooting:
+echo - Check if PostgreSQL is running: netstat -aon ^| find ":5432"
+echo - Check .env file: type .env
+echo - View detailed logs: pm2 logs billing_system
+echo.
+
+:SERVER_READY
+echo.
 echo ========================================
-echo SERVICE STATUS: RUNNING 24/7 WITH PM2!
+echo SERVICE STATUS: RUNNING 24/7 WITH PM2
 echo ========================================
 echo.
 echo Web Browser: http://localhost:5000
@@ -332,7 +445,12 @@ echo Useful PM2 Commands:
 echo   pm2 status       - Check server status
 echo   pm2 stop all     - Stop server
 echo   pm2 restart all  - Restart server
-echo   pm2 logs         - View server logs
+echo   pm2 logs billing_system - View server logs
+echo   pm2 logs billing_system --err - View error logs only
+echo.
+echo Default Login:
+echo   Username: admin
+echo   Password: admin@123
 echo.
 echo You can close this window now!
 echo.
