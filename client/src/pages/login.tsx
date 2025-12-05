@@ -32,6 +32,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function Login() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string>("");
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -39,6 +40,7 @@ export default function Login() {
       username: "",
       password: "",
     },
+    mode: "onSubmit", // Only validate on submit, not on change
   });
 
   async function onSubmit(data: LoginForm) {
@@ -141,16 +143,16 @@ export default function Login() {
                   </FormItem>
                 )}
               />
+              {formError && (
+                <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                  {formError}
+                </div>
+              )}
               <Button
                 type="submit"
                 className="w-full"
                 disabled={isLoading}
                 data-testid="button-login"
-                onClick={(e) => {
-                  console.log("[LOGIN] Button clicked!");
-                  console.log("[LOGIN] Form values:", form.getValues());
-                  console.log("[LOGIN] Form state:", form.formState);
-                }}
               >
                 {isLoading ? "Logging in..." : "Login"}
               </Button>
