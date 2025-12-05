@@ -1,0 +1,100 @@
+========================================
+Billing System - Complete Setup
+========================================
+
+Select startup mode:
+
+  1 = Development Mode (npm run dev)
+      - Hot reload enabled
+      - Press Ctrl+C to stop
+
+  2 = Production Mode with PM2 (24/7 running)
+      - Auto-restart on crash
+      - Auto-startup on computer restart
+      - Keep running in background
+
+Enter choice (1 or 2): 2
+
+========================================
+PRODUCTION MODE WITH PM2 SELECTED
+========================================
+
+This will:
+1. Install all dependencies
+2. Create .env file if needed
+3. Setup database
+4. Install PM2 globally
+5. Build for production
+6. Start with PM2 (24/7 running)
+
+========================================
+
+[1/6] .env file already exists
+
+Current configuration:
+DATABASE_URL=postgresql://postgres:ABC123@localhost:5432/billing_system
+NODE_ENV=development
+
+[2/6] Installing dependencies (npm install)...
+
+up to date, audited 609 packages in 996ms
+
+86 packages are looking for funding
+  run `npm fund` for details
+
+10 vulnerabilities (3 low, 5 moderate, 2 high)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+[3/6] Creating database...
+Connecting to PostgreSQL...
+Connected!
+Creating database: billing_system
+✓ Database already exists (OK)
+Database check complete.
+
+[3b/6] Setting up database schema...
+
+> rest-express@1.0.0 db:push
+> drizzle-kit push --force
+
+No config path provided, using default 'drizzle.config.ts'
+Reading config file 'E:\VfpNextConverter\drizzle.config.ts'
+Using 'pg' driver for database querying
+[✓] Pulling schema from database...
+error: column "id" is in a primary key
+    at E:\VfpNextConverter\node_modules\pg-pool\index.js:45:11
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async Object.query (E:\VfpNextConverter\node_modules\drizzle-kit\bin.cjs:80601:26)
+    at async pgPush (E:\VfpNextConverter\node_modules\drizzle-kit\bin.cjs:84411:13)
+    at async Object.handler (E:\VfpNextConverter\node_modules\drizzle-kit\bin.cjs:93813:9)
+    at async run (E:\VfpNextConverter\node_modules\drizzle-kit\bin.cjs:93059:7) {
+  length: 104,
+  severity: 'ERROR',
+  code: '42P16',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'tablecmds.c',
+  line: '14149',
+  routine: 'dropconstraint_internal'
+}
+2. Run DROP-DATABASE.bat to clean up
+3. Then try FINAL-START.bat again
+
+Press any key to continue . . .
+
