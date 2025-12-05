@@ -2,6 +2,8 @@
 REM Drop and recreate billing_system database - USE ONLY IF SETUP FAILS
 REM This will DELETE all data and start fresh!
 
+cd /d E:\VfpNextConverter
+
 echo.
 echo ========================================
 echo WARNING: DATABASE CLEANUP
@@ -21,16 +23,13 @@ if /i not "%CONFIRM%"=="YES" (
 )
 
 echo.
-echo Dropping old database...
-(
-    echo DROP DATABASE IF EXISTS billing_system;
-    echo CREATE DATABASE billing_system;
-) | psql -U postgres -h localhost -p 5432 postgres
+echo Dropping and recreating database...
+call node drop-db.js
 
 if errorlevel 1 (
     echo.
     echo ERROR: Could not recreate database!
-    echo Make sure PostgreSQL is running and user "postgres" exists.
+    echo Make sure PostgreSQL is running.
     echo.
 ) else (
     echo.
