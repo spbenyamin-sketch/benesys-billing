@@ -235,6 +235,7 @@ export default function PurchaseEntry() {
       });
       queryClient.invalidateQueries({ queryKey: ["/api/purchases"] });
       queryClient.invalidateQueries({ queryKey: ["/api/pending-purchases"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       form.reset({
         date: new Date().toISOString().split('T')[0],
         invoiceNo: "",
