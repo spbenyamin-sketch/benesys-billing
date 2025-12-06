@@ -73,10 +73,15 @@
     "settings": "સેટિંગ્સ",
     "billSettings": "બિલ સેટિંગ્સ",
     "barcodeManagement": "બારકોડ વ્યવસ્થાપન",
+    "barcodeLookup": "બારકોડ શોધ",
     "labelDesigner": "લેબલ ડિઝાઇનર",
     "userManagement": "યુઝર વ્યવસ્થાપન",
     "companySettings": "કંપની સેટિંગ્સ",
-    "logout": "લોગ આઉટ"
+    "logout": "લોગ આઉટ",
+    "masters": "માસ્ટર્સ",
+    "transactions": "વ્યવહારો",
+    "customers": "ગ્રાહકો",
+    "agents": "એજન્ટ"
   },
   "dashboard": {
     "title": "ડેશબોર્ડ",
@@ -237,7 +242,10 @@
     "generateReport": "રિપોર્ટ બનાવો",
     "exportExcel": "Excel માં નિકાસ",
     "exportPdf": "PDF માં નિકાસ",
-    "printReport": "રિપોર્ટ પ્રિન્ટ કરો"
+    "printReport": "રિપોર્ટ પ્રિન્ટ કરો",
+    "itemWiseSales": "આઇટમ મુજબ વેચાણ",
+    "categoryWiseSales": "શ્રેણી મુજબ વેચાણ",
+    "paymentReport": "ચુકવણી રિપોર્ટ"
   },
   "settings": {
     "title": "સેટિંગ્સ",

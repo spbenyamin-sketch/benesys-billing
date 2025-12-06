@@ -73,10 +73,15 @@
     "settings": "அமைப்புகள்",
     "billSettings": "பில் அமைப்புகள்",
     "barcodeManagement": "பார்கோடு மேலாண்மை",
+    "barcodeLookup": "பார்கோடு தேடல்",
     "labelDesigner": "லேபிள் வடிவமைப்பு",
     "userManagement": "பயனர் மேலாண்மை",
     "companySettings": "நிறுவன அமைப்புகள்",
-    "logout": "வெளியேறு"
+    "logout": "வெளியேறு",
+    "masters": "மாஸ்டர்கள்",
+    "transactions": "பரிவர்த்தனைகள்",
+    "customers": "வாடிக்கையாளர்கள்",
+    "agents": "முகவர்கள்"
   },
   "dashboard": {
     "title": "டாஷ்போர்டு",
@@ -237,7 +242,10 @@
     "generateReport": "அறிக்கை உருவாக்கு",
     "exportExcel": "Excel ஏற்றுமதி",
     "exportPdf": "PDF ஏற்றுமதி",
-    "printReport": "அறிக்கை அச்சு"
+    "printReport": "அறிக்கை அச்சு",
+    "itemWiseSales": "பொருள் வாரியான விற்பனை",
+    "categoryWiseSales": "வகை வாரியான விற்பனை",
+    "paymentReport": "கொடுப்பனவு அறிக்கை"
   },
   "settings": {
     "title": "அமைப்புகள்",

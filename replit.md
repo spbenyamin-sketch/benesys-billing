@@ -93,6 +93,47 @@ A comprehensive store management and billing system designed for retail business
 **Printing:**
 - **react-to-print:** Print library for thermal and document printing.
 
+**Internationalization:**
+- **react-i18next:** Translation library for multi-language support.
+- **i18next-browser-languagedetector:** Auto-detect user's preferred language.
+
+## Multi-Language Support
+
+### Supported Languages
+- **English (en):** Default language
+- **Hindi (hi):** हिंदी
+- **Gujarati (gu):** ગુજરાતી
+- **Tamil (ta):** தமிழ்
+
+### Implementation
+- Translation files located in `client/src/locales/`
+- Language selector available in header and login page
+- Language preference stored in localStorage
+- Auto-detection of browser language on first visit
+
+### Adding New Languages
+1. Create new translation file in `client/src/locales/` (e.g., `mr.json` for Marathi)
+2. Add language entry to `client/src/lib/i18n.ts` languages array
+3. Import and register in i18n configuration
+
+### Translation Keys Structure
+- `common.*` - Common UI strings (save, cancel, delete, etc.)
+- `nav.*` - Navigation menu items
+- `dashboard.*` - Dashboard page
+- `sales.*` - Sales module
+- `purchases.*` - Purchases module
+- `payments.*` - Payments module
+- `stock.*` - Stock module
+- `parties.*` - Parties/customers module
+- `items.*` - Items module
+- `reports.*` - Reports module
+- `settings.*` - Settings module
+- `users.*` - User management
+- `auth.*` - Authentication
+- `invoice.*` - Invoice/bill
+- `barcode.*` - Barcode management
+- `messages.*` - Toast/notification messages
+
 ## Bill Template System
 
 ### Template Types

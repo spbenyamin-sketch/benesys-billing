@@ -9,9 +9,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LogIn, Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export default function Login() {
   const { toast } = useToast();
+  const { t } = useTranslation();
   const [username, setUsername] = useState(() => localStorage.getItem("savedUsername") || "");
   const [password, setPassword] = useState(() => localStorage.getItem("savedPassword") || "");
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("rememberMe") === "true");
@@ -125,6 +128,9 @@ export default function Login() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="absolute top-4 right-4">
+        <LanguageSelector />
+      </div>
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
@@ -132,8 +138,8 @@ export default function Login() {
               <LogIn className="h-6 w-6" />
             </div>
             <div>
-              <CardTitle className="text-2xl">Login</CardTitle>
-              <CardDescription>Sign in to your account</CardDescription>
+              <CardTitle className="text-2xl">{t('auth.loginTitle')}</CardTitle>
+              <CardDescription>{t('auth.loginSubtitle')}</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -141,7 +147,7 @@ export default function Login() {
           <div className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium mb-2">
-                Username
+                {t('auth.username')}
               </label>
               <input
                 id="username"
@@ -160,7 +166,7 @@ export default function Login() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <input
                 id="password"
@@ -187,7 +193,7 @@ export default function Login() {
                 className="h-4 w-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               <label htmlFor="rememberMe" className="ml-2 text-sm text-muted-foreground cursor-pointer">
-                Remember me on this device
+                {t('auth.rememberMe')}
               </label>
             </div>
 
@@ -207,10 +213,10 @@ export default function Login() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
+                  {t('common.loading')}
                 </>
               ) : (
-                "Login"
+                t('auth.loginButton')
               )}
             </Button>
 

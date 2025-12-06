@@ -34,41 +34,43 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/contexts/CompanyContext";
+import { useTranslation } from "react-i18next";
 
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { resetCompanySelection } = useCompany();
+  const { t } = useTranslation();
   const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   const salesMenuItems = [
     {
-      title: "B2B Credit Sale",
+      title: t('nav.salesB2B'),
       url: "/sales/b2b",
       icon: Briefcase,
     },
     {
-      title: "B2C Retail Sale",
+      title: t('nav.salesB2C'),
       url: "/sales/b2c",
       icon: Store,
     },
     {
-      title: "Estimate",
+      title: t('nav.estimate'),
       url: "/sales/estimate",
       icon: FileEdit,
     },
     {
-      title: "Credit Note",
+      title: t('nav.creditNote'),
       url: "/sales/credit-note",
       icon: CreditCard,
     },
     {
-      title: "Debit Note",
+      title: t('nav.debitNote'),
       url: "/sales/debit-note",
       icon: CreditCard,
     },
     {
-      title: "Sales List",
+      title: t('sales.salesList'),
       url: "/sales",
       icon: ShoppingCart,
     },
@@ -76,17 +78,17 @@ export function AppSidebar() {
 
   const mastersMenuItems = [
     {
-      title: "Customers",
+      title: t('nav.customers'),
       url: "/parties",
       icon: Users,
     },
     {
-      title: "Items",
+      title: t('nav.items'),
       url: "/items",
       icon: Package,
     },
     {
-      title: "Agents",
+      title: t('nav.agents'),
       url: "/agents",
       icon: UserCircle,
     },
@@ -94,27 +96,27 @@ export function AppSidebar() {
 
   const transactionsMenuItems = [
     {
-      title: "Purchase Entry",
+      title: t('nav.purchaseEntry'),
       url: "/purchase-entry",
       icon: FileText,
     },
     {
-      title: "Stock Inward",
+      title: t('nav.stockInward'),
       url: "/stock-inward",
       icon: PackagePlus,
     },
     {
-      title: "Barcode Management",
+      title: t('nav.barcodeManagement'),
       url: "/barcode-management",
       icon: Barcode,
     },
     {
-      title: "Barcode Lookup",
+      title: t('nav.barcodeLookup'),
       url: "/barcode-lookup",
       icon: Barcode,
     },
     {
-      title: "Payments",
+      title: t('nav.payments'),
       url: "/payments",
       icon: Wallet,
     },
@@ -122,37 +124,37 @@ export function AppSidebar() {
 
   const reportsMenuItems = [
     {
-      title: "Outstanding",
+      title: t('nav.outstandingReport'),
       url: "/reports/outstanding",
       icon: BarChart3,
     },
     {
-      title: "Sales Report",
+      title: t('nav.salesReport'),
       url: "/reports/sales",
       icon: FileText,
     },
     {
-      title: "Purchase Report",
+      title: t('nav.purchaseReport'),
       url: "/reports/purchases",
       icon: ShoppingCart,
     },
     {
-      title: "Item Wise Sales",
+      title: t('reports.itemWiseSales'),
       url: "/reports/items",
       icon: Package,
     },
     {
-      title: "Category Wise Sales",
+      title: t('reports.categoryWiseSales'),
       url: "/reports/categories",
       icon: BarChart3,
     },
     {
-      title: "Payment Report",
+      title: t('reports.paymentReport'),
       url: "/reports/payments",
       icon: Wallet,
     },
     {
-      title: "Stock",
+      title: t('nav.stock'),
       url: "/stock",
       icon: Package,
     },
@@ -166,8 +168,8 @@ export function AppSidebar() {
             <Package className="h-5 w-5" />
           </div>
           <div className="flex flex-col">
-            <span className="text-base font-semibold">Store Management</span>
-            <span className="text-xs text-muted-foreground">Billing System</span>
+            <span className="text-base font-semibold">{t('settings.companySettings')}</span>
+            <span className="text-xs text-muted-foreground">{t('settings.billSettings')}</span>
           </div>
         </div>
       </SidebarHeader>
@@ -180,7 +182,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild isActive={location === "/"}>
                   <Link href="/" data-testid="link-dashboard">
                     <LayoutDashboard className="h-5 w-5" />
-                    <span>Dashboard</span>
+                    <span>{t('nav.dashboard')}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -189,7 +191,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Sales</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('nav.sales')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {salesMenuItems.map((item) => (
@@ -207,7 +209,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Masters</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('nav.masters')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {mastersMenuItems.map((item) => (
@@ -225,7 +227,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Transactions</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('nav.transactions')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {transactionsMenuItems.map((item) => (
@@ -243,7 +245,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Reports</SidebarGroupLabel>
+          <SidebarGroupLabel>{t('nav.reports')}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {reportsMenuItems.map((item) => (
@@ -262,14 +264,14 @@ export function AppSidebar() {
 
         {isSuperAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Administration</SidebarGroupLabel>
+            <SidebarGroupLabel>{t('settings.title')}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/users"}>
                     <Link href="/users" data-testid="link-user-management">
                       <Shield className="h-5 w-5" />
-                      <span>User Management</span>
+                      <span>{t('nav.userManagement')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -277,7 +279,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild isActive={location === "/companies"}>
                     <Link href="/companies" data-testid="link-companies">
                       <Building2 className="h-5 w-5" />
-                      <span>Companies</span>
+                      <span>{t('nav.companySettings')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -285,7 +287,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild isActive={location === "/bill-settings"}>
                     <Link href="/bill-settings" data-testid="link-bill-settings">
                       <FileText className="h-5 w-5" />
-                      <span>Bill Settings</span>
+                      <span>{t('nav.billSettings')}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -315,7 +317,7 @@ export function AppSidebar() {
           data-testid="button-logout"
         >
           <LogOut className="mr-2 h-5 w-5" />
-          Logout
+          {t('nav.logout')}
         </Button>
       </SidebarFooter>
     </Sidebar>

@@ -73,10 +73,15 @@
     "settings": "Settings",
     "billSettings": "Bill Settings",
     "barcodeManagement": "Barcode Management",
+    "barcodeLookup": "Barcode Lookup",
     "labelDesigner": "Label Designer",
     "userManagement": "User Management",
     "companySettings": "Company Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "masters": "Masters",
+    "transactions": "Transactions",
+    "customers": "Customers",
+    "agents": "Agents"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -237,7 +242,10 @@
     "generateReport": "Generate Report",
     "exportExcel": "Export to Excel",
     "exportPdf": "Export to PDF",
-    "printReport": "Print Report"
+    "printReport": "Print Report",
+    "itemWiseSales": "Item Wise Sales",
+    "categoryWiseSales": "Category Wise Sales",
+    "paymentReport": "Payment Report"
   },
   "settings": {
     "title": "Settings",
