@@ -8,6 +8,8 @@
     "search": "Search",
     "loading": "Loading...",
     "noData": "No data available",
+    "notAvailable": "N/A",
+    "companyLogo": "Company Logo",
     "actions": "Actions",
     "status": "Status",
     "active": "Active",

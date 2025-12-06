@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import { numberToWords } from "@/lib/number-to-words";
 
 interface InvoiceItem {
@@ -74,6 +75,7 @@ interface InvoicePrintProps {
 
 export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
   ({ invoice, template, companyName, companyAddress, companyGst, companyPhone }, ref) => {
+    const { t } = useTranslation();
     const isB4 = template.formatType === "B4";
     const pageWidth = isB4 ? "250mm" : "210mm";
     const pageHeight = isB4 ? "353mm" : "297mm";
@@ -108,7 +110,7 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
             {template.logoUrl && (
               <img
                 src={template.logoUrl}
-                alt="Company Logo"
+                alt={t("common.companyLogo")}
                 style={{ maxHeight: "60px", marginBottom: "8px", objectFit: "contain" }}
               />
             )}
@@ -120,16 +122,16 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
               <>
                 <div style={{ fontSize: "18px", fontWeight: 700 }}>{companyName}</div>
                 {companyAddress && <div style={{ fontSize: "11px" }}>{companyAddress}</div>}
-                {companyGst && <div style={{ fontSize: "11px" }}>GSTIN: {companyGst}</div>}
-                {companyPhone && <div style={{ fontSize: "11px" }}>Phone: {companyPhone}</div>}
+                {companyGst && <div style={{ fontSize: "11px" }}>{t("invoice.gstin")}: {companyGst}</div>}
+                {companyPhone && <div style={{ fontSize: "11px" }}>{t("invoice.phone")}: {companyPhone}</div>}
               </>
             )}
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>TAX INVOICE</div>
+            <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>{t("invoice.taxInvoice")}</div>
             <div style={{ fontSize: "11px" }}>
-              <div><span style={{ fontWeight: 500 }}>Invoice No:</span> {invoice.invoiceNo}</div>
-              <div><span style={{ fontWeight: 500 }}>Date:</span> {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
+              <div><span style={{ fontWeight: 500 }}>{t("invoice.invoiceNo")}:</span> {invoice.invoiceNo}</div>
+              <div><span style={{ fontWeight: 500 }}>{t("invoice.date")}:</span> {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
             </div>
           </div>
         </div>
@@ -137,18 +139,18 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
         <div style={{ border: "1px solid black", padding: "10px", marginBottom: "10px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
             <div>
-              <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "11px" }}>Bill To:</div>
-              <div style={{ fontWeight: 600, fontSize: "12px" }}>{invoice.partyName || "Cash Customer"}</div>
+              <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "11px" }}>{t("invoice.billTo")}:</div>
+              <div style={{ fontWeight: 600, fontSize: "12px" }}>{invoice.partyName || t("invoice.cashCustomer")}</div>
               {invoice.partyAddress && <div style={{ fontSize: "10px" }}>{invoice.partyAddress}</div>}
               {invoice.partyCity && <div style={{ fontSize: "10px" }}>{invoice.partyCity}{invoice.partyState ? `, ${invoice.partyState}` : ""}</div>}
-              {invoice.partyGstNo && <div style={{ fontSize: "10px" }}>GSTIN: {invoice.partyGstNo}</div>}
-              {invoice.partyPhone && <div style={{ fontSize: "10px" }}>Phone: {invoice.partyPhone}</div>}
+              {invoice.partyGstNo && <div style={{ fontSize: "10px" }}>{t("invoice.gstin")}: {invoice.partyGstNo}</div>}
+              {invoice.partyPhone && <div style={{ fontSize: "10px" }}>{t("invoice.phone")}: {invoice.partyPhone}</div>}
             </div>
             <div style={{ textAlign: "right", fontSize: "10px" }}>
               {invoice.isInterState ? (
-                <div>Inter-State Supply (IGST)</div>
+                <div>{t("invoice.interState")}</div>
               ) : (
-                <div>Intra-State Supply (CGST + SGST)</div>
+                <div>{t("invoice.intraState")}</div>
               )}
             </div>
           </div>
@@ -158,17 +160,17 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
           <thead>
             <tr style={{ backgroundColor: "#f0f0f0" }}>
               <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left", width: "30px" }}>#</th>
-              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left" }}>Item Description</th>
-              {template.showHsnCode && <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left", width: "70px" }}>HSN</th>}
-              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>Qty</th>
-              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "70px" }}>Rate</th>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left" }}>{t("invoice.itemDescription")}</th>
+              {template.showHsnCode && <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "left", width: "70px" }}>{t("invoice.hsn")}</th>}
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>{t("invoice.qty")}</th>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "70px" }}>{t("invoice.rate")}</th>
               {template.showTaxBreakup && (
                 <>
-                  <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>Disc%</th>
-                  <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>Tax%</th>
+                  <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>{t("invoice.discount")}</th>
+                  <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "50px" }}>{t("invoice.taxPercent")}</th>
                 </>
               )}
-              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "85px" }}>Amount</th>
+              <th style={{ border: "1px solid black", padding: "4px 6px", textAlign: "right", width: "85px" }}>{t("invoice.amount")}</th>
             </tr>
           </thead>
           <tbody>
@@ -178,10 +180,10 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
                 <td style={{ border: "1px solid black", padding: "3px 6px" }}>
                   <div style={{ fontWeight: 500 }}>{item.itemName}</div>
                   {template.showItemCode && item.itemCode && (
-                    <div style={{ fontSize: "9px", color: "#666" }}>Code: {item.itemCode}</div>
+                    <div style={{ fontSize: "9px", color: "#666" }}>{t("invoice.code")}: {item.itemCode}</div>
                   )}
                   {item.barcode && (
-                    <div style={{ fontSize: "9px", color: "#666" }}>BC: {item.barcode}</div>
+                    <div style={{ fontSize: "9px", color: "#666" }}>{t("invoice.barcode")}: {item.barcode}</div>
                   )}
                 </td>
                 {template.showHsnCode && (
@@ -205,42 +207,42 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
           <div style={{ flex: 1, paddingRight: "15px" }}>
             {template.showBankDetails && template.bankDetails && (
               <div style={{ marginBottom: "10px" }}>
-                <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "10px" }}>Bank Details:</div>
+                <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "10px" }}>{t("invoice.bankDetails")}:</div>
                 <div style={{ whiteSpace: "pre-line", fontSize: "9px" }}>{template.bankDetails}</div>
               </div>
             )}
             {template.termsAndConditions && (
               <div style={{ fontSize: "8px" }}>
-                <div style={{ fontWeight: 700, marginBottom: "2px" }}>Terms & Conditions:</div>
+                <div style={{ fontWeight: 700, marginBottom: "2px" }}>{t("invoice.terms")}:</div>
                 <div style={{ whiteSpace: "pre-line" }}>{template.termsAndConditions}</div>
               </div>
             )}
           </div>
           <div style={{ width: "220px", border: "1px solid black", fontSize: "11px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
-              <span>Subtotal:</span>
+              <span>{t("invoice.subtotal")}:</span>
               <span>₹{invoice.subtotal.toFixed(2)}</span>
             </div>
             {invoice.totalDiscount > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
-                <span>Discount:</span>
+                <span>{t("invoice.discountAmt")}:</span>
                 <span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
               </div>
             )}
             {template.showTaxBreakup && (
               invoice.isInterState ? (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
-                  <span>IGST:</span>
+                  <span>{t("invoice.igst")}:</span>
                   <span>₹{invoice.totalIgst.toFixed(2)}</span>
                 </div>
               ) : (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
-                    <span>CGST:</span>
+                    <span>{t("invoice.cgst")}:</span>
                     <span>₹{invoice.totalCgst.toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
-                    <span>SGST:</span>
+                    <span>{t("invoice.sgst")}:</span>
                     <span>₹{invoice.totalSgst.toFixed(2)}</span>
                   </div>
                 </>
@@ -248,12 +250,12 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
             )}
             {invoice.roundOff !== 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: "1px solid black" }}>
-                <span>Round Off:</span>
+                <span>{t("invoice.roundOff")}:</span>
                 <span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
               </div>
             )}
             <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 8px", fontWeight: 700, fontSize: "14px", backgroundColor: "#f0f0f0" }}>
-              <span>Grand Total:</span>
+              <span>{t("invoice.grandTotal")}:</span>
               <span>₹{invoice.grandTotal.toFixed(2)}</span>
             </div>
           </div>
@@ -261,17 +263,17 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
 
         {template.showPartyBalance && invoice.currentBalance !== undefined && (
           <div style={{ marginTop: "12px", border: "1px solid black", padding: "8px" }}>
-            <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "10px" }}>Account Summary:</div>
+            <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "10px" }}>{t("invoice.paymentDetails")}:</div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px" }}>
-              <span>Previous Balance:</span>
+              <span>{t("invoice.previousBalance")}:</span>
               <span>₹{(invoice.previousBalance || 0).toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px" }}>
-              <span>Current Bill:</span>
+              <span>{t("invoice.grandTotal")}:</span>
               <span>₹{invoice.grandTotal.toFixed(2)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: "1px solid black", paddingTop: "4px", marginTop: "4px", fontSize: "11px" }}>
-              <span>Outstanding Balance:</span>
+              <span>{t("invoice.currentBalance")}:</span>
               <span>₹{invoice.currentBalance.toFixed(2)}</span>
             </div>
           </div>
@@ -285,10 +287,10 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
 
         <div style={{ marginTop: "25px", display: "flex", justifyContent: "space-between" }}>
           <div style={{ textAlign: "center" }}>
-            <div style={{ borderTop: "1px solid black", width: "120px", paddingTop: "4px", fontSize: "9px" }}>Customer Signature</div>
+            <div style={{ borderTop: "1px solid black", width: "120px", paddingTop: "4px", fontSize: "9px" }}>{t("invoice.signature")}</div>
           </div>
           <div style={{ textAlign: "center" }}>
-            <div style={{ borderTop: "1px solid black", width: "120px", paddingTop: "4px", fontSize: "9px" }}>Authorized Signatory</div>
+            <div style={{ borderTop: "1px solid black", width: "120px", paddingTop: "4px", fontSize: "9px" }}>{t("invoice.authSignatory")}</div>
           </div>
         </div>
       </div>
@@ -300,6 +302,7 @@ InvoiceA4Print.displayName = "InvoiceA4Print";
 
 export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintProps>(
   ({ invoice, template, companyName, companyAddress, companyGst, companyPhone }, ref) => {
+    const { t } = useTranslation();
     return (
       <div
         ref={ref}
@@ -332,7 +335,7 @@ export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintPro
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "10px" }}>
             <div>
               {template.logoUrl && (
-                <img src={template.logoUrl} alt="Logo" style={{ maxHeight: "50px", marginBottom: "6px" }} />
+                <img src={template.logoUrl} alt={t("common.companyLogo")} style={{ maxHeight: "50px", marginBottom: "6px" }} />
               )}
               {template.headerText ? (
                 <div style={{ whiteSpace: "pre-line", fontWeight: 600, fontSize: "13px" }}>{template.headerText}</div>
@@ -340,35 +343,35 @@ export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintPro
                 <>
                   <div style={{ fontSize: "16px", fontWeight: 700 }}>{companyName}</div>
                   {companyAddress && <div style={{ fontSize: "10px" }}>{companyAddress}</div>}
-                  {companyGst && <div style={{ fontSize: "10px" }}>GSTIN: {companyGst}</div>}
+                  {companyGst && <div style={{ fontSize: "10px" }}>{t("invoice.gstin")}: {companyGst}</div>}
                 </>
               )}
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>TAX INVOICE</div>
+              <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>{t("invoice.taxInvoice")}</div>
               <div style={{ fontSize: "10px" }}>
-                <div>Invoice: {invoice.invoiceNo}</div>
-                <div>Date: {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
+                <div>{t("invoice.invoiceNo")}: {invoice.invoiceNo}</div>
+                <div>{t("invoice.date")}: {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
               </div>
             </div>
           </div>
 
           <div style={{ border: "1px solid black", padding: "8px", marginBottom: "8px" }}>
-            <div style={{ fontWeight: 700, fontSize: "10px", marginBottom: "3px" }}>Bill To:</div>
-            <div style={{ fontSize: "11px", fontWeight: 600 }}>{invoice.partyName || "Cash Customer"}</div>
+            <div style={{ fontWeight: 700, fontSize: "10px", marginBottom: "3px" }}>{t("invoice.billTo")}:</div>
+            <div style={{ fontSize: "11px", fontWeight: 600 }}>{invoice.partyName || t("invoice.cashCustomer")}</div>
             {invoice.partyAddress && <div style={{ fontSize: "9px" }}>{invoice.partyAddress}</div>}
-            {invoice.partyGstNo && <div style={{ fontSize: "9px" }}>GSTIN: {invoice.partyGstNo}</div>}
+            {invoice.partyGstNo && <div style={{ fontSize: "9px" }}>{t("invoice.gstin")}: {invoice.partyGstNo}</div>}
           </div>
 
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "8px", fontSize: "9px" }}>
             <thead>
               <tr style={{ backgroundColor: "#f0f0f0" }}>
                 <th style={{ border: "1px solid black", padding: "3px", textAlign: "left", width: "25px" }}>#</th>
-                <th style={{ border: "1px solid black", padding: "3px", textAlign: "left" }}>Description</th>
-                {template.showHsnCode && <th style={{ border: "1px solid black", padding: "3px", width: "55px" }}>HSN</th>}
-                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "40px" }}>Qty</th>
-                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "55px" }}>Rate</th>
-                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "70px" }}>Amount</th>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "left" }}>{t("invoice.itemDescription")}</th>
+                {template.showHsnCode && <th style={{ border: "1px solid black", padding: "3px", width: "55px" }}>{t("invoice.hsn")}</th>}
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "40px" }}>{t("invoice.qty")}</th>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "55px" }}>{t("invoice.rate")}</th>
+                <th style={{ border: "1px solid black", padding: "3px", textAlign: "right", width: "70px" }}>{t("invoice.amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -388,30 +391,30 @@ export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintPro
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <div style={{ width: "180px", border: "1px solid black", fontSize: "10px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
-                <span>Subtotal:</span><span>₹{invoice.subtotal.toFixed(2)}</span>
+                <span>{t("invoice.subtotal")}:</span><span>₹{invoice.subtotal.toFixed(2)}</span>
               </div>
               {invoice.totalDiscount > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
-                  <span>Discount:</span><span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
+                  <span>{t("invoice.discountAmt")}:</span><span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
                 </div>
               )}
               {template.showTaxBreakup && !invoice.isInterState && (
                 <>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
-                    <span>CGST:</span><span>₹{invoice.totalCgst.toFixed(2)}</span>
+                    <span>{t("invoice.cgst")}:</span><span>₹{invoice.totalCgst.toFixed(2)}</span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
-                    <span>SGST:</span><span>₹{invoice.totalSgst.toFixed(2)}</span>
+                    <span>{t("invoice.sgst")}:</span><span>₹{invoice.totalSgst.toFixed(2)}</span>
                   </div>
                 </>
               )}
               {invoice.roundOff !== 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "3px 6px", borderBottom: "1px solid black" }}>
-                  <span>Round Off:</span><span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
+                  <span>{t("invoice.roundOff")}:</span><span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
                 </div>
               )}
               <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 6px", fontWeight: 700, fontSize: "12px", backgroundColor: "#f0f0f0" }}>
-                <span>Total:</span><span>₹{invoice.grandTotal.toFixed(2)}</span>
+                <span>{t("invoice.grandTotal")}:</span><span>₹{invoice.grandTotal.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -421,8 +424,8 @@ export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintPro
           )}
 
           <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
-            <div style={{ borderTop: "1px solid black", width: "100px", paddingTop: "3px", textAlign: "center", fontSize: "8px" }}>Customer Sign</div>
-            <div style={{ borderTop: "1px solid black", width: "100px", paddingTop: "3px", textAlign: "center", fontSize: "8px" }}>Auth. Signatory</div>
+            <div style={{ borderTop: "1px solid black", width: "100px", paddingTop: "3px", textAlign: "center", fontSize: "8px" }}>{t("invoice.signature")}</div>
+            <div style={{ borderTop: "1px solid black", width: "100px", paddingTop: "3px", textAlign: "center", fontSize: "8px" }}>{t("invoice.authSignatory")}</div>
           </div>
         </div>
       </div>
@@ -434,6 +437,7 @@ InvoiceB4CenteredPrint.displayName = "InvoiceB4CenteredPrint";
 
 export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>(
   ({ invoice, template, companyName }, ref) => {
+    const { t } = useTranslation();
     const is3Inch = template.formatType === "thermal_3inch" || template.formatType === "3inch";
     const width = is3Inch ? "80mm" : "112mm";
 
@@ -460,7 +464,7 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
           <div className="text-center mb-2">
             <img
               src={template.logoUrl}
-              alt="Logo"
+              alt={t("common.companyLogo")}
               className="mx-auto max-h-12 object-contain"
             />
           </div>
@@ -480,16 +484,16 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
 
         <div className="text-xs space-y-0.5">
           <div className="flex justify-between">
-            <span>Bill No:</span>
+            <span>{t("invoice.invoiceNo")}:</span>
             <span className="font-bold">{invoice.invoiceNo}</span>
           </div>
           <div className="flex justify-between">
-            <span>Date:</span>
+            <span>{t("invoice.date")}:</span>
             <span>{format(new Date(invoice.date), "dd/MM/yyyy HH:mm")}</span>
           </div>
-          {invoice.partyName && invoice.partyName !== "Cash" && (
+          {invoice.partyName && (
             <div className="flex justify-between">
-              <span>Customer:</span>
+              <span>{t("invoice.billTo")}:</span>
               <span className="text-right max-w-[60%] truncate">{invoice.partyName}</span>
             </div>
           )}
@@ -499,8 +503,8 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
 
         <div className="text-xs">
           <div className="flex justify-between font-bold mb-1">
-            <span>Item</span>
-            <span>Amount</span>
+            <span>{t("invoice.particulars")}</span>
+            <span>{t("invoice.amount")}</span>
           </div>
           {invoice.items.map((item, index) => (
             <div key={item.id || index} className="mb-1">
@@ -511,11 +515,11 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
               <div className="flex justify-between text-xs opacity-75">
                 <span>{item.quantity} x ₹{item.rate.toFixed(2)}</span>
                 {item.discountPercent && item.discountPercent > 0 && (
-                  <span>Disc: {item.discountPercent}%</span>
+                  <span>{t("invoice.discount")}: {item.discountPercent}%</span>
                 )}
               </div>
               {template.showHsnCode && item.hsnCode && (
-                <div className="text-xs opacity-60">HSN: {item.hsnCode}</div>
+                <div className="text-xs opacity-60">{t("invoice.hsn")}: {item.hsnCode}</div>
               )}
             </div>
           ))}
@@ -525,33 +529,32 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
 
         <div className="text-xs space-y-0.5">
           <div className="flex justify-between">
-            <span>Items: {invoice.items.length}</span>
-            <span>Qty: {invoice.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
+            <span>{t("invoice.qty")}: {invoice.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Subtotal:</span>
+            <span>{t("invoice.subtotal")}:</span>
             <span>₹{invoice.subtotal.toFixed(2)}</span>
           </div>
           {invoice.totalDiscount > 0 && (
             <div className="flex justify-between">
-              <span>Discount:</span>
+              <span>{t("invoice.discountAmt")}:</span>
               <span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
             </div>
           )}
           {template.showTaxBreakup && (
             invoice.isInterState ? (
               <div className="flex justify-between">
-                <span>IGST:</span>
+                <span>{t("invoice.igst")}:</span>
                 <span>₹{invoice.totalIgst.toFixed(2)}</span>
               </div>
             ) : (
               <>
                 <div className="flex justify-between">
-                  <span>CGST:</span>
+                  <span>{t("invoice.cgst")}:</span>
                   <span>₹{invoice.totalCgst.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>SGST:</span>
+                  <span>{t("invoice.sgst")}:</span>
                   <span>₹{invoice.totalSgst.toFixed(2)}</span>
                 </div>
               </>
@@ -559,12 +562,12 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
           )}
           {invoice.roundOff !== 0 && (
             <div className="flex justify-between">
-              <span>Round Off:</span>
+              <span>{t("invoice.roundOff")}:</span>
               <span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between font-bold text-base border-t border-black pt-1">
-            <span>TOTAL:</span>
+            <span>{t("invoice.grandTotal")}:</span>
             <span>₹{invoice.grandTotal.toFixed(2)}</span>
           </div>
         </div>
@@ -574,11 +577,11 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
             <div className="border-t border-dashed border-black my-2" />
             <div className="text-xs space-y-0.5">
               <div className="flex justify-between">
-                <span>Cash:</span>
+                <span>{t("invoice.cashGiven")}:</span>
                 <span>₹{invoice.cashGiven.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold">
-                <span>Return:</span>
+                <span>{t("invoice.cashReturn")}:</span>
                 <span>₹{(invoice.cashReturn || 0).toFixed(2)}</span>
               </div>
             </div>
@@ -594,8 +597,7 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
             ))
           ) : (
             <>
-              <div>Thank you for your purchase!</div>
-              <div>Visit Again</div>
+              <div>{t("invoice.thankYou")}</div>
             </>
           )}
         </div>
