@@ -1176,6 +1176,7 @@ export class DatabaseStorage implements IStorage {
 
     return {
       ...result,
+      stockQty: result.qty,
       sale: saleDetails,
     };
   }
