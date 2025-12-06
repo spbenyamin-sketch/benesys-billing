@@ -169,10 +169,14 @@ export default function BarcodeManagement() {
 
   const filteredItems = useMemo(() => {
     if (!stockItems) return [];
-    if (!searchTerm) return stockItems;
+    
+    // Only show items with valid barcodes
+    let items = stockItems.filter(item => item.barcode && item.barcode.trim().length > 0);
+    
+    if (!searchTerm) return items;
     
     const term = searchTerm.toLowerCase();
-    return stockItems.filter(item =>
+    return items.filter(item =>
       item.barcode.toLowerCase().includes(term) ||
       item.itname.toLowerCase().includes(term) ||
       (item.brandname && item.brandname.toLowerCase().includes(term)) ||
@@ -403,7 +407,7 @@ export default function BarcodeManagement() {
                     <TableHead>Item Name</TableHead>
                     <TableHead>Brand</TableHead>
                     <TableHead>Size</TableHead>
-                    <TableHead className="text-center">Qty</TableHead>
+                    <TableHead className="text-center">Bundle Qty</TableHead>
                     <TableHead>Cost</TableHead>
                     <TableHead>Rate</TableHead>
                     <TableHead>MRP</TableHead>
