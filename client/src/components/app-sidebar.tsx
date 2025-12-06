@@ -156,11 +156,6 @@ export function AppSidebar() {
       url: "/stock",
       icon: Package,
     },
-    {
-      title: "Stock View",
-      url: "/stock/view",
-      icon: Package,
-    },
   ];
 
   return (

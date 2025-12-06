@@ -32,7 +32,6 @@ import PurchaseEntry from "@/pages/purchase-entry";
 import PurchaseDetail from "@/pages/purchase-detail";
 import Payments from "@/pages/payments";
 import Stock from "@/pages/stock";
-import StockView from "@/pages/stock-view";
 import StockInward from "@/pages/stock-inward";
 import BarcodeManagement from "@/pages/barcode-management";
 import Outstanding from "@/pages/reports/outstanding";
@@ -94,7 +93,6 @@ function Router() {
       <ProtectedRoute path="/purchases/:id" component={PurchaseDetails} />
       <ProtectedRoute path="/purchases" component={Purchases} />
       <ProtectedRoute path="/payments" component={Payments} />
-      <ProtectedRoute path="/stock/view" component={StockView} />
       <ProtectedRoute path="/stock" component={Stock} />
       <ProtectedRoute path="/reports/outstanding" component={Outstanding} />
       <ProtectedRoute path="/reports/sales" component={SalesReport} />
