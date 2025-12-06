@@ -375,6 +375,7 @@ export default function Invoice() {
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-[50px]">#</TableHead>
                   <TableHead>Item</TableHead>
+                  {items?.some(i => i.barcode) && <TableHead className="w-[120px]">Barcode</TableHead>}
                   <TableHead className="w-[80px]">HSN</TableHead>
                   <TableHead className="text-right w-[80px]">Qty</TableHead>
                   <TableHead className="text-right w-[100px]">Rate</TableHead>
@@ -392,6 +393,11 @@ export default function Invoice() {
                       <div className="font-medium">{item.itemName}</div>
                       <div className="text-xs text-muted-foreground">{item.itemCode}</div>
                     </TableCell>
+                    {items?.some(i => i.barcode) && (
+                      <TableCell className="font-mono text-sm text-blue-600" data-testid={`text-barcode-${item.id}`}>
+                        {item.barcode || "-"}
+                      </TableCell>
+                    )}
                     <TableCell className="font-mono text-sm">{item.hsnCode}</TableCell>
                     <TableCell className="text-right">{parseFloat(item.quantity).toFixed(3)}</TableCell>
                     <TableCell className="text-right">₹{parseFloat(item.rate).toFixed(2)}</TableCell>
