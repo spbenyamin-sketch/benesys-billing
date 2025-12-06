@@ -12,8 +12,9 @@ import { LogIn, Loader2 } from "lucide-react";
 
 export default function Login() {
   const { toast } = useToast();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState(() => localStorage.getItem("savedUsername") || "");
+  const [password, setPassword] = useState(() => localStorage.getItem("savedPassword") || "");
+  const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("rememberMe") === "true");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -69,6 +70,17 @@ export default function Login() {
       }
 
       console.log("[LOGIN] SUCCESS! User:", data.user?.username);
+
+      // Handle remember me
+      if (rememberMe) {
+        localStorage.setItem("savedUsername", username);
+        localStorage.setItem("savedPassword", password);
+        localStorage.setItem("rememberMe", "true");
+      } else {
+        localStorage.removeItem("savedUsername");
+        localStorage.removeItem("savedPassword");
+        localStorage.removeItem("rememberMe");
+      }
 
       // Clear storage and redirect
       sessionStorage.removeItem("hasSelectedCompany");
@@ -162,6 +174,21 @@ export default function Login() {
                 data-testid="input-password"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white"
               />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                id="rememberMe"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                disabled={isLoading}
+                data-testid="checkbox-remember-me"
+                className="h-4 w-4 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+              <label htmlFor="rememberMe" className="ml-2 text-sm text-muted-foreground cursor-pointer">
+                Remember me on this device
+              </label>
             </div>
 
             {errorMessage && (
