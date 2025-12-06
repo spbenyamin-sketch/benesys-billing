@@ -187,9 +187,6 @@ export default function Login() {
               )}
             </Button>
 
-            <div className="text-xs text-center text-muted-foreground mt-4 p-2 bg-muted rounded">
-              Default: admin / admin@123
-            </div>
           </div>
         </CardContent>
       </Card>
