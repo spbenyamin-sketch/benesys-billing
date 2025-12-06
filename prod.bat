@@ -1,12 +1,25 @@
 @echo off
 REM Production Mode - PM2 Process Manager
 REM This batch file sets up the app to run 24/7 with PM2
+REM You can specify a custom port as a parameter: prod.bat 8080
+REM Or set PORT environment variable: set PORT=8080 && prod.bat
+
+setlocal enabledelayedexpansion
+
+REM Get port from command line argument or environment variable
+if not "%~1"=="" (
+    set PORT=%~1
+) else if "%PORT%"=="" (
+    set PORT=5000
+)
 
 echo.
 echo ===============================================
 echo BILLING & INVENTORY MANAGEMENT SYSTEM
 echo Production Mode (PM2 24/7)
 echo ===============================================
+echo.
+echo Using port: %PORT%
 echo.
 
 REM Check if node_modules exists
@@ -35,7 +48,8 @@ if errorlevel 1 (
 echo.
 
 REM Start with PM2
-echo Starting application with PM2...
+echo Starting application with PM2 on port %PORT%...
+set PORT=%PORT%
 call pm2 start "npm run start" --name "billing-system" --max-memory-restart 1G
 
 echo.
@@ -43,7 +57,11 @@ echo ===============================================
 echo Application started successfully!
 echo ===============================================
 echo.
-echo App available at: http://localhost:5000
+echo App available at: http://localhost:%PORT%
+echo.
+echo To use a different port next time:
+echo   - Run as: prod.bat 8080
+echo   - Or set: set PORT=8080 ^&^& prod.bat
 echo.
 echo Useful Commands:
 echo   - View logs:     pm2 logs billing-system

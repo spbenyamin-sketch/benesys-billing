@@ -68,6 +68,16 @@ dev.bat
 
 The app will be available at: `http://localhost:5000`
 
+**Use Custom Port:**
+```bash
+REM Development mode with custom port
+dev.bat 8080
+
+REM Or set environment variable first
+set PORT=8080
+dev.bat
+```
+
 #### **For Production Mode** (24/7 with PM2):
 ```bash
 npm run build
@@ -78,6 +88,16 @@ Or use the batch file:
 prod.bat
 ```
 
+**Use Custom Port:**
+```bash
+REM Production mode with custom port
+prod.bat 8080
+
+REM Or set environment variable first
+set PORT=8080
+prod.bat
+```
+
 ## Batch Files Included
 
 ### `dev.bat` - Development Mode
@@ -85,12 +105,16 @@ prod.bat
 - Perfect for testing and development
 - Data persists in local PostgreSQL database
 - Stop with: `Ctrl + C`
+- **Custom Port:** `dev.bat 8080` or `set PORT=8080 && dev.bat`
+- **Default Port:** 5000
 
 ### `prod.bat` - Production Mode  
 - Uses PM2 for process management
 - Runs 24/7 automatically
 - Survives system reboots (if PM2 startup is enabled)
 - Logs saved to `pm2-logs/`
+- **Custom Port:** `prod.bat 8080` or `set PORT=8080 && prod.bat`
+- **Default Port:** 5000
 
 ## First Time Setup
 
