@@ -16,7 +16,6 @@ export function useAuth() {
     queryFn: getQueryFn({ on401: "returnNull" }),
     retry: false,
     staleTime: 0, // Always treat as stale - always fetch fresh
-    refetchOnMount: "stale", // Refetch on mount if stale
     refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
