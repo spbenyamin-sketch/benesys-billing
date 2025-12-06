@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Shield, User, Plus, Building2 } from "lucide-react";
+import { Trash2, Shield, User, Plus, Building2, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Badge } from "@/components/ui/badge";
 
@@ -66,6 +66,13 @@ interface UserCompany {
   isDefault: boolean;
   company: Company;
 }
+
+const editUserSchema = z.object({
+  role: z.enum(["user", "admin"]),
+  pagePermissions: z.array(z.string()).optional(),
+});
+
+type EditUserForm = z.infer<typeof editUserSchema>;
 
 const PAGE_OPTIONS = [
   { id: "dashboard", label: "Dashboard", icon: "📊" },
@@ -99,6 +106,8 @@ export default function UserManagement() {
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Only admins can access this page
@@ -146,6 +155,14 @@ export default function UserManagement() {
       role: "user",
       pagePermissions: [],
       companyIds: [],
+    },
+  });
+
+  const editForm = useForm<EditUserForm>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      role: "user",
+      pagePermissions: [],
     },
   });
 
@@ -272,8 +289,61 @@ export default function UserManagement() {
     },
   });
 
+  const updatePermissionsMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      role,
+      pagePermissions,
+    }: {
+      userId: string;
+      role: string;
+      pagePermissions?: string[];
+    }) => {
+      return apiRequest("PUT", `/api/users/${userId}/permissions`, {
+        role,
+        pagePermissions,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setEditDialogOpen(false);
+      setEditingUser(null);
+      editForm.reset();
+      toast({
+        title: "Success",
+        description: "User permissions updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: CreateUserForm) => {
     createUserMutation.mutate(data);
+  };
+
+  const onEditSubmit = (data: EditUserForm) => {
+    if (editingUser) {
+      updatePermissionsMutation.mutate({
+        userId: editingUser.id,
+        role: data.role,
+        pagePermissions: data.pagePermissions,
+      });
+    }
+  };
+
+  const handleEditClick = (user: User) => {
+    setEditingUser(user);
+    editForm.reset({
+      role: user.role,
+      pagePermissions: user.pagePermissions || [],
+    });
+    setEditDialogOpen(true);
   };
 
   const getRoleBadge = (role: string) => {
@@ -325,7 +395,7 @@ export default function UserManagement() {
               Create User
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
               <DialogDescription>
@@ -545,6 +615,106 @@ export default function UserManagement() {
         </Dialog>
       </div>
 
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit User Permissions</DialogTitle>
+            <DialogDescription>
+              Update role and page access permissions for {editingUser?.username}
+            </DialogDescription>
+          </DialogHeader>
+          {editingUser && (
+            <Form {...editForm}>
+              <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid={`edit-select-role-${editingUser.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="user">Normal User</SelectItem>
+                          <SelectItem value="admin">Super Admin</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editForm.control}
+                  name="pagePermissions"
+                  render={() => (
+                    <FormItem>
+                      <FormLabel>Page Access Permissions</FormLabel>
+                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded">
+                        {PAGE_OPTIONS.map((page) => (
+                          <FormField
+                            key={page.id}
+                            control={editForm.control}
+                            name="pagePermissions"
+                            render={({ field }) => {
+                              return (
+                                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(page.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([
+                                              ...(field.value || []),
+                                              page.id,
+                                            ])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== page.id
+                                              )
+                                            );
+                                      }}
+                                      data-testid={`edit-checkbox-page-${page.id}`}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal text-xs">
+                                    {page.label}
+                                  </FormLabel>
+                                </FormItem>
+                              );
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditDialogOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updatePermissionsMutation.isPending}
+                    data-testid="button-save-permissions"
+                  >
+                    {updatePermissionsMutation.isPending ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle>All Users</CardTitle>
@@ -689,25 +859,38 @@ export default function UserManagement() {
                       {new Date(user.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
-                      {user.id !== currentUser?.id && isAdmin && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => {
-                            if (
-                              confirm(
-                                "Are you sure you want to delete this user?"
-                              )
-                            ) {
-                              deleteMutation.mutate(user.id);
-                            }
-                          }}
-                          disabled={deleteMutation.isPending}
-                          data-testid={`button-delete-${user.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
+                      <div className="flex gap-2">
+                        {user.id !== currentUser?.id && isAdmin && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEditClick(user)}
+                            data-testid={`button-edit-${user.id}`}
+                            title="Edit user permissions"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {user.id !== currentUser?.id && isAdmin && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  "Are you sure you want to delete this user?"
+                                )
+                              ) {
+                                deleteMutation.mutate(user.id);
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            data-testid={`button-delete-${user.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

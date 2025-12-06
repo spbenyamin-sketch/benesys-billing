@@ -157,6 +157,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/users/:id/permissions', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only super admin can manage permissions" });
+      }
+      const { role, pagePermissions } = req.body;
+      if (!['user', 'admin'].includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+      const user = await storage.updateUserPermissions(req.params.id, role, pagePermissions);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user permissions:", error);
+      res.status(500).json({ message: "Failed to update user permissions" });
+    }
+  });
+
   app.post('/api/users/create', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
