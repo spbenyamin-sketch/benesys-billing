@@ -31,9 +31,11 @@ Preferred communication style: Simple, everyday language.
 
 ### Authentication & Authorization
 
-- **Replit Auth Integration:** OpenID Connect (OIDC) via Passport.js strategy.
-- **Session Management:** PostgreSQL-backed sessions (`sessions` table) with a 7-day TTL, secure HTTP-only cookies.
-- **User Roles:** Supports 'user', 'admin', 'agent'.
+- **Local Auth:** Username/password authentication via Passport.js local strategy with bcrypt password hashing.
+- **Session Management:** PostgreSQL-backed sessions (`sessions` table) with a 7-day TTL, HTTP-only cookies.
+- **Session Cookies:** `secure: false` to allow HTTP for localhost/offline installation; `sameSite: lax` for security.
+- **User Roles:** Supports 'user', 'admin', 'superadmin'.
+- **Default Credentials:** admin / admin@123 (created during initial setup).
 - **Multi-Company Implementation:** Enterprise-grade data isolation using `companyId` on all transactional tables, `user_companies` junction table for user-company relationships, `X-Company-Id` headers for API requests, and `validateCompanyAccess` middleware for security. All queries are filtered by `companyId` with defensive joins.
 
 ### Database Schema & Design
