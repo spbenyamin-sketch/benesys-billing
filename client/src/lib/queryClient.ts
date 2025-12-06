@@ -7,9 +7,9 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-function getCompanyHeaders(): Record<string, string> {
+function getCompanyHeaders(): HeadersInit {
   const companyId = localStorage.getItem("currentCompanyId");
-  const headers: Record<string, string> = {};
+  const headers: HeadersInit = {};
   
   if (companyId) {
     headers["X-Company-Id"] = companyId;
@@ -23,7 +23,7 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const headers: Record<string, string> = {
+  const headers: HeadersInit = {
     ...getCompanyHeaders(),
   };
   

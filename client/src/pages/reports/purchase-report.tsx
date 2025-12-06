@@ -12,8 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { FileText, FileSpreadsheet, FileDown, Printer } from "lucide-react";
-import { exportToExcel, exportToPDF, formatCurrency, formatDate } from "@/lib/export-utils";
+import { FileText, Download, Printer } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReactToPrint } from "react-to-print";
 import { format } from "date-fns";
@@ -95,8 +94,9 @@ export default function PurchaseReport() {
     taxBreakdown: {} as Record<string, { rate: number; amount: number; taxAmount: number }>,
   });
 
-  const getPurchaseData = () => {
-    return (purchases || []).map(purchase => {
+  const handleExport = () => {
+    const headers = ["Date", "Invoice No", "Party", "City", "Items", "Total Qty", "Cost", "Tax", "Bill Amount"];
+    const rows = (purchases || []).map(purchase => {
       const items = purchase.items || [];
       const totalQty = items.reduce((sum, item) => sum + Number(item.qty || 0), 0);
       const totalCost = items.reduce((sum, item) => sum + (Number(item.cost || 0) * Number(item.qty || 0)), 0);
@@ -108,70 +108,26 @@ export default function PurchaseReport() {
       }, 0);
       const totalAmount = totalCost + totalTax;
 
-      return {
-        date: formatDate(purchase.date),
-        invoiceNo: `P-${purchase.purchaseNo}`,
-        partyName: purchase.partyName || "Cash",
-        city: purchase.city || "",
-        itemCount: items.length,
-        totalQty: totalQty.toFixed(2),
-        totalCost: totalCost.toFixed(2),
-        totalTax: totalTax.toFixed(2),
-        totalAmount: totalAmount.toFixed(2),
-      };
+      return [
+        new Date(purchase.date).toLocaleDateString(),
+        purchase.purchaseNo,
+        purchase.partyName || "Cash",
+        purchase.city || "",
+        items.length,
+        totalQty.toFixed(2),
+        totalCost.toFixed(2),
+        totalTax.toFixed(2),
+        totalAmount.toFixed(2),
+      ];
     });
-  };
 
-  const handleExcelExport = () => {
-    if (!purchases?.length) return;
-    
-    exportToExcel({
-      title: "Purchase Report",
-      filename: `Purchase-Report-${format(new Date(), "yyyy-MM-dd")}`,
-      dateRange: { start: startDate, end: endDate },
-      columns: [
-        { header: "Date", key: "date", width: 12 },
-        { header: "Invoice No", key: "invoiceNo", width: 15 },
-        { header: "Party", key: "partyName", width: 25 },
-        { header: "City", key: "city", width: 15 },
-        { header: "Items", key: "itemCount", width: 8 },
-        { header: "Total Qty", key: "totalQty", width: 12 },
-        { header: "Cost", key: "totalCost", width: 12, format: formatCurrency },
-        { header: "Tax", key: "totalTax", width: 12, format: formatCurrency },
-        { header: "Bill Amount", key: "totalAmount", width: 15, format: formatCurrency },
-      ],
-      data: getPurchaseData(),
-      summary: {
-        label: "Total",
-        values: ["", "", "", "", totals.totalQty.toFixed(2), totals.totalCost.toFixed(2), totals.totalTax.toFixed(2), totals.totalAmount.toFixed(2)],
-      },
-    });
-  };
-
-  const handlePDFExport = () => {
-    if (!purchases?.length) return;
-    
-    exportToPDF({
-      title: "Purchase Report",
-      filename: `Purchase-Report-${format(new Date(), "yyyy-MM-dd")}`,
-      dateRange: { start: startDate, end: endDate },
-      columns: [
-        { header: "Date", key: "date", width: 12 },
-        { header: "Invoice No", key: "invoiceNo", width: 15 },
-        { header: "Party", key: "partyName", width: 25 },
-        { header: "City", key: "city", width: 15 },
-        { header: "Items", key: "itemCount", width: 8 },
-        { header: "Total Qty", key: "totalQty", width: 12 },
-        { header: "Cost", key: "totalCost", width: 12, format: formatCurrency },
-        { header: "Tax", key: "totalTax", width: 12, format: formatCurrency },
-        { header: "Bill Amount", key: "totalAmount", width: 15, format: formatCurrency },
-      ],
-      data: getPurchaseData(),
-      summary: {
-        label: "Total",
-        values: ["", "", "", "", totals.totalQty.toFixed(2), totals.totalCost.toFixed(2), totals.totalTax.toFixed(2), totals.totalAmount.toFixed(2)],
-      },
-    });
+    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `purchase-report-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
   };
 
   return (
@@ -182,18 +138,14 @@ export default function PurchaseReport() {
             <h1 className="text-3xl font-bold">Purchase Report</h1>
             <p className="text-muted-foreground">Detailed purchase analysis with tax breakdown</p>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="outline" onClick={handleExcelExport} disabled={!purchases?.length} data-testid="button-export-excel">
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Excel
-            </Button>
-            <Button variant="outline" onClick={handlePDFExport} disabled={!purchases?.length} data-testid="button-export-pdf">
-              <FileDown className="mr-2 h-4 w-4" />
-              PDF
-            </Button>
+          <div className="flex gap-2">
             <Button onClick={() => handlePrint()} variant="outline" data-testid="button-print">
               <Printer className="mr-2 h-4 w-4" />
               Print
+            </Button>
+            <Button onClick={handleExport} variant="outline" data-testid="button-export">
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
             </Button>
           </div>
         </div>

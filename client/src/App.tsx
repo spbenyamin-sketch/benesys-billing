@@ -63,7 +63,7 @@ function ProtectedRoute({ path, component: Component }: { path: string; componen
 
 function Router() {
   const { isAuthenticated, user } = useAuth();
-  const isSuperAdmin = (user as any)?.role === "admin" || (user as any)?.role === "superadmin";
+  const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
   const { canAccess } = usePermissions();
 
   if (!isAuthenticated) {
@@ -121,7 +121,7 @@ function AppContent() {
     "--sidebar-width-icon": "3rem",
   } as React.CSSProperties;
 
-  const isSuperAdmin = (user as any)?.role === "admin" || (user as any)?.role === "superadmin";
+  const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
 
   // Show loading state
   if (setupLoading || authLoading) {

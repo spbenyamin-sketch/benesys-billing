@@ -10,27 +10,16 @@ interface User {
 }
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<User | null>({
+  const { data: user, isLoading } = useQuery<User>({
     queryKey: ["/api/auth/user"],
-    queryFn: async () => {
-      const res = await fetch("/api/auth/user", {
-        credentials: "include",
-      });
-      if (res.status === 401) {
-        return null;
-      }
-      if (!res.ok) {
-        throw new Error("Failed to fetch user");
-      }
-      return res.json();
-    },
     retry: false,
-    staleTime: 0,
-    refetchOnWindowFocus: true,
+    staleTime: 0, // Always treat as stale - always fetch fresh
+    refetchOnMount: "stale", // Refetch on mount if stale
+    refetchOnWindowFocus: true, // Refetch when window regains focus
   });
 
   return {
-    user: user || undefined,
+    user,
     isLoading,
     isAuthenticated: !!user,
   };
