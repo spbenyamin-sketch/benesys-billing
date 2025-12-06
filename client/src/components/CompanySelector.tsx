@@ -2,15 +2,26 @@ import { useCompany } from "@/contexts/CompanyContext";
 import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus } from "lucide-react";
+import { Building2, Plus, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 
 export function CompanySelector() {
-  const { userCompanies, currentCompany, setCurrentCompany, isLoading } = useCompany();
+  const { userCompanies, currentCompany, setCurrentCompany, isLoading, resetCompanySelection } = useCompany();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   
   const isSuperAdmin = user?.role === "admin";
+
+  const handleLogout = async () => {
+    try {
+      resetCompanySelection();
+      await fetch("/api/logout", { method: "POST", credentials: "include" });
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      window.location.href = "/";
+    }
+  };
 
   if (isLoading) {
     return (
@@ -30,14 +41,24 @@ export function CompanySelector() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-2xl mx-4">
         <CardHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Building2 className="h-6 w-6" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <Building2 className="h-6 w-6" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl">Select Company</CardTitle>
+                <CardDescription>Choose a company to continue</CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-2xl">Select Company</CardTitle>
-              <CardDescription>Choose a company to continue</CardDescription>
-            </div>
+            <Button 
+              variant="outline" 
+              onClick={handleLogout}
+              size="sm"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -60,9 +81,20 @@ export function CompanySelector() {
                   </Button>
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  Please contact your administrator to get access to a company.
-                </p>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Please contact your administrator to get access to a company.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={handleLogout}
+                    className="w-full"
+                    data-testid="button-logout-no-companies"
+                  >
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </Button>
+                </div>
               )}
             </div>
           ) : (
