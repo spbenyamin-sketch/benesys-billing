@@ -50,6 +50,16 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  // For Windows offline installation: always allow HTTP cookies
+  // Secure cookies would break HTTP-only localhost access
+  // This is safe since the app runs on localhost without internet exposure
+  const shouldUseSecureCookies = false;
+  
+  console.log("[SESSION] ✅ Session initialized");
+  console.log("[SESSION] Node environment:", process.env.NODE_ENV);
+  console.log("[SESSION] Using secure cookies:", shouldUseSecureCookies);
+  console.log("[SESSION] Session path: /");
+  
   return session({
     secret,
     store: sessionStore,
@@ -57,13 +67,10 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      // Allow cookies over HTTP for localhost development/testing
-      // Only enforce HTTPS in production AND when not on localhost
-      secure: process.env.NODE_ENV === "production" && 
-              process.env.HOSTNAME !== "localhost" && 
-              process.env.HOSTNAME !== "127.0.0.1",
+      secure: shouldUseSecureCookies,
       sameSite: "lax",
       maxAge: sessionTtl,
+      path: "/",
     },
   });
 }
