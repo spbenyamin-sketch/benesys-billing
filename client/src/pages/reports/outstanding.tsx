@@ -10,7 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Users, Printer } from "lucide-react";
+import { Search, Users, Printer, FileSpreadsheet, FileDown } from "lucide-react";
+import { exportToExcel, exportToPDF, formatCurrency } from "@/lib/export-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useRef } from "react";
 import { Link } from "wouter";
@@ -179,6 +180,88 @@ export default function Outstanding() {
     documentTitle: `Outstanding-Report-${format(new Date(), "yyyy-MM-dd")}`,
   });
 
+  const handleExcelExport = () => {
+    if (!filteredParties?.length) return;
+    
+    exportToExcel({
+      title: "Outstanding Report",
+      filename: `Outstanding-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      columns: [
+        { header: "Code", key: "partyCode", width: 12 },
+        { header: "Party Name", key: "partyName", width: 25 },
+        { header: "City", key: "partyCity", width: 15 },
+        { header: "Sales", key: "totalSales", width: 12, format: formatCurrency },
+        { header: "Purchases", key: "totalPurchases", width: 12, format: formatCurrency },
+        { header: "Received", key: "totalPaymentsCredit", width: 12, format: formatCurrency },
+        { header: "Paid", key: "totalPaymentsDebit", width: 12, format: formatCurrency },
+        { header: "Balance", key: "balance", width: 12 },
+      ],
+      data: filteredParties.map(party => ({
+        partyCode: party.partyCode,
+        partyName: party.partyName,
+        partyCity: party.partyCity || "",
+        totalSales: party.totalSales,
+        totalPurchases: party.totalPurchases,
+        totalPaymentsCredit: party.totalPaymentsCredit,
+        totalPaymentsDebit: party.totalPaymentsDebit,
+        balance: party.balance.toFixed(2),
+      })),
+      summary: {
+        label: "Totals",
+        values: [
+          "",
+          "",
+          receivableParties.reduce((sum, p) => sum + parseFloat(p.totalSales), 0).toFixed(2),
+          payableParties.reduce((sum, p) => sum + parseFloat(p.totalPurchases), 0).toFixed(2),
+          "",
+          "",
+          totalOutstanding.toFixed(2),
+        ],
+      },
+    });
+  };
+
+  const handlePDFExport = () => {
+    if (!filteredParties?.length) return;
+    
+    exportToPDF({
+      title: "Outstanding Report",
+      filename: `Outstanding-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      columns: [
+        { header: "Code", key: "partyCode", width: 12 },
+        { header: "Party Name", key: "partyName", width: 25 },
+        { header: "City", key: "partyCity", width: 15 },
+        { header: "Sales", key: "totalSales", width: 12, format: formatCurrency },
+        { header: "Purchases", key: "totalPurchases", width: 12, format: formatCurrency },
+        { header: "Received", key: "totalPaymentsCredit", width: 12, format: formatCurrency },
+        { header: "Paid", key: "totalPaymentsDebit", width: 12, format: formatCurrency },
+        { header: "Balance", key: "balance", width: 12 },
+      ],
+      data: filteredParties.map(party => ({
+        partyCode: party.partyCode,
+        partyName: party.partyName,
+        partyCity: party.partyCity || "",
+        totalSales: party.totalSales,
+        totalPurchases: party.totalPurchases,
+        totalPaymentsCredit: party.totalPaymentsCredit,
+        totalPaymentsDebit: party.totalPaymentsDebit,
+        balance: party.balance.toFixed(2),
+      })),
+      summary: {
+        label: "Totals",
+        values: [
+          "",
+          "",
+          receivableParties.reduce((sum, p) => sum + parseFloat(p.totalSales), 0).toFixed(2),
+          payableParties.reduce((sum, p) => sum + parseFloat(p.totalPurchases), 0).toFixed(2),
+          "",
+          "",
+          totalOutstanding.toFixed(2),
+        ],
+      },
+    });
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -188,10 +271,20 @@ export default function Outstanding() {
             Party-wise balance, outstanding amounts, and complete transaction history
           </p>
         </div>
-        <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-outstanding">
-          <Printer className="mr-2 h-4 w-4" />
-          Print Report
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExcelExport} disabled={!filteredParties?.length} data-testid="button-export-excel">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handlePDFExport} disabled={!filteredParties?.length} data-testid="button-export-pdf">
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-outstanding">
+            <Printer className="mr-2 h-4 w-4" />
+            Print
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-6 sm:grid-cols-3">
