@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink, Printer } from "lucide-react";
+import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink, Printer, ZoomIn, ZoomOut } from "lucide-react";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -557,7 +557,9 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const [marginBottom, setMarginBottom] = useState(10);
   const [gapHorizontal, setGapHorizontal] = useState(2);
   const [gapVertical, setGapVertical] = useState(2);
-  const scale = 6; // Larger scale for display
+  const [zoomLevel, setZoomLevel] = useState(100);
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const scale = (6 * zoomLevel) / 100;
   
   const elementTemplates: TemplateElement[] = [
     { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, fontFamily: "Arial", barcodeType: "CODE128", visible: true, width: 46, height: 8 },
@@ -624,27 +626,38 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
     e.preventDefault();
     setSelectedElement(elementId);
-    const canvasRect = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect();
     const elementRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     setDragging({
       id: elementId,
       offsetX: e.clientX - elementRect.left,
       offsetY: e.clientY - elementRect.top,
-      canvasRect: canvasRect,
+      canvasRect: null as any,
     });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!dragging) return;
-    const canvasRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const newXPixels = e.clientX - dragging.canvasRect.left - dragging.offsetX;
-    const newYPixels = e.clientY - dragging.canvasRect.top - dragging.offsetY;
-    const newX = Math.max(0, Math.min(newXPixels / scale, labelWidth - 2));
-    const newY = Math.max(0, Math.min(newYPixels / scale, labelHeight - 2));
+    const canvasContainer = e.currentTarget as HTMLElement;
+    const canvasInner = canvasContainer.querySelector('[data-canvas-inner]') as HTMLElement;
+    if (!canvasInner) return;
+    
+    const canvasRect = canvasInner.getBoundingClientRect();
+    const newXPixels = e.clientX - canvasRect.left - dragging.offsetX;
+    const newYPixels = e.clientY - canvasRect.top - dragging.offsetY;
+    let newX = Math.max(0, Math.min(newXPixels / scale, labelWidth - 2));
+    let newY = Math.max(0, Math.min(newYPixels / scale, labelHeight - 2));
+
+    if (snapToGrid) {
+      newX = Math.round(newX);
+      newY = Math.round(newY);
+    } else {
+      newX = Math.round(newX * 10) / 10;
+      newY = Math.round(newY * 10) / 10;
+    }
 
     setElements(
       elements.map((el) =>
-        el.id === dragging.id ? { ...el, x: Math.round(newX * 10) / 10, y: Math.round(newY * 10) / 10 } : el
+        el.id === dragging.id ? { ...el, x: newX, y: newY } : el
       )
     );
   };
@@ -788,7 +801,46 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
               </div>
             </div>
 
-            <p className="text-xs text-muted-foreground mb-2">Drag elements to position them on your label</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs text-muted-foreground">Drag elements to position them on your label</p>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
+                  <Checkbox 
+                    id="snapToGrid" 
+                    checked={snapToGrid} 
+                    onCheckedChange={(checked) => setSnapToGrid(checked as boolean)} 
+                  />
+                  <Label htmlFor="snapToGrid" className="text-xs">Snap to Grid</Label>
+                </div>
+                <div className="flex items-center gap-1 ml-3 border rounded px-2 py-1 bg-white">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setDragging(null);
+                      setZoomLevel(Math.max(50, zoomLevel - 25));
+                    }}
+                    disabled={zoomLevel <= 50}
+                    data-testid="button-zoom-out"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs font-mono w-10 text-center">{zoomLevel}%</span>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setDragging(null);
+                      setZoomLevel(Math.min(200, zoomLevel + 25));
+                    }}
+                    disabled={zoomLevel >= 200}
+                    data-testid="button-zoom-in"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
 
             {/* Canvas */}
             <div
@@ -803,6 +855,7 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
               }}
             >
               <div
+                data-canvas-inner
                 style={{
                   width: `${labelWidth * scale}px`,
                   height: `${labelHeight * scale}px`,

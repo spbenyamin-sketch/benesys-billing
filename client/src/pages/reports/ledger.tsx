@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, FileText, Printer } from "lucide-react";
+import { ArrowLeft, FileText, Printer, FileSpreadsheet, FileDown } from "lucide-react";
+import { exportToExcel, exportToPDF, formatCurrency, formatDate } from "@/lib/export-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,70 @@ export default function Ledger() {
     documentTitle: `Ledger-${ledger?.partyName || partyId}-${format(new Date(), "yyyy-MM-dd")}`,
   });
 
+  const handleExcelExport = () => {
+    if (!ledger?.entries?.length) return;
+    
+    exportToExcel({
+      title: `Party Ledger: ${ledger.partyName}`,
+      filename: `Ledger-${ledger.partyName}-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Type", key: "type", width: 10 },
+        { header: "Reference", key: "reference", width: 15 },
+        { header: "Details", key: "details", width: 30 },
+        { header: "Debit", key: "debit", width: 12, format: formatCurrency },
+        { header: "Credit", key: "credit", width: 12, format: formatCurrency },
+        { header: "Balance", key: "balance", width: 12, format: formatCurrency },
+      ],
+      data: ledger.entries.map(entry => ({
+        date: formatDate(entry.date),
+        type: entry.type.charAt(0).toUpperCase() + entry.type.slice(1),
+        reference: entry.reference,
+        details: entry.details || "",
+        debit: entry.debit > 0 ? entry.debit.toFixed(2) : "",
+        credit: entry.credit > 0 ? entry.credit.toFixed(2) : "",
+        balance: entry.balance.toFixed(2),
+      })),
+      summary: {
+        label: `Closing Balance: ${ledger.closingBalance.toFixed(2)}`,
+        values: [],
+      },
+    });
+  };
+
+  const handlePDFExport = () => {
+    if (!ledger?.entries?.length) return;
+    
+    exportToPDF({
+      title: `Party Ledger: ${ledger.partyName}`,
+      filename: `Ledger-${ledger.partyName}-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Type", key: "type", width: 10 },
+        { header: "Reference", key: "reference", width: 15 },
+        { header: "Details", key: "details", width: 30 },
+        { header: "Debit", key: "debit", width: 12, format: formatCurrency },
+        { header: "Credit", key: "credit", width: 12, format: formatCurrency },
+        { header: "Balance", key: "balance", width: 12, format: formatCurrency },
+      ],
+      data: ledger.entries.map(entry => ({
+        date: formatDate(entry.date),
+        type: entry.type.charAt(0).toUpperCase() + entry.type.slice(1),
+        reference: entry.reference,
+        details: entry.details || "",
+        debit: entry.debit > 0 ? entry.debit.toFixed(2) : "",
+        credit: entry.credit > 0 ? entry.credit.toFixed(2) : "",
+        balance: entry.balance.toFixed(2),
+      })),
+      summary: {
+        label: `Closing Balance: ${ledger.closingBalance.toFixed(2)}`,
+        values: [],
+      },
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
@@ -120,10 +185,20 @@ export default function Ledger() {
             Complete transaction history for {ledger.partyCode}
           </p>
         </div>
-        <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-ledger">
-          <Printer className="mr-2 h-4 w-4" />
-          Print Ledger
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExcelExport} disabled={!ledger?.entries?.length} data-testid="button-export-excel">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handlePDFExport} disabled={!ledger?.entries?.length} data-testid="button-export-pdf">
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-ledger">
+            <Printer className="mr-2 h-4 w-4" />
+            Print
+          </Button>
+        </div>
       </div>
 
       <Card>

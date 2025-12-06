@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Package, Search, Printer } from "lucide-react";
+import { Package, Search, Printer, FileSpreadsheet, FileDown } from "lucide-react";
+import { exportToExcel, exportToPDF, formatCurrency } from "@/lib/export-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useReactToPrint } from "react-to-print";
 import { useCompany } from "@/contexts/CompanyContext";
@@ -145,11 +146,6 @@ export default function ItemsReport() {
     },
   });
 
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Items-Report-${format(new Date(), "yyyy-MM-dd")}`,
-  });
-
   const filteredItems = items?.filter((item) =>
     item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     item.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -170,6 +166,89 @@ export default function ItemsReport() {
     ? `${format(new Date(startDate), "dd/MM/yyyy")} to ${format(new Date(endDate), "dd/MM/yyyy")}`
     : "All Time";
 
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Items-Report-${format(new Date(), "yyyy-MM-dd")}`,
+  });
+
+  const handleExcelExport = () => {
+    if (!filteredItems?.length) return;
+    
+    exportToExcel({
+      title: "Item Wise Sales Report",
+      filename: `Items-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      filters: saleType === "all" ? "All Types" : saleType,
+      columns: [
+        { header: "Code", key: "itemCode", width: 12 },
+        { header: "Item Name", key: "itemName", width: 25 },
+        { header: "Category", key: "category", width: 15 },
+        { header: "HSN", key: "hsnCode", width: 12 },
+        { header: "Tax%", key: "tax", width: 8 },
+        { header: "Bills", key: "invoiceCount", width: 8 },
+        { header: "Qty", key: "totalQty", width: 10 },
+        { header: "Sale Value", key: "totalSaleValue", width: 12, format: formatCurrency },
+        { header: "Tax", key: "totalTaxValue", width: 12, format: formatCurrency },
+        { header: "Amount", key: "totalAmount", width: 12, format: formatCurrency },
+      ],
+      data: filteredItems.map(item => ({
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        category: item.category || "",
+        hsnCode: item.hsnCode || "",
+        tax: item.tax ? `${parseFloat(item.tax).toFixed(1)}%` : "",
+        invoiceCount: item.invoiceCount,
+        totalQty: parseFloat(item.totalQty).toFixed(3),
+        totalSaleValue: item.totalSaleValue,
+        totalTaxValue: item.totalTaxValue,
+        totalAmount: item.totalAmount,
+      })),
+      summary: {
+        label: "Total",
+        values: ["", "", "", "", filteredItems.reduce((s, i) => s + i.invoiceCount, 0).toString(), totals.qty.toFixed(3), totals.saleValue.toFixed(2), totals.taxValue.toFixed(2), totals.amount.toFixed(2)],
+      },
+    });
+  };
+
+  const handlePDFExport = () => {
+    if (!filteredItems?.length) return;
+    
+    exportToPDF({
+      title: "Item Wise Sales Report",
+      filename: `Items-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      filters: saleType === "all" ? "All Types" : saleType,
+      columns: [
+        { header: "Code", key: "itemCode", width: 12 },
+        { header: "Item Name", key: "itemName", width: 25 },
+        { header: "Category", key: "category", width: 15 },
+        { header: "HSN", key: "hsnCode", width: 12 },
+        { header: "Tax%", key: "tax", width: 8 },
+        { header: "Bills", key: "invoiceCount", width: 8 },
+        { header: "Qty", key: "totalQty", width: 10 },
+        { header: "Sale Value", key: "totalSaleValue", width: 12, format: formatCurrency },
+        { header: "Tax", key: "totalTaxValue", width: 12, format: formatCurrency },
+        { header: "Amount", key: "totalAmount", width: 12, format: formatCurrency },
+      ],
+      data: filteredItems.map(item => ({
+        itemCode: item.itemCode,
+        itemName: item.itemName,
+        category: item.category || "",
+        hsnCode: item.hsnCode || "",
+        tax: item.tax ? `${parseFloat(item.tax).toFixed(1)}%` : "",
+        invoiceCount: item.invoiceCount,
+        totalQty: parseFloat(item.totalQty).toFixed(3),
+        totalSaleValue: item.totalSaleValue,
+        totalTaxValue: item.totalTaxValue,
+        totalAmount: item.totalAmount,
+      })),
+      summary: {
+        label: "Total",
+        values: ["", "", "", "", filteredItems.reduce((s, i) => s + i.invoiceCount, 0).toString(), totals.qty.toFixed(3), totals.saleValue.toFixed(2), totals.taxValue.toFixed(2), totals.amount.toFixed(2)],
+      },
+    });
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -179,10 +258,20 @@ export default function ItemsReport() {
             Item-wise sales analysis for all bill types
           </p>
         </div>
-        <Button onClick={() => handlePrint()} disabled={!filteredItems?.length} data-testid="button-print-items-report">
-          <Printer className="h-4 w-4 mr-2" />
-          Print Report
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExcelExport} disabled={!filteredItems?.length} data-testid="button-export-excel">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handlePDFExport} disabled={!filteredItems?.length} data-testid="button-export-pdf">
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button variant="outline" onClick={() => handlePrint()} disabled={!filteredItems?.length} data-testid="button-print-items-report">
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+        </div>
       </div>
 
       <Card>

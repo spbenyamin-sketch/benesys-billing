@@ -1227,6 +1227,7 @@ export class DatabaseStorage implements IStorage {
   // ==================== REPORT OPERATIONS ====================
   async getDashboardMetrics(companyId: number): Promise<any> {
     const today = new Date().toISOString().split('T')[0];
+    const todayDate = new Date();
 
     // Today's sales
     const [todaySales] = await db
@@ -1265,12 +1266,121 @@ export class DatabaseStorage implements IStorage {
       .from(parties)
       .where(eq(parties.companyId, companyId));
 
+    // Last 7 days sales trend
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(todayDate);
+      date.setDate(date.getDate() - i);
+      last7Days.push(date.toISOString().split('T')[0]);
+    }
+
+    const salesTrend = await Promise.all(
+      last7Days.map(async (date) => {
+        const [result] = await db
+          .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+          .from(sales)
+          .where(and(eq(sales.date, date), eq(sales.companyId, companyId)));
+        return {
+          date,
+          day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
+          amount: parseFloat(result?.total?.toString() || "0"),
+        };
+      })
+    );
+
+    // Sales by type (B2B, B2C, Estimate)
+    const salesByType = await db
+      .select({
+        saleType: sales.saleType,
+        total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)`,
+        count: sql<number>`COUNT(*)`,
+      })
+      .from(sales)
+      .where(eq(sales.companyId, companyId))
+      .groupBy(sales.saleType);
+
+    // Top 5 selling items (by quantity sold)
+    const topSellingItems = await db
+      .select({
+        itemId: saleItems.itemId,
+        itemName: saleItems.itemName,
+        totalQty: sql<number>`COALESCE(SUM(${saleItems.quantity}), 0)`,
+        totalAmount: sql<number>`COALESCE(SUM(${saleItems.amount}), 0)`,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .where(eq(sales.companyId, companyId))
+      .groupBy(saleItems.itemId, saleItems.itemName)
+      .orderBy(desc(sql`SUM(${saleItems.quantity})`))
+      .limit(5);
+
+    // Expiring stock (next 30 days)
+    const thirtyDaysFromNow = new Date(todayDate);
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+    const expiryDateStr = thirtyDaysFromNow.toISOString().split('T')[0];
+
+    const expiringStock = await db
+      .select({
+        id: stockInwardItems.id,
+        barcode: stockInwardItems.barcode,
+        itemName: stockInwardItems.itname,
+        expiryDate: stockInwardItems.expirydate,
+        rate: stockInwardItems.rate,
+        status: stockInwardItems.status,
+      })
+      .from(stockInwardItems)
+      .where(
+        and(
+          eq(stockInwardItems.companyId, companyId),
+          eq(stockInwardItems.status, "available"),
+          isNotNull(stockInwardItems.expirydate),
+          lte(stockInwardItems.expirydate, expiryDateStr)
+        )
+      )
+      .orderBy(stockInwardItems.expirydate)
+      .limit(10);
+
+    // This month's sales total
+    const firstDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1).toISOString().split('T')[0];
+    const [monthSales] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+      .from(sales)
+      .where(and(gte(sales.date, firstDayOfMonth), eq(sales.companyId, companyId)));
+
+    // This month's purchases total
+    const [monthPurchases] = await db
+      .select({ total: sql<number>`COALESCE(SUM(${purchases.amount}), 0)` })
+      .from(purchases)
+      .where(and(gte(purchases.date, firstDayOfMonth), eq(purchases.companyId, companyId)));
+
     return {
       todaysSales: todaySales?.total || 0,
       totalOutstanding,
       lowStockCount: lowStockResult?.count || 0,
       totalCustomers: customersResult?.count || 0,
       recentSales,
+      salesTrend,
+      salesByType: salesByType.map(s => ({
+        type: s.saleType || 'Other',
+        total: parseFloat(s.total?.toString() || "0"),
+        count: parseInt(s.count?.toString() || "0"),
+      })),
+      topSellingItems: topSellingItems.map(item => ({
+        itemId: item.itemId,
+        itemName: item.itemName || 'Unknown',
+        totalQty: parseFloat(item.totalQty?.toString() || "0"),
+        totalAmount: parseFloat(item.totalAmount?.toString() || "0"),
+      })),
+      expiringStock: expiringStock.map(item => ({
+        id: item.id,
+        barcode: item.barcode,
+        itemName: item.itemName,
+        expiryDate: item.expiryDate,
+        rate: item.rate,
+        daysUntilExpiry: Math.ceil((new Date(item.expiryDate!).getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24)),
+      })),
+      monthSales: parseFloat(monthSales?.total?.toString() || "0"),
+      monthPurchases: parseFloat(monthPurchases?.total?.toString() || "0"),
     };
   }
 

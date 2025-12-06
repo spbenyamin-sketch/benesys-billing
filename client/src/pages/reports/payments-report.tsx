@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, Search, Printer, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Wallet, Search, Printer, ArrowDownCircle, ArrowUpCircle, FileSpreadsheet, FileDown } from "lucide-react";
+import { exportToExcel, exportToPDF, formatCurrency, formatDate } from "@/lib/export-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useReactToPrint } from "react-to-print";
@@ -146,6 +147,64 @@ export default function PaymentsReport() {
     documentTitle: `Payments-Report-${format(new Date(), "yyyy-MM-dd")}`,
   });
 
+  const handleExcelExport = () => {
+    if (!filteredPayments?.length) return;
+    
+    exportToExcel({
+      title: "Payment Report",
+      filename: `Payment-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      filters: paymentType === "all" ? "All Types" : paymentType,
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Type", key: "type", width: 10 },
+        { header: "Party", key: "partyName", width: 25 },
+        { header: "Details", key: "details", width: 30 },
+        { header: "Amount", key: "amount", width: 12, format: formatCurrency },
+      ],
+      data: filteredPayments.map(payment => ({
+        date: formatDate(payment.date),
+        type: payment.type,
+        partyName: payment.partyName || "Cash",
+        details: payment.details || "",
+        amount: payment.amount,
+      })),
+      summary: {
+        label: "Total",
+        values: ["", "", "", payments?.reduce((sum, p) => sum + parseFloat(p.amount), 0).toFixed(2) || "0.00"],
+      },
+    });
+  };
+
+  const handlePDFExport = () => {
+    if (!filteredPayments?.length) return;
+    
+    exportToPDF({
+      title: "Payment Report",
+      filename: `Payment-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      filters: paymentType === "all" ? "All Types" : paymentType,
+      columns: [
+        { header: "Date", key: "date", width: 12 },
+        { header: "Type", key: "type", width: 10 },
+        { header: "Party", key: "partyName", width: 25 },
+        { header: "Details", key: "details", width: 30 },
+        { header: "Amount", key: "amount", width: 12, format: formatCurrency },
+      ],
+      data: filteredPayments.map(payment => ({
+        date: formatDate(payment.date),
+        type: payment.type,
+        partyName: payment.partyName || "Cash",
+        details: payment.details || "",
+        amount: payment.amount,
+      })),
+      summary: {
+        label: "Total",
+        values: ["", "", "", payments?.reduce((sum, p) => sum + parseFloat(p.amount), 0).toFixed(2) || "0.00"],
+      },
+    });
+  };
+
   const filteredPayments = payments?.filter((payment) =>
     (payment.partyName?.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (payment.details?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -178,10 +237,20 @@ export default function PaymentsReport() {
             Date-wise payment transactions
           </p>
         </div>
-        <Button onClick={() => handlePrint()} disabled={!filteredPayments?.length} data-testid="button-print-payments-report">
-          <Printer className="h-4 w-4 mr-2" />
-          Print Report
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExcelExport} disabled={!filteredPayments?.length} data-testid="button-export-excel">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handlePDFExport} disabled={!filteredPayments?.length} data-testid="button-export-pdf">
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button variant="outline" onClick={() => handlePrint()} disabled={!filteredPayments?.length} data-testid="button-print-payments-report">
+            <Printer className="h-4 w-4 mr-2" />
+            Print
+          </Button>
+        </div>
       </div>
 
       <Card>

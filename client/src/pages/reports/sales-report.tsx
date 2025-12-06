@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer, FileSpreadsheet, FileDown } from "lucide-react";
+import { exportToExcel, exportToPDF, formatCurrency, formatDate } from "@/lib/export-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -77,11 +78,6 @@ export default function SalesReport() {
     return true;
   });
 
-  const handlePrint = useReactToPrint({
-    contentRef: printRef,
-    documentTitle: `Sales-Report-${format(new Date(), "yyyy-MM-dd")}`,
-  });
-
   const totals = filteredSales?.reduce(
     (acc, sale) => ({
       qty: acc.qty + parseFloat(sale.totalQty),
@@ -94,6 +90,85 @@ export default function SalesReport() {
     { qty: 0, saleValue: 0, taxValue: 0, cgst: 0, sgst: 0, grandTotal: 0 }
   ) || { qty: 0, saleValue: 0, taxValue: 0, cgst: 0, sgst: 0, grandTotal: 0 };
 
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Sales-Report-${format(new Date(), "yyyy-MM-dd")}`,
+  });
+
+  const handleExcelExport = () => {
+    if (!filteredSales?.length) return;
+    
+    exportToExcel({
+      title: "Sales Report",
+      filename: `Sales-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      filters: saleTypeFilter === "all" ? "All Types" : saleTypeFilter,
+      columns: [
+        { header: "Invoice", key: "invoice", width: 15 },
+        { header: "Date", key: "date", width: 12 },
+        { header: "Type", key: "saleType", width: 10 },
+        { header: "Customer", key: "partyName", width: 25 },
+        { header: "Sale Value", key: "saleValue", width: 12, format: formatCurrency },
+        { header: "CGST", key: "cgstTotal", width: 10, format: formatCurrency },
+        { header: "SGST", key: "sgstTotal", width: 10, format: formatCurrency },
+        { header: "Tax", key: "taxValue", width: 10, format: formatCurrency },
+        { header: "Total", key: "grandTotal", width: 12, format: formatCurrency },
+      ],
+      data: filteredSales.map(sale => ({
+        invoice: `${sale.saleType}-${sale.invoiceNo}`,
+        date: formatDate(sale.date),
+        saleType: sale.saleType,
+        partyName: sale.partyName || "Cash Sale",
+        saleValue: sale.saleValue,
+        cgstTotal: sale.cgstTotal,
+        sgstTotal: sale.sgstTotal,
+        taxValue: sale.taxValue,
+        grandTotal: sale.grandTotal,
+      })),
+      summary: {
+        label: "Total",
+        values: ["", "", "", totals.saleValue.toFixed(2), totals.cgst.toFixed(2), totals.sgst.toFixed(2), totals.taxValue.toFixed(2), totals.grandTotal.toFixed(2)],
+      },
+    });
+  };
+
+  const handlePDFExport = () => {
+    if (!filteredSales?.length) return;
+    
+    exportToPDF({
+      title: "Sales Report",
+      filename: `Sales-Report-${format(new Date(), "yyyy-MM-dd")}`,
+      dateRange: { start: startDate, end: endDate },
+      filters: saleTypeFilter === "all" ? "All Types" : saleTypeFilter,
+      columns: [
+        { header: "Invoice", key: "invoice", width: 15 },
+        { header: "Date", key: "date", width: 12 },
+        { header: "Type", key: "saleType", width: 10 },
+        { header: "Customer", key: "partyName", width: 25 },
+        { header: "Sale Value", key: "saleValue", width: 12, format: formatCurrency },
+        { header: "CGST", key: "cgstTotal", width: 10, format: formatCurrency },
+        { header: "SGST", key: "sgstTotal", width: 10, format: formatCurrency },
+        { header: "Tax", key: "taxValue", width: 10, format: formatCurrency },
+        { header: "Total", key: "grandTotal", width: 12, format: formatCurrency },
+      ],
+      data: filteredSales.map(sale => ({
+        invoice: `${sale.saleType}-${sale.invoiceNo}`,
+        date: formatDate(sale.date),
+        saleType: sale.saleType,
+        partyName: sale.partyName || "Cash Sale",
+        saleValue: sale.saleValue,
+        cgstTotal: sale.cgstTotal,
+        sgstTotal: sale.sgstTotal,
+        taxValue: sale.taxValue,
+        grandTotal: sale.grandTotal,
+      })),
+      summary: {
+        label: "Total",
+        values: ["", "", "", totals.saleValue.toFixed(2), totals.cgst.toFixed(2), totals.sgst.toFixed(2), totals.taxValue.toFixed(2), totals.grandTotal.toFixed(2)],
+      },
+    });
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -103,10 +178,20 @@ export default function SalesReport() {
             Detailed sales analysis with filters and summaries
           </p>
         </div>
-        <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-report">
-          <Printer className="mr-2 h-4 w-4" />
-          Print Report
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" onClick={handleExcelExport} disabled={!filteredSales?.length} data-testid="button-export-excel">
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Excel
+          </Button>
+          <Button variant="outline" onClick={handlePDFExport} disabled={!filteredSales?.length} data-testid="button-export-pdf">
+            <FileDown className="mr-2 h-4 w-4" />
+            PDF
+          </Button>
+          <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-report">
+            <Printer className="mr-2 h-4 w-4" />
+            Print
+          </Button>
+        </div>
       </div>
 
       <Card>
