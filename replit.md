@@ -6,7 +6,9 @@ A comprehensive store management and billing system designed for retail business
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+- **Communication Style:** Simple, everyday language
+- **Deployment:** App will run on localhost (local development)
+- **Database Changes:** All database schema changes must be documented in `shared/schema.ts` before implementation
 
 ## System Architecture
 
