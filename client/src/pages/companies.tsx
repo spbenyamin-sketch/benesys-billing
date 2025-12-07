@@ -42,8 +42,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { format } from "date-fns";
 
 export default function Companies() {
   const { toast } = useToast();
@@ -127,8 +128,23 @@ export default function Companies() {
       city: company.city || "",
       state: company.state || "",
       gstNo: company.gstNo || "",
+      expiryDate: company.expiryDate ? new Date(company.expiryDate) : undefined,
     });
     setIsEditDialogOpen(true);
+  };
+
+  const getExpiryStatus = (expiryDate: Date | null | undefined) => {
+    if (!expiryDate) return { status: "No Expiry", color: "text-green-600", icon: CheckCircle2 };
+    
+    const now = new Date();
+    const daysUntilExpiry = Math.ceil((new Date(expiryDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiry < 0) {
+      return { status: "Expired", color: "text-red-600", icon: AlertCircle };
+    } else if (daysUntilExpiry <= 30) {
+      return { status: `Expiring in ${daysUntilExpiry}d`, color: "text-yellow-600", icon: AlertCircle };
+    }
+    return { status: `Active - ${daysUntilExpiry}d left`, color: "text-green-600", icon: CheckCircle2 };
   };
 
   const handleDelete = (company: Company) => {
@@ -264,6 +280,25 @@ export default function Companies() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={createForm.control}
+                  name="expiryDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Software Expiry Date (Optional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="date"
+                          data-testid="input-company-expiry"
+                          value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <DialogFooter>
                   <Button
                     type="submit"
@@ -301,11 +336,15 @@ export default function Companies() {
                   <TableHead>City</TableHead>
                   <TableHead>State</TableHead>
                   <TableHead>GST Number</TableHead>
+                  <TableHead>License Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {companies.map((company) => (
+                {companies.map((company) => {
+                  const expiryStatus = getExpiryStatus(company.expiryDate);
+                  const StatusIcon = expiryStatus.icon;
+                  return (
                   <TableRow key={company.id} data-testid={`row-company-${company.id}`}>
                     <TableCell className="font-medium" data-testid={`text-company-name-${company.id}`}>
                       {company.name}
@@ -314,6 +353,12 @@ export default function Companies() {
                     <TableCell>{company.city}</TableCell>
                     <TableCell>{company.state}</TableCell>
                     <TableCell>{company.gstNo}</TableCell>
+                    <TableCell data-testid={`text-expiry-${company.id}`}>
+                      <div className="flex items-center gap-2">
+                        <StatusIcon className={`h-4 w-4 ${expiryStatus.color}`} />
+                        <span className={expiryStatus.color}>{expiryStatus.status}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right space-x-2">
                       <Button
                         variant="ghost"
@@ -333,7 +378,8 @@ export default function Companies() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                );
+                })}
               </TableBody>
             </Table>
           )}
@@ -418,6 +464,23 @@ export default function Companies() {
                     <FormLabel>GST Number</FormLabel>
                     <FormControl>
                       <Input {...field} placeholder="Enter GST number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editForm.control}
+                name="expiryDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Software Expiry Date (Optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        value={field.value ? format(new Date(field.value), "yyyy-MM-dd") : ""}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
