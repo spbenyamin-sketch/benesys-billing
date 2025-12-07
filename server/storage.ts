@@ -1571,7 +1571,7 @@ export class DatabaseStorage implements IStorage {
         groupedByDate[dateKey] = { cashTotal: 0, cardTotal: 0, netTotal: 0 };
       }
       
-      const amount = sale.grandTotal || 0;
+      const amount = parseFloat(String(sale.grandTotal || 0));
       // B2C/ESTIMATE = Cash, B2B = Card/Credit
       if (sale.saleType === 'B2C' || sale.saleType === 'ESTIMATE') {
         groupedByDate[dateKey].cashTotal += amount;
@@ -1583,13 +1583,15 @@ export class DatabaseStorage implements IStorage {
 
     const data = Object.entries(groupedByDate).map(([date, totals]) => ({
       date,
-      ...totals,
+      cashTotal: Number(totals.cashTotal.toFixed(2)),
+      cardTotal: Number(totals.cardTotal.toFixed(2)),
+      netTotal: Number(totals.netTotal.toFixed(2)),
     }));
 
     const totals = {
-      cashTotal: data.reduce((sum, row) => sum + row.cashTotal, 0),
-      cardTotal: data.reduce((sum, row) => sum + row.cardTotal, 0),
-      netTotal: data.reduce((sum, row) => sum + row.netTotal, 0),
+      cashTotal: Number(data.reduce((sum, row) => sum + row.cashTotal, 0).toFixed(2)),
+      cardTotal: Number(data.reduce((sum, row) => sum + row.cardTotal, 0).toFixed(2)),
+      netTotal: Number(data.reduce((sum, row) => sum + row.netTotal, 0).toFixed(2)),
     };
 
     return { data, totals };

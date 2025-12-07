@@ -79,18 +79,18 @@ export default function SalesTotalReport() {
       [`Bill Type: ${billType}`],
       [],
       ["Date", "Cash", "Card", "Net Amount"],
-      ...reportData.data.map((row) => [
+      ...reportData.data.map((row: any) => [
         format(new Date(row.date), "dd-MMM-yyyy"),
-        row.cashTotal.toFixed(2),
-        row.cardTotal.toFixed(2),
-        row.netTotal.toFixed(2),
+        String(Number(row.cashTotal || 0).toFixed(2)),
+        String(Number(row.cardTotal || 0).toFixed(2)),
+        String(Number(row.netTotal || 0).toFixed(2)),
       ]),
       [],
       [
         "TOTAL",
-        reportData.totals.cashTotal.toFixed(2),
-        reportData.totals.cardTotal.toFixed(2),
-        reportData.totals.netTotal.toFixed(2),
+        String(Number(reportData.totals?.cashTotal || 0).toFixed(2)),
+        String(Number(reportData.totals?.cardTotal || 0).toFixed(2)),
+        String(Number(reportData.totals?.netTotal || 0).toFixed(2)),
       ],
     ];
 
@@ -202,32 +202,32 @@ export default function SalesTotalReport() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {reportData.data.map((row, idx) => (
+                      {reportData.data.map((row: any, idx: number) => (
                         <TableRow key={idx} data-testid={`row-sales-total-${idx}`}>
                           <TableCell>
                             {format(new Date(row.date), "dd MMM yyyy")}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ₹{row.cashTotal.toFixed(2)}
+                            ₹{Number(row.cashTotal || 0).toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ₹{row.cardTotal.toFixed(2)}
+                            ₹{Number(row.cardTotal || 0).toFixed(2)}
                           </TableCell>
                           <TableCell className="text-right font-medium">
-                            ₹{row.netTotal.toFixed(2)}
+                            ₹{Number(row.netTotal || 0).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       ))}
                       <TableRow className="font-bold bg-muted">
                         <TableCell>TOTAL</TableCell>
                         <TableCell className="text-right">
-                          ₹{reportData.totals.cashTotal.toFixed(2)}
+                          ₹{Number(reportData.totals?.cashTotal || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ₹{reportData.totals.cardTotal.toFixed(2)}
+                          ₹{Number(reportData.totals?.cardTotal || 0).toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          ₹{reportData.totals.netTotal.toFixed(2)}
+                          ₹{Number(reportData.totals?.netTotal || 0).toFixed(2)}
                         </TableCell>
                       </TableRow>
                     </TableBody>
