@@ -104,6 +104,21 @@ const getFilteredPages = (role: string) => {
   return PAGE_OPTIONS;
 };
 
+// Get available roles to assign based on current user's role
+const getAvailableRoles = (currentUserRole: string) => {
+  if (currentUserRole === "superadmin") {
+    // Super Admin can create admin and normal users (not superadmin via create)
+    return [
+      { value: "user", label: "Normal User" },
+      { value: "admin", label: "Admin (Customer)" },
+    ];
+  }
+  // Admin can only create normal users
+  return [
+    { value: "user", label: "Normal User" },
+  ];
+};
+
 const createUserSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -148,8 +163,15 @@ export default function UserManagement() {
     );
   }
 
-  const { data: users, isLoading } = useQuery<User[]>({
+  const { data: allUsers, isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
+  });
+
+  // Filter users based on current user's role
+  const users = allUsers?.filter(u => {
+    if (isSuperAdmin) return true; // Super Admin sees all users
+    if (isAdminCustomer) return u.role !== 'superadmin'; // Admin doesn't see superadmin
+    return false;
   });
 
   const { data: companies } = useQuery<Company[]>({
@@ -442,7 +464,9 @@ export default function UserManagement() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">User Management</h1>
           <p className="text-muted-foreground mt-2">
-            Manage user roles and permissions (Super Admin only)
+            {isSuperAdmin 
+              ? "Manage all users and their roles" 
+              : "Manage users in your company"}
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -552,9 +576,11 @@ export default function UserManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="user">Normal User</SelectItem>
-                          <SelectItem value="admin">Admin (Customer)</SelectItem>
-                          {isSuperAdmin && <SelectItem value="superadmin">Super Admin</SelectItem>}
+                          {getAvailableRoles(currentUser?.role || 'user').map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -723,9 +749,11 @@ export default function UserManagement() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="user">Normal User</SelectItem>
-                          <SelectItem value="admin">Admin (Customer)</SelectItem>
-                          {isSuperAdmin && <SelectItem value="superadmin">Super Admin</SelectItem>}
+                          {getAvailableRoles(currentUser?.role || 'user').map((role) => (
+                            <SelectItem key={role.value} value={role.value}>
+                              {role.label}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
