@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -14,7 +15,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Purchases() {
-
+  const { t } = useTranslation();
   const { data: purchases, isLoading } = useQuery<any[]>({
     queryKey: ["/api/purchases"],
   });
@@ -24,20 +25,20 @@ export default function Purchases() {
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Purchases</h1>
-            <p className="text-muted-foreground">View and manage all purchase records</p>
+            <h1 className="text-3xl font-bold">{t('purchases.title')}</h1>
+            <p className="text-muted-foreground">{t('purchases.subtitle')}</p>
           </div>
           <Link href="/purchases/new">
             <Button data-testid="button-new-purchase">
               <Plus className="mr-2 h-4 w-4" />
-              New Purchase
+              {t('purchases.newPurchase')}
             </Button>
           </Link>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Purchase History</CardTitle>
+            <CardTitle>{t('purchases.purchaseHistory')}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -49,11 +50,11 @@ export default function Purchases() {
             ) : !purchases || purchases.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground mb-4">No purchases found</p>
+                <p className="text-muted-foreground mb-4">{t('purchases.noPurchasesFound')}</p>
                 <Link href="/purchases/new">
                   <Button data-testid="button-create-first-purchase">
                     <Plus className="mr-2 h-4 w-4" />
-                    Create First Purchase
+                    {t('purchases.createFirstPurchase')}
                   </Button>
                 </Link>
               </div>
@@ -62,13 +63,13 @@ export default function Purchases() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Invoice No</TableHead>
-                      <TableHead>Party</TableHead>
-                      <TableHead>City</TableHead>
-                      <TableHead className="text-right">Total Qty</TableHead>
-                      <TableHead className="text-right">Bill Amount</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t('common.date')}</TableHead>
+                      <TableHead>{t('purchases.invoiceNo')}</TableHead>
+                      <TableHead>{t('purchases.party')}</TableHead>
+                      <TableHead>{t('common.city')}</TableHead>
+                      <TableHead className="text-right">{t('common.quantity')}</TableHead>
+                      <TableHead className="text-right">{t('purchases.billAmount')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -76,7 +77,7 @@ export default function Purchases() {
                       <TableRow key={purchase.id} data-testid={`row-purchase-${purchase.id}`}>
                         <TableCell>{new Date(purchase.date).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">{purchase.invoiceNo}</TableCell>
-                        <TableCell>{purchase.partyName || "Cash"}</TableCell>
+                        <TableCell>{purchase.partyName || t('payments.cash')}</TableCell>
                         <TableCell className="text-muted-foreground">{purchase.city}</TableCell>
                         <TableCell className="text-right font-mono">{purchase.totalQty || 0}</TableCell>
                         <TableCell className="text-right font-mono">

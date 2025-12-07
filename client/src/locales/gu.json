@@ -174,6 +174,7 @@
   },
   "purchases": {
     "title": "ખરીદી",
+    "subtitle": "બધા ખરીદી રેકોર્ડ જુઓ અને મેનેજ કરો",
     "newPurchase": "નવી ખરીદી",
     "purchaseNo": "ખરીદી નંબર",
     "purchaseDate": "ખરીદી તારીખ",
@@ -187,7 +188,13 @@
     "purchaseList": "ખરીદી યાદી",
     "viewPurchase": "ખરીદી જુઓ",
     "editPurchase": "ખરીદી સંપાદિત કરો",
-    "deletePurchase": "ખરીદી કાઢી નાખો"
+    "deletePurchase": "ખરીદી કાઢી નાખો",
+    "purchaseHistory": "ખરીદી ઇતિહાસ",
+    "party": "પાર્ટી",
+    "billAmount": "બિલ રકમ",
+    "invoiceNo": "ઇન્વોઇસ નંબર",
+    "noPurchasesFound": "કોઈ ખરીદી મળી નથી",
+    "createFirstPurchase": "પ્રથમ ખરીદી બનાવો"
   },
   "payments": {
     "title": "ચુકવણી",

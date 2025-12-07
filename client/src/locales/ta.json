@@ -174,6 +174,7 @@
   },
   "purchases": {
     "title": "கொள்முதல்",
+    "subtitle": "அனைத்து கொள்முதல் பதிவுகளையும் பார்த்து நிர்வகிக்கவும்",
     "newPurchase": "புதிய கொள்முதல்",
     "purchaseNo": "கொள்முதல் எண்",
     "purchaseDate": "கொள்முதல் தேதி",
@@ -187,7 +188,13 @@
     "purchaseList": "கொள்முதல் பட்டியல்",
     "viewPurchase": "கொள்முதல் காண்",
     "editPurchase": "கொள்முதல் திருத்து",
-    "deletePurchase": "கொள்முதல் நீக்கு"
+    "deletePurchase": "கொள்முதல் நீக்கு",
+    "purchaseHistory": "கொள்முதல் வரலாறு",
+    "party": "தரப்பு",
+    "billAmount": "பில் தொகை",
+    "invoiceNo": "விலைப்பட்டியல் எண்",
+    "noPurchasesFound": "கொள்முதல் இல்லை",
+    "createFirstPurchase": "முதல் கொள்முதல் உருவாக்கு"
   },
   "payments": {
     "title": "கொடுப்பனவுகள்",
