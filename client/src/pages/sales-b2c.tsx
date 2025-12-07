@@ -757,16 +757,6 @@ export default function SalesB2C() {
                             ₹{(item.saleValue + item.taxValue).toFixed(2)}
                           </TableCell>
                           <TableCell>
-                            {canDeleteBill && (
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => removeLineItem(item.tempId)}
-                                data-testid={`button-remove-${item.tempId}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
                           </TableCell>
                         </TableRow>
                       ))
