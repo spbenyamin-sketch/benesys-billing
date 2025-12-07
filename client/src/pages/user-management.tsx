@@ -125,11 +125,10 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // Only admins can access this page
+  // Only Super Admin can access this page
   const isSuperAdmin = currentUser?.role === "superadmin";
-  const isAdmin = isSuperAdmin || currentUser?.role === "admin";
 
-  if (!isAdmin) {
+  if (!isSuperAdmin) {
     return (
       <div className="p-6">
         <Card>
@@ -138,7 +137,7 @@ export default function UserManagement() {
               <Shield className="w-12 h-12 mx-auto text-red-600" />
               <h2 className="text-2xl font-bold">Access Denied</h2>
               <p className="text-muted-foreground">
-                Only Super Admin or Admin can access user management
+                Only Super Admin can access user management
               </p>
             </div>
           </CardContent>
@@ -399,11 +398,19 @@ export default function UserManagement() {
   };
 
   const getRoleBadge = (role: string) => {
-    if (role === "admin") {
+    if (role === "superadmin") {
       return (
         <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
           <Shield className="mr-1 h-3 w-3" />
           Super Admin
+        </Badge>
+      );
+    }
+    if (role === "admin") {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+          <Shield className="mr-1 h-3 w-3" />
+          Admin (Customer)
         </Badge>
       );
     }
@@ -440,8 +447,8 @@ export default function UserManagement() {
           <DialogTrigger asChild>
             <Button 
               data-testid="button-create-user"
-              disabled={!isAdmin}
-              title={!isAdmin ? "Only admins can create users" : ""}
+              disabled={!isSuperAdmin}
+              title={!isSuperAdmin ? "Only Super Admin can create users" : ""}
             >
               <Plus className="mr-2 h-4 w-4" />
               Create User
