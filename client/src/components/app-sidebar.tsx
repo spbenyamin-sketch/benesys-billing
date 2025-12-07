@@ -40,7 +40,8 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
   const { resetCompanySelection } = useCompany();
-  const isSuperAdmin = user?.role === "admin" || user?.role === "superadmin";
+  const isSuperAdmin = user?.role === "superadmin";
+  const isAdminCustomer = user?.role === "admin";
 
   const salesMenuItems = [
     {
@@ -255,7 +256,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {isSuperAdmin && (
+        {(isSuperAdmin || isAdminCustomer) && (
           <SidebarGroup>
             <SidebarGroupLabel>Administration</SidebarGroupLabel>
             <SidebarGroupContent>
@@ -268,22 +269,26 @@ export function AppSidebar() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === "/companies"}>
-                    <Link href="/companies" data-testid="link-companies">
-                      <Building2 className="h-5 w-5" />
-                      <span>Companies</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={location === "/bill-settings"}>
-                    <Link href="/bill-settings" data-testid="link-bill-settings">
-                      <FileText className="h-5 w-5" />
-                      <span>Bill Settings</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                {isSuperAdmin && (
+                  <>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/companies"}>
+                        <Link href="/companies" data-testid="link-companies">
+                          <Building2 className="h-5 w-5" />
+                          <span>Companies</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild isActive={location === "/bill-settings"}>
+                        <Link href="/bill-settings" data-testid="link-bill-settings">
+                          <FileText className="h-5 w-5" />
+                          <span>Bill Settings</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

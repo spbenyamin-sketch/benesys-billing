@@ -125,10 +125,12 @@ export default function UserManagement() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  // Only Super Admin can access this page
+  // Super Admin and Admin (Customer) can access this page
   const isSuperAdmin = currentUser?.role === "superadmin";
+  const isAdminCustomer = currentUser?.role === "admin";
+  const canAccessUserMgmt = isSuperAdmin || isAdminCustomer;
 
-  if (!isSuperAdmin) {
+  if (!canAccessUserMgmt) {
     return (
       <div className="p-6">
         <Card>
@@ -137,7 +139,7 @@ export default function UserManagement() {
               <Shield className="w-12 h-12 mx-auto text-red-600" />
               <h2 className="text-2xl font-bold">Access Denied</h2>
               <p className="text-muted-foreground">
-                Only Super Admin can access user management
+                Only Super Admin or Admin can access user management
               </p>
             </div>
           </CardContent>
@@ -948,7 +950,7 @@ export default function UserManagement() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        {user.id !== currentUser?.id && isAdmin && (
+                        {user.id !== currentUser?.id && canAccessUserMgmt && (
                           <Button
                             size="icon"
                             variant="ghost"
@@ -959,7 +961,7 @@ export default function UserManagement() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                        {user.id !== currentUser?.id && isAdmin && (
+                        {user.id !== currentUser?.id && canAccessUserMgmt && (
                           <Button
                             size="icon"
                             variant="ghost"
