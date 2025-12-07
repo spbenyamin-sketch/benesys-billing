@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,7 @@ interface SaleReport {
 }
 
 export default function SalesReport() {
+  const { t } = useTranslation();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
@@ -173,35 +175,35 @@ export default function SalesReport() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Sales Report</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t("reports.salesReport")}</h1>
           <p className="text-muted-foreground mt-2">
-            Detailed sales analysis with filters and summaries
+            {t("reports.dateRange")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" onClick={handleExcelExport} disabled={!filteredSales?.length} data-testid="button-export-excel">
             <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Excel
+            {t("common.export")}
           </Button>
           <Button variant="outline" onClick={handlePDFExport} disabled={!filteredSales?.length} data-testid="button-export-pdf">
             <FileDown className="mr-2 h-4 w-4" />
-            PDF
+            {t("common.pdf")}
           </Button>
           <Button variant="outline" onClick={() => handlePrint()} data-testid="button-print-report">
             <Printer className="mr-2 h-4 w-4" />
-            Print
+            {t("common.print")}
           </Button>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Filters</CardTitle>
+          <CardTitle>{t("common.filter")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label htmlFor="startDate">{t("reports.fromDate")}</Label>
               <Input
                 id="startDate"
                 type="date"
@@ -211,7 +213,7 @@ export default function SalesReport() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
+              <Label htmlFor="endDate">{t("reports.toDate")}</Label>
               <Input
                 id="endDate"
                 type="date"
@@ -221,24 +223,24 @@ export default function SalesReport() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="saleType">Sale Type</Label>
+              <Label htmlFor="saleType">{t("sales.saleType")}</Label>
               <Select value={saleTypeFilter} onValueChange={setSaleTypeFilter}>
                 <SelectTrigger id="saleType" data-testid="select-sale-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="B2B">B2B (Credit)</SelectItem>
-                  <SelectItem value="B2C">B2C (Cash/Retail)</SelectItem>
-                  <SelectItem value="ESTIMATE">Estimate</SelectItem>
+                  <SelectItem value="all">{t("sales.allTypes")}</SelectItem>
+                  <SelectItem value="B2B">{t("sales.b2bCredit")}</SelectItem>
+                  <SelectItem value="B2C">{t("sales.b2cCash")}</SelectItem>
+                  <SelectItem value="ESTIMATE">{t("sales.estimate")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="itemId">Item Master</Label>
+              <Label htmlFor="itemId">{t("items.title")}</Label>
               <Select value={selectedItemId} onValueChange={setSelectedItemId} data-testid="select-item-master">
                 <SelectTrigger id="itemId">
-                  <SelectValue placeholder="All Items" />
+                  <SelectValue placeholder={t("stock.allItems")} />
                 </SelectTrigger>
                 <SelectContent>
                   {masterItems?.map((item) => (
@@ -256,7 +258,7 @@ export default function SalesReport() {
       <div className="grid gap-6 sm:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("reports.totalInvoices")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-total-invoices">
@@ -267,7 +269,7 @@ export default function SalesReport() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.quantity")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-total-qty">
@@ -278,7 +280,7 @@ export default function SalesReport() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Tax</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.tax")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-total-tax">
@@ -289,7 +291,7 @@ export default function SalesReport() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Grand Total</CardTitle>
+            <CardTitle className="text-sm font-medium">{t("common.grandTotal")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-grand-total">
@@ -302,14 +304,14 @@ export default function SalesReport() {
       <div ref={printRef}>
         <Card>
           <CardHeader className="print:hidden">
-            <CardTitle>Sales Details</CardTitle>
+            <CardTitle>{t("sales.salesList")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="hidden print:block mb-4">
-              <h2 className="text-xl font-bold">Sales Report</h2>
+              <h2 className="text-xl font-bold">{t("reports.salesReport")}</h2>
               <p className="text-sm text-muted-foreground">
-                {startDate && endDate ? `${startDate} to ${endDate}` : "All dates"} | 
-                {saleTypeFilter === "all" ? " All Types" : ` ${saleTypeFilter}`}
+                {startDate && endDate ? `${startDate} to ${endDate}` : t("common.all")} | 
+                {saleTypeFilter === "all" ? ` ${t("sales.allTypes")}` : ` ${saleTypeFilter}`}
               </p>
             </div>
             {isLoading ? (
@@ -323,15 +325,15 @@ export default function SalesReport() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="text-right">Sale Value</TableHead>
-                      <TableHead className="text-right">CGST</TableHead>
-                      <TableHead className="text-right">SGST</TableHead>
-                      <TableHead className="text-right">Tax</TableHead>
-                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>{t("sales.invoiceNo")}</TableHead>
+                      <TableHead>{t("common.date")}</TableHead>
+                      <TableHead>{t("sales.saleType")}</TableHead>
+                      <TableHead>{t("sales.customer")}</TableHead>
+                      <TableHead className="text-right">{t("sales.amount")}</TableHead>
+                      <TableHead className="text-right">{t("invoice.cgst")}</TableHead>
+                      <TableHead className="text-right">{t("invoice.sgst")}</TableHead>
+                      <TableHead className="text-right">{t("common.tax")}</TableHead>
+                      <TableHead className="text-right">{t("common.total")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -365,7 +367,7 @@ export default function SalesReport() {
                       </TableRow>
                     ))}
                     <TableRow className="font-bold bg-muted/50">
-                      <TableCell colSpan={4}>Total</TableCell>
+                      <TableCell colSpan={4}>{t("common.total")}</TableCell>
                       <TableCell className="text-right font-mono">₹{totals.saleValue.toFixed(2)}</TableCell>
                       <TableCell className="text-right font-mono">₹{totals.cgst.toFixed(2)}</TableCell>
                       <TableCell className="text-right font-mono">₹{totals.sgst.toFixed(2)}</TableCell>

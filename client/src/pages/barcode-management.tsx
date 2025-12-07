@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ItemSearchModal } from "@/components/item-search-modal";
 import { Button } from "@/components/ui/button";
@@ -125,6 +126,7 @@ const getCompanyHeader = (): Record<string, string> => {
 };
 
 export default function BarcodeManagement() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [filterPurchaseId, setFilterPurchaseId] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("all");

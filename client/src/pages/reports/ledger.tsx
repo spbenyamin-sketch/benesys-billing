@@ -1,5 +1,6 @@
 import { useParams } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +43,7 @@ interface LedgerData {
 }
 
 export default function Ledger() {
+  const { t } = useTranslation();
   const params = useParams();
   const partyId = params.id;
   const [startDate, setStartDate] = useState("");
