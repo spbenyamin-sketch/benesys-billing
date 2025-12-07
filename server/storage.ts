@@ -1892,10 +1892,14 @@ export class DatabaseStorage implements IStorage {
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
 
-    const b2bConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstNo}, '')) = 15`];
-    const b2cConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstNo}, '')) != 15`];
+    const fetchHSNData = async (isB2B: boolean) => {
+      const baseConditions = [...conditions];
+      if (isB2B) {
+        baseConditions.push(sql`CHAR_LENGTH(COALESCE(${sales.partyGstNo}, '')) = 15`);
+      } else {
+        baseConditions.push(sql`CHAR_LENGTH(COALESCE(${sales.partyGstNo}, '')) != 15`);
+      }
 
-    const fetchHSNData = async (conds: any[]) => {
       const hsnData = await db
         .select({
           hsnCode: saleItems.hsnCode,
@@ -1909,7 +1913,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(saleItems)
         .innerJoin(sales, eq(saleItems.saleId, sales.id))
-        .where(and(...conds))
+        .where(and(...baseConditions))
         .groupBy(saleItems.hsnCode, saleItems.tax)
         .orderBy(saleItems.hsnCode);
 
@@ -1929,8 +1933,8 @@ export class DatabaseStorage implements IStorage {
     };
 
     const [b2b, b2c] = await Promise.all([
-      fetchHSNData(b2bConditions),
-      fetchHSNData(b2cConditions),
+      fetchHSNData(true),
+      fetchHSNData(false),
     ]);
 
     return { b2b, b2c };
