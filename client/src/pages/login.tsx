@@ -128,10 +128,7 @@ export default function Login() {
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <div className="flex justify-center mb-4">
-            <div className="text-center">
-              <p className="text-sm font-semibold text-muted-foreground mb-1">Developed by</p>
-              <p className="text-2xl font-bold">BeneSys</p>
-            </div>
+            <p className="text-2xl font-bold">BeneSys</p>
           </div>
           <div className="text-center">
             <CardTitle className="text-2xl">Login</CardTitle>

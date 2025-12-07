@@ -163,10 +163,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-2 py-3">
         <Link href="/" className="flex items-center justify-center w-full">
-          <div className="text-center">
-            <p className="text-xs font-semibold text-muted-foreground">Developed by</p>
-            <p className="text-sm font-bold">BeneSys</p>
-          </div>
+          <p className="text-sm font-bold">BeneSys</p>
         </Link>
       </SidebarHeader>
 

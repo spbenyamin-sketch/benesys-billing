@@ -226,7 +226,7 @@ function AppContent() {
           <header className="flex items-center justify-between border-b px-4 py-2">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <span className="text-xs text-muted-foreground">Developed by BeneSys</span>
+              <span className="text-xs text-muted-foreground">BeneSys</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -260,7 +260,7 @@ function AppContent() {
             </div>
           )}
           <footer className="border-t px-4 py-2 text-xs text-muted-foreground text-center">
-            <p>Developed by BeneSys {currentCompany.expiryDate && `| Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
+            <p>BeneSys {currentCompany.expiryDate && `| Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
           </footer>
           <main className="flex-1 overflow-y-auto">
             <Router />
