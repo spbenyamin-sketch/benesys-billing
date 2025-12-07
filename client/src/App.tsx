@@ -19,6 +19,7 @@ import Dashboard from "@/pages/dashboard";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
 import Agents from "@/pages/agents";
+import logoUrl from "@assets/logo_1765091352986.jpg";
 import SalesBilling from "@/pages/sales-billing";
 import BillEntry from "@/pages/bill-entry";
 import SalesB2B from "@/pages/sales-b2b";
@@ -167,8 +168,11 @@ function AppContent() {
           <div className="flex h-screen w-full">
             <AppSidebar />
             <div className="flex flex-col flex-1 overflow-hidden">
-              <header className="flex items-center justify-between border-b px-4 py-3">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <header className="flex items-center justify-between border-b px-4 py-2">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger data-testid="button-sidebar-toggle" />
+                  <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain" />
+                </div>
                 <div className="text-sm text-muted-foreground">
                   No company selected - Create a company to get started
                 </div>
@@ -191,8 +195,11 @@ function AppContent() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between border-b px-4 py-3">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
+          <header className="flex items-center justify-between border-b px-4 py-2">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain" />
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" />

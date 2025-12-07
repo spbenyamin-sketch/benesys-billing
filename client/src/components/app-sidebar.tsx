@@ -34,6 +34,7 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCompany } from "@/contexts/CompanyContext";
+import logoUrl from "@assets/logo_1765091352986.jpg";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -160,16 +161,10 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b border-sidebar-border px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Package className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-semibold">Store Management</span>
-            <span className="text-xs text-muted-foreground">Billing System</span>
-          </div>
-        </div>
+      <SidebarHeader className="border-b border-sidebar-border px-2 py-3">
+        <Link href="/" className="flex items-center justify-center w-full">
+          <img src={logoUrl} alt="BeneSys" className="h-12 w-auto object-contain" />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
