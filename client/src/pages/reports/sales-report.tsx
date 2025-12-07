@@ -19,12 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, Printer, FileSpreadsheet, FileDown } from "lucide-react";
+import { FileText, Printer, FileSpreadsheet, FileDown, Upload } from "lucide-react";
 import { exportToExcel, exportToPDF, formatCurrency, formatDate } from "@/lib/export-utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
+import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
 
 interface SaleReport {
   id: number;
@@ -47,7 +49,9 @@ export default function SalesReport() {
   const [endDate, setEndDate] = useState("");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
   const [selectedItemId, setSelectedItemId] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Fetch master items for the filter
   const { data: masterItems } = useQuery({
@@ -169,6 +173,108 @@ export default function SalesReport() {
     });
   };
 
+  const handleGSTExport = async () => {
+    if (!startDate || !endDate) {
+      toast({
+        title: "Date Range Required",
+        description: "Please select both start and end dates to generate GST files",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const companyId = localStorage.getItem("currentCompanyId") || "";
+      const saleType = saleTypeFilter !== "all" ? saleTypeFilter : undefined;
+
+      const params = new URLSearchParams();
+      params.set("startDate", startDate);
+      params.set("endDate", endDate);
+      if (saleType) params.set("saleType", saleType);
+
+      const [gstr1Response, hsnResponse] = await Promise.all([
+        fetch(`/api/reports/gstr1?${params}`, {
+          credentials: "include",
+          headers: { "X-Company-Id": companyId },
+        }),
+        fetch(`/api/reports/hsn-summary?${params}`, {
+          credentials: "include",
+          headers: { "X-Company-Id": companyId },
+        }),
+      ]);
+
+      if (!gstr1Response.ok || !hsnResponse.ok) {
+        throw new Error("Failed to fetch GST data");
+      }
+
+      const gstr1Data = await gstr1Response.json();
+      const hsnData = await hsnResponse.json();
+
+      const b2bData = gstr1Data.filter((row: any) => row.gstin && row.gstin.length === 15);
+      const b2cData = gstr1Data.filter((row: any) => !row.gstin || row.gstin.length !== 15);
+
+      const gstr1Sheet = XLSX.utils.json_to_sheet(gstr1Data.map((row: any) => ({
+        "GSTIN": row.gstin,
+        "Party Name": row.partyName,
+        "Invoice No": row.invoiceNo,
+        "Date": row.date,
+        "Invoice Value": row.totalValue,
+        "Place of Supply": row.placeOfSupply,
+        "Reverse Charge": row.reverseCharge,
+        "Invoice Type": row.invoiceType,
+        "Taxable Value": row.taxableValue,
+        "Tax Rate": row.taxRate,
+        "CGST": row.cgst,
+        "SGST": row.sgst,
+        "IGST": row.igst,
+        "Cess": row.cess,
+      })));
+
+      const hsnB2BData = hsnData.map((row: any) => ({
+        "HSN Code": row.hsnCode,
+        "Description": row.description,
+        "UQC": row.uqc,
+        "Total Qty": row.totalQty,
+        "Total Value": row.totalValue,
+        "Tax Rate": row.taxRate,
+        "Taxable Value": row.taxableValue,
+        "IGST": row.igst,
+        "CGST": row.cgst,
+        "SGST": row.sgst,
+        "Cess": row.cess,
+      }));
+      const hsnB2BSheet = XLSX.utils.json_to_sheet(hsnB2BData);
+      const hsnB2CSheet = XLSX.utils.json_to_sheet(hsnB2BData);
+
+      const wb1 = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb1, gstr1Sheet, "GSTR1");
+      XLSX.writeFile(wb1, `GSTR1-${startDate}-to-${endDate}.xlsx`);
+
+      const wb2 = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb2, hsnB2BSheet, "HSN-B2B");
+      XLSX.writeFile(wb2, `HSN-B2B-${startDate}-to-${endDate}.xlsx`);
+
+      const wb3 = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb3, hsnB2CSheet, "HSN-B2C");
+      XLSX.writeFile(wb3, `HSN-B2C-${startDate}-to-${endDate}.xlsx`);
+
+      toast({
+        title: "GST Files Generated",
+        description: "GSTR1, HSN B2B, and HSN B2C files have been downloaded",
+      });
+    } catch (error) {
+      console.error("Error exporting GST files:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to generate GST files. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -179,6 +285,15 @@ export default function SalesReport() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button 
+            variant="default" 
+            onClick={handleGSTExport} 
+            disabled={isExporting || !startDate || !endDate} 
+            data-testid="button-export-gst"
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            {isExporting ? "Generating..." : "Generate GST Files"}
+          </Button>
           <Button variant="outline" onClick={handleExcelExport} disabled={!filteredSales?.length} data-testid="button-export-excel">
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Excel
