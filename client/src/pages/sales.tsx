@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,12 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, FileText, Filter, Printer, Eye, Edit } from "lucide-react";
+import { Plus, Search, FileText, Filter, Printer, Eye, Edit, Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useReactToPrint } from "react-to-print";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 
 interface Sale {
   id: number;
@@ -44,10 +47,41 @@ export default function Sales() {
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
   const [, setLocation] = useLocation();
   const printRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
 
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["/api/sales"],
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (saleId: number) => {
+      const response = await apiRequest("DELETE", `/api/sales/${saleId}`);
+      if (!response.ok) throw new Error("Failed to delete sale");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Sale deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete sale",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteSale = (saleId: number) => {
+    if (window.confirm("Are you sure you want to delete this sale?")) {
+      deleteMutation.mutate(saleId);
+    }
+  };
 
   const filteredSales = sales?.filter((sale) => {
     const matchesSearch = 
@@ -205,6 +239,18 @@ export default function Sales() {
                             >
                               <Printer className="h-4 w-4" />
                             </Button>
+                            {canDeleteBill && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleDeleteSale(sale.id)}
+                                title="Delete Sale"
+                                data-testid={`button-delete-sale-${sale.id}`}
+                                disabled={deleteMutation.isPending}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
