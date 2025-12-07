@@ -264,7 +264,28 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(user: Partial<UpsertUser>): Promise<User> {
-    const results = await db.insert(users).values(user as any).returning();
+    console.log('[STORAGE] createUser called with:', { 
+      username: user.username, 
+      role: user.role,
+      firstName: user.firstName 
+    });
+    
+    const results = await db.insert(users).values({
+      username: user.username,
+      passwordHash: user.passwordHash,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role || 'user', // Ensure role is explicitly set
+      pagePermissions: user.pagePermissions || [],
+    }).returning();
+    
+    console.log('[STORAGE] createUser result:', { 
+      id: results[0]?.id, 
+      username: results[0]?.username,
+      role: results[0]?.role 
+    });
+    
     return results[0];
   }
 
