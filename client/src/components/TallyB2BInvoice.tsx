@@ -194,7 +194,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
               </td>
               <td style={{ width: "50%", verticalAlign: "top" }}>
                 <div style={{ marginBottom: "4px" }}>
-                  <strong>Buyer (Bill to):</strong>
+                  <strong>{translateToTamil("Buyer (Bill to)", enableTamilPrint)}:</strong>
                 </div>
                 <div style={{ fontWeight: "600", marginBottom: "2px" }}>{invoice.partyName || "N/A"}</div>
                 <div style={{ fontSize: "8px" }}>{invoice.partyAddress || "N/A"}</div>
@@ -203,10 +203,10 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                   {invoice.partyState && ` - ${invoice.partyState}`}
                 </div>
                 <div style={{ fontSize: "8px" }}>
-                  <strong>GSTIN/UIN:</strong> {invoice.partyGstNo || "N/A"}
+                  <strong>{translateToTamil("GSTIN/UIN", enableTamilPrint)}:</strong> {invoice.partyGstNo || "N/A"}
                 </div>
                 <div style={{ fontSize: "8px" }}>
-                  <strong>Phone:</strong> {invoice.partyPhone || "N/A"}
+                  <strong>{translateToTamil("Phone", enableTamilPrint)}:</strong> {invoice.partyPhone || "N/A"}
                 </div>
               </td>
             </tr>
@@ -218,11 +218,11 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <thead>
             <tr>
               <th style={{ width: "5%", textAlign: "center" }}>#</th>
-              <th style={{ width: "25%", textAlign: "left" }}>Description of Goods</th>
-              {template.showHsnCode && <th style={{ width: "8%", textAlign: "center" }}>HSN/SAC</th>}
-              <th style={{ width: "8%", textAlign: "right" }}>Quantity</th>
-              <th style={{ width: "12%", textAlign: "right" }}>Rate</th>
-              <th style={{ width: "12%", textAlign: "right" }}>Amount</th>
+              <th style={{ width: "25%", textAlign: "left" }}>{translateToTamil("Description of Goods", enableTamilPrint)}</th>
+              {template.showHsnCode && <th style={{ width: "8%", textAlign: "center" }}>{translateToTamil("HSN/SAC", enableTamilPrint)}</th>}
+              <th style={{ width: "8%", textAlign: "right" }}>{translateToTamil("Quantity", enableTamilPrint)}</th>
+              <th style={{ width: "12%", textAlign: "right" }}>{translateToTamil("Rate", enableTamilPrint)}</th>
+              <th style={{ width: "12%", textAlign: "right" }}>{translateToTamil("Amount", enableTamilPrint)}</th>
             </tr>
           </thead>
           <tbody>
@@ -252,9 +252,9 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <table style={{ marginBottom: "8px", fontSize: "8px" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "center" }}>HSN/SAC</th>
-                <th style={{ textAlign: "right" }}>Taxable Value</th>
-                <th style={{ textAlign: "center" }}>Tax Rate %</th>
+                <th style={{ textAlign: "center" }}>{translateToTamil("HSN/SAC", enableTamilPrint)}</th>
+                <th style={{ textAlign: "right" }}>{translateToTamil("Taxable Value", enableTamilPrint)}</th>
+                <th style={{ textAlign: "center" }}>{translateToTamil("Tax Rate", enableTamilPrint)} %</th>
                 {!invoice.isInterState ? (
                   <>
                     <th style={{ textAlign: "right" }}>CGST %</th>
@@ -263,7 +263,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                 ) : (
                   <th style={{ textAlign: "right" }}>IGST %</th>
                 )}
-                <th style={{ textAlign: "right" }}>Tax Amount</th>
+                <th style={{ textAlign: "right" }}>{translateToTamil("Tax Amount", enableTamilPrint)}</th>
               </tr>
             </thead>
             <tbody>
@@ -293,7 +293,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
           <div style={{ fontSize: "8px" }}>
             <div style={{ marginBottom: "2px" }}>
-              <strong>Amount Chargeable (in words):</strong>
+              <strong>{translateToTamil("Amount Chargeable (in words)", enableTamilPrint)}:</strong>
             </div>
             <div style={{ fontStyle: "italic", paddingTop: "2px" }}>
               {numberToWords(invoice.grandTotal)} Rupees Only
@@ -302,12 +302,12 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <table style={{ fontSize: "8px" }}>
             <tbody>
               <tr>
-                <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>Subtotal:</td>
+                <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{translateToTamil("Subtotal", enableTamilPrint)}:</td>
                 <td style={{ width: "30%", textAlign: "right" }}>₹{invoice.subtotal.toFixed(2)}</td>
               </tr>
               {invoice.totalDiscount > 0 && (
                 <tr>
-                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>Discount:</td>
+                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{translateToTamil("Discount", enableTamilPrint)}:</td>
                   <td style={{ width: "30%", textAlign: "right" }}>- ₹{invoice.totalDiscount.toFixed(2)}</td>
                 </tr>
               )}
@@ -331,12 +331,12 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
               )}
               {invoice.roundOff !== 0 && (
                 <tr>
-                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>Round Off:</td>
+                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{translateToTamil("Round Off", enableTamilPrint)}:</td>
                   <td style={{ width: "30%", textAlign: "right" }}>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</td>
                 </tr>
               )}
               <tr style={{ borderTop: "2px solid black" }}>
-                <td style={{ width: "70%", textAlign: "right", fontWeight: "bold", fontSize: "10px" }}>TOTAL:</td>
+                <td style={{ width: "70%", textAlign: "right", fontWeight: "bold", fontSize: "10px" }}>{translateToTamil("TOTAL", enableTamilPrint)}:</td>
                 <td style={{ width: "30%", textAlign: "right", fontWeight: "bold", fontSize: "10px" }}>₹{invoice.grandTotal.toFixed(2)}</td>
               </tr>
             </tbody>
@@ -345,7 +345,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
 
         {/* ========== DECLARATION ========== */}
         <div style={{ border: "1px solid black", padding: "6px", marginBottom: "8px", fontSize: "8px" }}>
-          <div style={{ fontWeight: "bold", marginBottom: "2px" }}>Declaration:</div>
+          <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{translateToTamil("Declaration", enableTamilPrint)}:</div>
           <div>
             We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
           </div>
@@ -354,7 +354,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
         {/* ========== BANK DETAILS ========== */}
         {template.showBankDetails && template.bankDetails && (
           <div style={{ border: "1px solid black", padding: "6px", marginBottom: "8px", fontSize: "8px" }}>
-            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>Bank Details:</div>
+            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{translateToTamil("Bank Details", enableTamilPrint)}:</div>
             <div style={{ whiteSpace: "pre-line" }}>{template.bankDetails}</div>
           </div>
         )}
@@ -362,7 +362,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
         {/* ========== TERMS & CONDITIONS ========== */}
         {template.termsAndConditions && (
           <div style={{ border: "1px solid black", padding: "6px", marginBottom: "8px", fontSize: "7px" }}>
-            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>Terms & Conditions:</div>
+            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{translateToTamil("Terms & Conditions", enableTamilPrint)}:</div>
             <div style={{ whiteSpace: "pre-line" }}>{template.termsAndConditions}</div>
           </div>
         )}
