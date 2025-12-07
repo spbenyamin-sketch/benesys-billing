@@ -77,6 +77,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Create super admin user
+      console.log('[SETUP] Creating user with:', { username, role: 'superadmin', firstName: 'Super', lastName: 'Admin' });
       const user = await storage.createUser({
         username,
         passwordHash,
@@ -84,6 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: 'Super',
         lastName: 'Admin',
       });
+      console.log('[SETUP] User created with role:', user.role);
 
       // Login the user by creating a session
       req.logIn(user, (err: any) => {
