@@ -75,7 +75,7 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
   updatedAt: true,
   createdBy: true,
 }).extend({
-  expiryDate: z.date().optional(),
+  expiryDate: z.coerce.date().optional(),
 });
 
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
