@@ -122,6 +122,7 @@ export interface IStorage {
   getSalesTotalReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any>;
   getGSTR1Data(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
   getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<{b2b: any[], b2c: any[]}>;
+  generateEInvoiceJSON(saleId: number, companyId: number): Promise<any>;
   getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any>;
 
   // Bill Template operations
@@ -1699,6 +1700,170 @@ export class DatabaseStorage implements IStorage {
       gstType: sale.gstType || 'CGST/SGST',
       saleType: sale.saleType,
     }));
+  }
+
+  async generateEInvoiceJSON(saleId: number, companyId: number): Promise<any> {
+    const sale = await this.getSale(saleId, companyId);
+    if (!sale) {
+      throw new Error("Sale not found");
+    }
+
+    if (sale.saleType !== 'B2B') {
+      throw new Error("e-Invoice can only be generated for B2B sales");
+    }
+
+    const saleItemsList = await this.getSaleItems(saleId, companyId);
+    const company = await this.getCompany(companyId);
+    
+    let party = null;
+    if (sale.partyId) {
+      party = await this.getParty(sale.partyId, companyId);
+    }
+
+    if (!party?.gstNo || party.gstNo.length !== 15) {
+      throw new Error("Valid 15-character GSTIN required for buyer to generate e-Invoice");
+    }
+
+    const sellerStateCode = company?.gstNo?.substring(0, 2) || "33";
+    const buyerStateCode = party.gstNo.substring(0, 2);
+    const isInterState = sellerStateCode !== buyerStateCode;
+
+    const assessableValue = parseFloat(String(sale.saleValue || 0));
+    const cgstValue = isInterState ? 0 : parseFloat(String(sale.cgstTotal || 0));
+    const sgstValue = isInterState ? 0 : parseFloat(String(sale.sgstTotal || 0));
+    const igstValue = isInterState ? parseFloat(String(sale.taxValue || 0)) : 0;
+    const totalValue = parseFloat(String(sale.grandTotal || 0));
+    const roundOff = parseFloat(String(sale.roundOff || 0));
+
+    const formatDate = (dateStr: string) => {
+      if (!dateStr) return "";
+      const d = new Date(dateStr);
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    const itemList = saleItemsList.map((item: any, index: number) => {
+      const qty = parseFloat(String(item.quantity || 0));
+      const rate = parseFloat(String(item.rate || 0));
+      const amount = parseFloat(String(item.amount || 0));
+      const saleValue = parseFloat(String(item.saleValue || 0));
+      const taxRate = parseFloat(String(item.tax || 0));
+      const itemCgst = isInterState ? 0 : parseFloat(String(item.cgst || 0));
+      const itemSgst = isInterState ? 0 : parseFloat(String(item.sgst || 0));
+      const itemIgst = isInterState ? parseFloat(String(item.taxValue || 0)) : 0;
+      const itemTotal = saleValue + itemCgst + itemSgst + itemIgst;
+
+      return {
+        SlNo: String(index + 1),
+        PrdDesc: item.itemName || "Product",
+        IsServc: "N",
+        HsnCd: item.hsnCode || "",
+        Barcde: item.barcode || null,
+        Qty: qty,
+        FreeQty: 0,
+        Unit: "NOS",
+        UnitPrice: rate,
+        TotAmt: amount,
+        Discount: parseFloat(String(item.discount || 0)),
+        PreTaxVal: 0,
+        AssAmt: saleValue,
+        GstRt: taxRate,
+        IgstAmt: itemIgst,
+        CgstAmt: itemCgst,
+        SgstAmt: itemSgst,
+        CesRt: 0,
+        CesAmt: 0,
+        CesNonAdvlAmt: 0,
+        StateCesRt: 0,
+        StateCesAmt: 0,
+        StateCesNonAdvlAmt: 0,
+        OthChrg: 0,
+        TotItemVal: Math.round(itemTotal),
+        OrdLineRef: null,
+        OrgCntry: null,
+        PrdSlNo: null,
+        BchDtls: null,
+      };
+    });
+
+    const eInvoiceJSON = {
+      Version: "1.1",
+      TranDtls: {
+        TaxSch: "GST",
+        SupTyp: "B2B",
+        IgstOnIntra: isInterState ? "Y" : "N",
+        RegRev: null,
+        EcmGstin: null,
+      },
+      DocDtls: {
+        Typ: "INV",
+        No: String(sale.invoiceNo),
+        Dt: formatDate(sale.date),
+      },
+      SellerDtls: {
+        Gstin: company?.gstNo || "",
+        LglNm: company?.name || "",
+        TrdNm: null,
+        Addr1: company?.address || "",
+        Addr2: "",
+        Loc: company?.city || "",
+        Pin: parseInt(company?.address?.match(/\d{6}/)?.[0] || "600001"),
+        Stcd: sellerStateCode,
+        Ph: company?.phone || null,
+        Em: company?.email || null,
+      },
+      BuyerDtls: {
+        Gstin: party.gstNo,
+        LglNm: party.name || "",
+        TrdNm: null,
+        Pos: buyerStateCode,
+        Addr1: party.address || "",
+        Addr2: "",
+        Loc: party.city || "",
+        Pin: parseInt(party.pincode || "600001"),
+        Stcd: buyerStateCode,
+        Ph: party.phone || null,
+        Em: null,
+      },
+      DispDtls: null,
+      ShipDtls: party.hasShippingAddress ? {
+        Gstin: party.gstNo,
+        LglNm: party.shipName || party.name || "",
+        TrdNm: null,
+        Addr1: party.shipAddress || "",
+        Addr2: "",
+        Loc: party.shipCity || party.city || "",
+        Pin: parseInt(party.shipPincode || party.pincode || "600001"),
+        Stcd: party.shipStateCode || buyerStateCode,
+      } : null,
+      ValDtls: {
+        AssVal: assessableValue,
+        IgstVal: igstValue,
+        CgstVal: cgstValue,
+        SgstVal: sgstValue,
+        CesVal: 0,
+        StCesVal: 0,
+        Discount: 0,
+        OthChrg: 0,
+        RndOffAmt: roundOff,
+        TotInvVal: totalValue,
+        TotInvValFc: 0,
+      },
+      ExpDtls: null,
+      EwbDtls: null,
+      PayDtls: null,
+      RefDtls: null,
+      AddlDocDtls: [{
+        Url: "https://einv-apisandbox.nic.in",
+        Docs: "Invoice",
+        Info: "Generated from BeneSys Billing System",
+      }],
+      ItemList: itemList,
+    };
+
+    return eInvoiceJSON;
   }
 
   async getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<{b2b: any[], b2c: any[]}> {

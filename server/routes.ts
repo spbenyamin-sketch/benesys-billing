@@ -1008,6 +1008,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/sales/:id/einvoice-json", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const saleId = parseInt(req.params.id);
+      const eInvoiceJSON = await storage.generateEInvoiceJSON(saleId, req.companyId);
+      
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="einvoice-${saleId}.json"`);
+      res.json([eInvoiceJSON]);
+    } catch (error: any) {
+      console.error("Error generating e-Invoice JSON:", error);
+      res.status(400).json({ message: error.message || "Failed to generate e-Invoice JSON" });
+    }
+  });
+
   app.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const partyId = parseInt(req.params.partyId);

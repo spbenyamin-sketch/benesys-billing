@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Printer, ArrowLeft, Edit, Globe } from "lucide-react";
+import { Printer, ArrowLeft, Edit, Globe, FileJson } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { format } from "date-fns";
@@ -95,9 +96,11 @@ export default function Invoice() {
   const [hasPrinted, setHasPrinted] = useState(false);
   const [templateReady, setTemplateReady] = useState(false);
   const [enableTamilPrint, setEnableTamilPrint] = useState(false);
+  const [isDownloadingJSON, setIsDownloadingJSON] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
   const { shouldAutoPrint } = usePrintSettings();
   const { currentCompany } = useCompany();
+  const { toast } = useToast();
   
   const searchParams = new URLSearchParams(searchString);
   const autoPrintRequested = searchParams.get("print") === "auto";
@@ -294,6 +297,49 @@ export default function Invoice() {
   // Use template's Tamil setting or local override
   const isTamilEnabled = enableTamilPrint || activeTemplate.enableTamilPrint;
 
+  const handleDownloadEInvoiceJSON = async () => {
+    if (!saleId) return;
+    
+    setIsDownloadingJSON(true);
+    try {
+      const companyId = localStorage.getItem("currentCompanyId") || "";
+      const response = await fetch(`/api/sales/${saleId}/einvoice-json`, {
+        credentials: "include",
+        headers: { "X-Company-Id": companyId },
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate e-Invoice JSON");
+      }
+      
+      const jsonData = await response.json();
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `einvoice-${sale?.invoiceNo || saleId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "e-Invoice JSON Downloaded",
+        description: "Upload this file to GST portal for IRN generation",
+      });
+    } catch (error: any) {
+      console.error("Error downloading e-Invoice JSON:", error);
+      toast({
+        title: "Download Failed",
+        description: error.message || "Failed to generate e-Invoice JSON",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloadingJSON(false);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6 print:hidden gap-4">
@@ -303,7 +349,7 @@ export default function Invoice() {
             Back to Sales
           </Link>
         </Button>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <div className="flex items-center gap-2 border rounded-md px-3 py-2">
             <Checkbox 
               id="tamil-print" 
@@ -316,6 +362,17 @@ export default function Invoice() {
               தமிழ் (Tamil)
             </label>
           </div>
+          {isB2B && (
+            <Button 
+              variant="outline" 
+              onClick={handleDownloadEInvoiceJSON}
+              disabled={isDownloadingJSON}
+              data-testid="button-download-einvoice"
+            >
+              <FileJson className="mr-2 h-4 w-4" />
+              {isDownloadingJSON ? "Generating..." : "e-Invoice JSON"}
+            </Button>
+          )}
           <Button onClick={() => handlePrint()} data-testid="button-print">
             <Printer className="mr-2 h-4 w-4" />
             Print Invoice

@@ -170,6 +170,13 @@ Templates can be assigned to specific transaction types:
   - Each item requires itemName, quantity (positive), and rate (non-negative)
 - Updates merge with existing sale data to prevent field loss
 
+### e-Invoice JSON Generation (B2B Only)
+- **Location:** Invoice page → "e-Invoice JSON" button (visible only for B2B sales)
+- **API:** `GET /api/sales/:id/einvoice-json`
+- **Format:** India GST e-Invoice JSON v1.1 schema
+- **Sections:** TranDtls, DocDtls, SellerDtls, BuyerDtls, ItemList, ValDtls
+- **Usage:** Download JSON file and upload to GST portal for IRN generation
+
 ## Payment Management
 
 ### Payment Receipt Printing
