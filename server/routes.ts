@@ -76,14 +76,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create super admin user
-      console.log('[SETUP] Creating user with:', { username, role: 'superadmin', firstName: 'Super', lastName: 'Admin' });
+      // Create super admin user - MUST be superadmin role
+      const userRole = 'superadmin';
+      const userFirstName = 'Super';
+      const userLastName = 'Admin';
+      console.log('=== SETUP V3 === Creating superadmin with role:', userRole);
+      
       const user = await storage.createUser({
         username,
         passwordHash,
-        role: 'superadmin',
-        firstName: 'Super',
-        lastName: 'Admin',
+        role: userRole,
+        firstName: userFirstName,
+        lastName: userLastName,
       });
       console.log('[SETUP] User created with role:', user.role);
 

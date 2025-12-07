@@ -198,13 +198,15 @@ export async function setupAuth(app: Express) {
 
       const passwordHash = await bcrypt.hash(password, 10);
       
+      // Create SUPERADMIN user on initial setup
       const user = await storage.createUser({
         username,
         passwordHash,
-        role: "admin",
-        firstName: "Admin",
-        lastName: "User",
+        role: "superadmin",
+        firstName: "Super",
+        lastName: "Admin",
       });
+      console.log('[SETUP] Created superadmin user with role:', user.role);
 
       // Auto-login after setup
       req.login(user, (err) => {
