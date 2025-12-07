@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { usePrintSettings } from "@/hooks/use-print-settings";
+import { useAuth } from "@/hooks/use-auth";
 import { Plus, Trash2, Save, Barcode, Search, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -66,6 +67,8 @@ export default function SalesEstimate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { shouldAutoPrint } = usePrintSettings();
+  const { user } = useAuth();
+  const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
@@ -597,14 +600,16 @@ export default function SalesEstimate() {
                             ₹{item.amount.toFixed(2)}
                           </TableCell>
                           <TableCell>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => removeLineItem(item.tempId)}
-                              data-testid={`button-remove-${item.tempId}`}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {canDeleteBill && (
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => removeLineItem(item.tempId)}
+                                data-testid={`button-remove-${item.tempId}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
