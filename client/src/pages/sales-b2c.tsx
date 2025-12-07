@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { usePrintSettings } from "@/hooks/use-print-settings";
-import { useAuth } from "@/hooks/use-auth";
+import { useAuth } from "@/hooks/useAuth";
 import { Plus, Trash2, Save, Barcode, Search, CreditCard, Banknote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
