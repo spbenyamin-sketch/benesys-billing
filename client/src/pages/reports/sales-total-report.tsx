@@ -38,8 +38,25 @@ export default function SalesTotalReport() {
   );
   const [billType, setBillType] = useState("ALL");
 
+  // Build query params as URL search params
+  const queryParams = new URLSearchParams();
+  if (fromDate) queryParams.set("fromDate", fromDate);
+  if (toDate) queryParams.set("toDate", toDate);
+  if (billType) queryParams.set("billType", billType);
+
+  const queryString = queryParams.toString();
+  const apiUrl = queryString ? `/api/reports/sales-total?${queryString}` : "/api/reports/sales-total";
+
   const { data: reportData, isLoading } = useQuery({
-    queryKey: ["/api/reports/sales-total", fromDate, toDate, billType, currentCompany?.id],
+    queryKey: ["/api/reports/sales-total", fromDate, toDate, billType],
+    queryFn: async () => {
+      const res = await fetch(apiUrl, { 
+        credentials: "include", 
+        headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } 
+      });
+      if (!res.ok) throw new Error("Failed to fetch sales total report");
+      return res.json();
+    },
     enabled: !!currentCompany?.id,
   });
 
