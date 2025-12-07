@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { PartySearchModal } from "@/components/party-search-modal";
@@ -82,6 +83,7 @@ interface CreditNoteLineItem {
 }
 
 export default function CreditNote() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -151,8 +153,8 @@ export default function CreditNote() {
         const alreadyAdded = lineItems.some(item => item.barcode === data.barcode || (item.itemId === data.itemId && item.quantity === 1));
         if (alreadyAdded) {
           toast({
-            title: "Barcode Already Used",
-            description: `${data.itemName} (${data.barcode}) has already been added to this bill`,
+            title: t('creditNote.barcodeAlreadyUsed'),
+            description: `${data.itemName} (${data.barcode}) ${t('creditNote.barcodeAlreadyAddedError')}`,
             variant: "destructive",
           });
           setBarcodeInput("");
@@ -190,13 +192,13 @@ export default function CreditNote() {
       barcodeInputRef.current?.focus();
       
       toast({
-        title: "Item Added",
-        description: `${data.itemName} added from barcode scan`,
+        title: t('creditNote.itemAdded'),
+        description: `${data.itemName} ${t('creditNote.addedFromBarcode')}`,
       });
     } catch (error) {
       toast({
-        title: "Barcode Not Found",
-        description: "No item found with this barcode in inventory",
+        title: t('creditNote.barcodeNotFound'),
+        description: t('creditNote.noItemsFound'),
         variant: "destructive",
       });
     }
@@ -391,8 +393,8 @@ export default function CreditNote() {
       queryClient.invalidateQueries({ queryKey: ["/api/parties", selectedPartyId, "outstanding"] });
       
       toast({
-        title: "Success",
-        description: "Credit Note saved successfully",
+        title: t('creditNote.successTitle'),
+        description: t('creditNote.creditNoteSaved'),
       });
 
       const printParam = shouldAutoPrint("CN") ? "?print=auto" : "";
@@ -407,7 +409,7 @@ export default function CreditNote() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -418,9 +420,9 @@ export default function CreditNote() {
     <div ref={formContainerRef} className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Credit Note (B2B)</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t('creditNote.title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Issue credit notes for returns and adjustments
+            {t('creditNote.subtitle')}
           </p>
         </div>
         <div className="flex gap-2">
@@ -430,7 +432,7 @@ export default function CreditNote() {
             data-testid="button-save-credit-note"
           >
             <Save className="mr-2 h-4 w-4" />
-            {saveMutation.isPending ? "Saving..." : "Save & Print"}
+            {saveMutation.isPending ? t('creditNote.saving') : t('creditNote.saveAndPrint')}
           </Button>
         </div>
       </div>
@@ -441,11 +443,11 @@ export default function CreditNote() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                Credit Note Details
+                {t('creditNote.details')}
               </CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="inclusive-tax" className="text-sm">Tax Inclusive</Label>
+                  <Label htmlFor="inclusive-tax" className="text-sm">{t('creditNote.taxInclusive')}</Label>
                   <Switch
                     id="inclusive-tax"
                     checked={inclusiveTax}
@@ -459,7 +461,7 @@ export default function CreditNote() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="invoiceDate">Date</Label>
+                <Label htmlFor="invoiceDate">{t('creditNote.date')}</Label>
                 <Input
                   id="invoiceDate"
                   type="date"
@@ -469,7 +471,7 @@ export default function CreditNote() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="party">Party/Customer *</Label>
+                <Label htmlFor="party">{t('creditNote.partyRequired')}</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -481,25 +483,25 @@ export default function CreditNote() {
                   {selectedParty ? (
                     <span className="text-sm">{selectedParty.name} - {selectedParty.city}</span>
                   ) : (
-                    <span className="text-muted-foreground text-sm">Click to search party...</span>
+                    <span className="text-muted-foreground text-sm">{t('creditNote.selectParty')}</span>
                   )}
                 </Button>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="originalInvoice">Original Invoice No.</Label>
+                <Label htmlFor="originalInvoice">{t('creditNote.originalInvoiceNo')}</Label>
                 <Input
                   id="originalInvoice"
-                  placeholder="Original Bill No."
+                  placeholder={t('creditNote.originalBillNo')}
                   value={originalInvoiceNo}
                   onChange={(e) => setOriginalInvoiceNo(e.target.value)}
                   data-testid="input-original-invoice"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reason">Reason</Label>
+                <Label htmlFor="reason">{t('creditNote.reason')}</Label>
                 <Input
                   id="reason"
-                  placeholder="Return reason"
+                  placeholder={t('creditNote.returnReason')}
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   data-testid="input-reason"
@@ -534,7 +536,7 @@ export default function CreditNote() {
                   data-testid="button-search-mode-barcode"
                 >
                   <Barcode className="mr-1 h-3 w-3" />
-                  Barcode Scan
+                  {t('creditNote.barcodeScan')}
                 </Button>
                 <Button
                   size="sm"
@@ -543,14 +545,14 @@ export default function CreditNote() {
                   data-testid="button-search-mode-item"
                 >
                   <Search className="mr-1 h-3 w-3" />
-                  Item Search
+                  {t('creditNote.itemSearch')}
                 </Button>
               </div>
               {searchMode === "barcode" && (
                 <div className="flex-1 flex gap-2">
                   <Input
                     ref={barcodeInputRef}
-                    placeholder="Scan barcode..."
+                    placeholder={t('creditNote.scanBarcode')}
                     value={barcodeInput}
                     onChange={(e) => setBarcodeInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
@@ -559,7 +561,7 @@ export default function CreditNote() {
                     data-testid="input-barcode"
                   />
                   <Button onClick={handleBarcodeSearch} data-testid="button-barcode-add">
-                    Add
+                    {t('common.add')}
                   </Button>
                 </div>
               )}
@@ -567,7 +569,7 @@ export default function CreditNote() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>Return Items ({lineItems.length})</Label>
+                <Label>{t('creditNote.returnItems')} ({lineItems.length})</Label>
                 {searchMode === "item" && (
                   <Button 
                     size="sm" 
@@ -602,7 +604,7 @@ export default function CreditNote() {
                     data-testid="button-add-line-item"
                   >
                     <Plus className="mr-1 h-3 w-3" />
-                    Add Item
+                    {t('creditNote.addItem')}
                   </Button>
                 )}
               </div>
@@ -611,12 +613,12 @@ export default function CreditNote() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[200px]">Item</TableHead>
-                      <TableHead className="w-[70px]">Stock</TableHead>
-                      <TableHead className="w-[70px]">Qty</TableHead>
-                      <TableHead className="w-[90px]">Rate</TableHead>
-                      <TableHead className="w-[70px]">Disc%</TableHead>
-                      <TableHead className="w-[100px] text-right">Amount</TableHead>
+                      <TableHead className="w-[200px]">{t('common.select')}</TableHead>
+                      <TableHead className="w-[70px]">{t('creditNote.stock')}</TableHead>
+                      <TableHead className="w-[70px]">{t('creditNote.qty')}</TableHead>
+                      <TableHead className="w-[90px]">{t('creditNote.rate')}</TableHead>
+                      <TableHead className="w-[70px]">{t('creditNote.discPercent')}</TableHead>
+                      <TableHead className="w-[100px] text-right">{t('creditNote.amount')}</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -624,7 +626,7 @@ export default function CreditNote() {
                     {lineItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Add items to create credit note
+                          {t('creditNote.addItem')} to create credit note
                         </TableCell>
                       </TableRow>
                     ) : (

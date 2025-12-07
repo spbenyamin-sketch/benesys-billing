@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -391,6 +392,7 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
 }
 
 export default function BillSettings() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [showPreview, setShowPreview] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -510,9 +512,9 @@ export default function BillSettings() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Bill Settings</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t("billSettings.title")}</h1>
         <p className="text-muted-foreground mt-2">
-          Configure invoice formats for A4, B4, and thermal printers. Assign templates to B2B, B2C, or Estimate.
+          {t("billSettings.description")}
         </p>
       </div>
 
@@ -520,15 +522,15 @@ export default function BillSettings() {
         <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="standard" data-testid="tab-standard">
             <FileText className="mr-2 h-4 w-4" />
-            A4 / B4 Format
+            {t("billSettings.a4B4Format")}
           </TabsTrigger>
           <TabsTrigger value="thermal" data-testid="tab-thermal">
             <Printer className="mr-2 h-4 w-4" />
-            Thermal Printer
+            {t("billSettings.thermalPrinter")}
           </TabsTrigger>
           <TabsTrigger value="print-settings" data-testid="tab-print-settings">
             <Zap className="mr-2 h-4 w-4" />
-            Quick Print
+            {t("billSettings.quickPrint")}
           </TabsTrigger>
         </TabsList>
 
@@ -538,16 +540,16 @@ export default function BillSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  {formData.id ? "Edit Template" : "Create A4/B4 Template"}
+                  {formData.id ? t("billSettings.editTemplate") : t("billSettings.createA4B4Template")}
                 </CardTitle>
                 <CardDescription>
-                  Standard paper formats like Tally for GST invoices
+                  {t("billSettings.standardPaperFormats")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Template Name</Label>
+                    <Label htmlFor="name">{t("billSettings.templateName")}</Label>
                     <Input
                       id="name"
                       placeholder="e.g., GST Invoice A4"
