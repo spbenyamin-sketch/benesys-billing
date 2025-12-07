@@ -219,6 +219,7 @@ export default function Companies() {
                       <FormControl>
                         <Input
                           {...field}
+                          value={field.value || ""}
                           data-testid="input-company-address"
                           placeholder="Enter address"
                         />
@@ -237,6 +238,7 @@ export default function Companies() {
                         <FormControl>
                           <Input
                             {...field}
+                            value={field.value || ""}
                             data-testid="input-company-city"
                             placeholder="City"
                           />
@@ -254,6 +256,7 @@ export default function Companies() {
                         <FormControl>
                           <Input
                             {...field}
+                            value={field.value || ""}
                             data-testid="input-company-state"
                             placeholder="State"
                           />
@@ -272,6 +275,7 @@ export default function Companies() {
                       <FormControl>
                         <Input
                           {...field}
+                          value={field.value || ""}
                           data-testid="input-company-gst"
                           placeholder="Enter GST number"
                         />
@@ -422,7 +426,7 @@ export default function Companies() {
                   <FormItem>
                     <FormLabel>Address</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Enter address" />
+                      <Input {...field} value={field.value || ""} placeholder="Enter address" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -436,7 +440,7 @@ export default function Companies() {
                     <FormItem>
                       <FormLabel>City</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="City" />
+                        <Input {...field} value={field.value || ""} placeholder="City" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -449,7 +453,7 @@ export default function Companies() {
                     <FormItem>
                       <FormLabel>State</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="State" />
+                        <Input {...field} value={field.value || ""} placeholder="State" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -463,7 +467,7 @@ export default function Companies() {
                   <FormItem>
                     <FormLabel>GST Number</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Enter GST number" />
+                      <Input {...field} value={field.value || ""} placeholder="Enter GST number" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

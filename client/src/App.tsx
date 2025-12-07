@@ -14,8 +14,10 @@ import { CompanySwitcher } from "@/components/CompanySwitcher";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Setup from "@/pages/setup";
-import { Building2 } from "lucide-react";
+import { Building2, AlertTriangle, AlertCircle } from "lucide-react";
 import Dashboard from "@/pages/dashboard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { format } from "date-fns";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
 import Agents from "@/pages/agents";
@@ -189,7 +191,33 @@ function AppContent() {
     return <CompanySelector />;
   }
 
+  // Check if company is expired or expiring soon
+  const getExpiryAlert = () => {
+    if (!currentCompany.expiryDate) return null;
+    
+    const now = new Date();
+    const expiryDate = new Date(currentCompany.expiryDate);
+    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilExpiry < 0) {
+      return {
+        type: "error",
+        title: "Software License Expired",
+        message: `Your software license expired on ${format(expiryDate, "MMM d, yyyy")}. Please contact support to renew.`,
+      };
+    } else if (daysUntilExpiry <= 30) {
+      return {
+        type: "warning",
+        title: "Software License Expiring Soon",
+        message: `Your software license will expire on ${format(expiryDate, "MMM d, yyyy")} (${daysUntilExpiry} days remaining).`,
+      };
+    }
+    return null;
+  };
+
   // Show main app with sidebar
+  const expiryAlert = getExpiryAlert();
+  
   return (
     <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
@@ -210,6 +238,27 @@ function AppContent() {
               <CompanySwitcher />
             </div>
           </header>
+          {expiryAlert && (
+            <div className={`px-4 py-3 border-b ${expiryAlert.type === "error" ? "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800" : "bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800"}`} data-testid="alert-expiry">
+              <Alert className={expiryAlert.type === "error" ? "border-red-300" : "border-yellow-300"}>
+                <div className="flex items-start gap-3">
+                  {expiryAlert.type === "error" ? (
+                    <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <h4 className={`font-semibold ${expiryAlert.type === "error" ? "text-red-900 dark:text-red-100" : "text-yellow-900 dark:text-yellow-100"}`}>
+                      {expiryAlert.title}
+                    </h4>
+                    <p className={`text-sm ${expiryAlert.type === "error" ? "text-red-700 dark:text-red-200" : "text-yellow-700 dark:text-yellow-200"}`}>
+                      {expiryAlert.message}
+                    </p>
+                  </div>
+                </div>
+              </Alert>
+            </div>
+          )}
           <main className="flex-1 overflow-y-auto">
             <Router />
           </main>
