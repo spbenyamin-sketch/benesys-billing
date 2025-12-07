@@ -239,7 +239,7 @@ export default function Sales() {
                             >
                               <Printer className="h-4 w-4" />
                             </Button>
-                            {canDeleteBill && (
+                            {canDeleteBill && (sale.saleType === "B2C" || sale.saleType === "ESTIMATE") && (
                               <Button
                                 size="icon"
                                 variant="ghost"
