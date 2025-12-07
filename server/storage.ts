@@ -56,6 +56,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUserRole(id: string, role: string): Promise<User>;
   updateUserPermissions(id: string, role: string, pagePermissions?: string[]): Promise<User>;
+  updateUserPassword(id: string, passwordHash: string): Promise<User>;
   updateUser(id: string, user: Partial<UpsertUser>): Promise<User>;
   deleteUser(id: string): Promise<void>;
   getUserCompanies(userId: string): Promise<any[]>;
@@ -234,6 +235,18 @@ export class DatabaseStorage implements IStorage {
       .set({ 
         role, 
         pagePermissions: pagePermissions || [],
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return updated;
+  }
+
+  async updateUserPassword(id: string, passwordHash: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ 
+        passwordHash,
         updatedAt: new Date() 
       })
       .where(eq(users.id, id))

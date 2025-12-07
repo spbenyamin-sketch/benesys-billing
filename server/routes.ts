@@ -175,6 +175,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put('/api/users/:id/password', isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only super admin can update passwords" });
+      }
+      const { password } = req.body;
+      if (!password || password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters" });
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      const user = await storage.updateUserPassword(req.params.id, passwordHash);
+      res.json(user);
+    } catch (error) {
+      console.error("Error updating user password:", error);
+      res.status(500).json({ message: "Failed to update user password" });
+    }
+  });
+
   app.post('/api/users/create', isAuthenticated, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);

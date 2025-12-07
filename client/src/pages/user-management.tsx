@@ -69,6 +69,7 @@ interface UserCompany {
 
 const editUserSchema = z.object({
   role: z.enum(["user", "admin"]),
+  password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   pagePermissions: z.array(z.string()).optional(),
 });
 
@@ -166,6 +167,7 @@ export default function UserManagement() {
     resolver: zodResolver(editUserSchema),
     defaultValues: {
       role: "user",
+      password: "",
       pagePermissions: [],
     },
   });
@@ -327,6 +329,34 @@ export default function UserManagement() {
     },
   });
 
+  const updatePasswordMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      password,
+    }: {
+      userId: string;
+      password: string;
+    }) => {
+      return apiRequest("PUT", `/api/users/${userId}/password`, {
+        password,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Success",
+        description: "User password updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const onSubmit = (data: CreateUserForm) => {
     createUserMutation.mutate(data);
   };
@@ -338,6 +368,13 @@ export default function UserManagement() {
         role: data.role,
         pagePermissions: data.pagePermissions,
       });
+      
+      if (data.password && data.password.trim()) {
+        updatePasswordMutation.mutate({
+          userId: editingUser.id,
+          password: data.password,
+        });
+      }
     }
   };
 
@@ -630,6 +667,24 @@ export default function UserManagement() {
           {editingUser && (
             <Form {...editForm}>
               <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4">
+                <FormField
+                  control={editForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password (Leave blank to keep current)</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="password"
+                          placeholder="Enter new password or leave blank"
+                          data-testid={`input-edit-password-${editingUser.id}`}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   control={editForm.control}
                   name="role"
