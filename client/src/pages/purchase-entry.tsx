@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { PartySearchModal } from "@/components/party-search-modal";
 import { Button } from "@/components/ui/button";
@@ -87,7 +86,6 @@ interface Party {
 }
 
 export default function PurchaseEntry() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("entry");
   const [gstType, setGstType] = useState<"local" | "interstate" | "exempt">("local");
@@ -331,19 +329,19 @@ export default function PurchaseEntry() {
           <TabsList className="grid w-full grid-cols-4 max-w-lg">
             <TabsTrigger value="entry" data-testid="tab-entry">
               <Plus className="mr-2 h-4 w-4" />
-              {t("purchaseEntry.newEntry")}
+              New Entry
             </TabsTrigger>
             <TabsTrigger value="pending" data-testid="tab-pending">
               <Truck className="mr-2 h-4 w-4" />
-              {t("purchaseEntry.pending")} ({pendingCount})
+              Pending ({pendingCount})
             </TabsTrigger>
             <TabsTrigger value="list" data-testid="tab-list">
               <FileText className="mr-2 h-4 w-4" />
-              {t("purchaseEntry.allPurchases")}
+              All Purchases
             </TabsTrigger>
             <TabsTrigger value="edit" data-testid="tab-edit">
               <Package className="mr-2 h-4 w-4" />
-              {t("purchaseEntry.editItems")}
+              Edit Items
             </TabsTrigger>
           </TabsList>
 
@@ -352,14 +350,14 @@ export default function PurchaseEntry() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  {t("purchaseEntry.billOutlineDetails")}
+                  Bill Outline Details
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
                   <div className="grid grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="date">{t("purchaseEntry.billDate")}</Label>
+                      <Label htmlFor="date">Bill Date *</Label>
                       <Input
                         id="date"
                         type="date"
@@ -371,11 +369,11 @@ export default function PurchaseEntry() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="invoiceNo">{t("purchaseEntry.invoiceNo")}</Label>
+                      <Label htmlFor="invoiceNo">Invoice / Bill No *</Label>
                       <Input
                         id="invoiceNo"
                         {...form.register("invoiceNo")}
-                        placeholder={t("purchaseEntry.supplierBillNumberPlaceholder")}
+                        placeholder="Supplier bill number"
                         data-testid="input-invoice-no"
                       />
                       {form.formState.errors.invoiceNo && (
@@ -383,7 +381,7 @@ export default function PurchaseEntry() {
                       )}
                     </div>
                     <div>
-                      <Label htmlFor="party">{t("purchaseEntry.supplierOrParty")}</Label>
+                      <Label htmlFor="party">Supplier / Party *</Label>
                       <Button
                         type="button"
                         variant="outline"
@@ -395,7 +393,7 @@ export default function PurchaseEntry() {
                         {selectedParty ? (
                           <span className="text-sm">{selectedParty.name}</span>
                         ) : (
-                          <span className="text-muted-foreground text-sm">{t("purchaseEntry.selectSupplierPlaceholder")}</span>
+                          <span className="text-muted-foreground text-sm">Click to search supplier...</span>
                         )}
                       </Button>
                       {form.formState.errors.partyId && (
@@ -406,7 +404,7 @@ export default function PurchaseEntry() {
 
                   <div className="grid grid-cols-4 gap-4">
                     <div>
-                      <Label htmlFor="amount">{t("purchaseEntry.billAmount")}</Label>
+                      <Label htmlFor="amount">Bill Amount</Label>
                       <Input
                         id="amount"
                         type="number"
@@ -417,7 +415,7 @@ export default function PurchaseEntry() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="totalQty">{t("purchaseEntry.totalQuantity")}</Label>
+                      <Label htmlFor="totalQty">Total Quantity</Label>
                       <Input
                         id="totalQty"
                         type="number"
@@ -428,7 +426,7 @@ export default function PurchaseEntry() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="gstType">{t("purchaseEntry.gstType")}</Label>
+                      <Label htmlFor="gstType">GST Type</Label>
                       <Select 
                         value={gstType} 
                         onValueChange={(v: "local" | "interstate" | "exempt") => {

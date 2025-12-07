@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { ItemSearchModal } from "@/components/item-search-modal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,17 +60,6 @@ interface Party {
   name: string;
 }
 
-interface Item {
-  id: number;
-  code: string;
-  name: string;
-  hsnCode?: string;
-  cost?: string;
-  tax?: string;
-  cgst?: string;
-  sgst?: string;
-}
-
 interface ItemHistory {
   item: {
     id: number;
@@ -119,7 +107,6 @@ function ItemHistoryDialog({
   isOpen: boolean; 
   onClose: () => void;
 }) {
-  const { t } = useTranslation();
   const { data: history, isLoading } = useQuery<ItemHistory>({
     queryKey: [`/api/items/${itemId}/history`],
     enabled: !!itemId && isOpen,
@@ -131,7 +118,7 @@ function ItemHistoryDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <History className="h-5 w-5" />
-            {t('stock.itemMovementHistory')}
+            Item Movement History
           </DialogTitle>
         </DialogHeader>
         
@@ -146,31 +133,31 @@ function ItemHistoryDialog({
               <CardContent className="pt-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('stock.code')}</p>
+                    <p className="text-sm text-muted-foreground">Code</p>
                     <p className="font-mono font-medium">{history.item.code}</p>
                   </div>
                   <div className="col-span-2 md:col-span-1">
-                    <p className="text-sm text-muted-foreground">{t('common.name')}</p>
+                    <p className="text-sm text-muted-foreground">Name</p>
                     <p className="font-medium">{history.item.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('items.hsnCode')}</p>
+                    <p className="text-sm text-muted-foreground">HSN Code</p>
                     <p className="font-mono">{history.item.hsnCode || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('stock.category')}</p>
+                    <p className="text-sm text-muted-foreground">Category</p>
                     <p>{history.item.category || "—"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('stock.packType')}</p>
+                    <p className="text-sm text-muted-foreground">Pack Type</p>
                     <p>{history.item.packType}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('stock.rate')}</p>
+                    <p className="text-sm text-muted-foreground">Rate</p>
                     <p className="font-mono">₹{parseFloat(history.item.cost).toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('common.tax')}</p>
+                    <p className="text-sm text-muted-foreground">Tax</p>
                     <p className="font-mono text-sm">
                       {history.item.cgstRate && history.item.sgstRate 
                         ? `${parseFloat(history.item.cgstRate) + parseFloat(history.item.sgstRate)}%`
@@ -185,7 +172,7 @@ function ItemHistoryDialog({
               <Card className="border-green-200 dark:border-green-900">
                 <CardContent className="pt-4 text-center">
                   <ArrowDownLeft className="h-5 w-5 mx-auto mb-1 text-green-600" />
-                  <p className="text-sm text-muted-foreground">{t('stock.purchased')}</p>
+                  <p className="text-sm text-muted-foreground">Purchased</p>
                   <p className="text-xl font-mono font-bold text-green-600">
                     {history.movement.totalPurchasedQty.toFixed(2)}
                   </p>
@@ -194,7 +181,7 @@ function ItemHistoryDialog({
               <Card className="border-red-200 dark:border-red-900">
                 <CardContent className="pt-4 text-center">
                   <ArrowUpRight className="h-5 w-5 mx-auto mb-1 text-red-600" />
-                  <p className="text-sm text-muted-foreground">{t('stock.sold')}</p>
+                  <p className="text-sm text-muted-foreground">Sold</p>
                   <p className="text-xl font-mono font-bold text-red-600">
                     {history.movement.totalSoldQty.toFixed(2)}
                   </p>
@@ -203,14 +190,14 @@ function ItemHistoryDialog({
               <Card>
                 <CardContent className="pt-4 text-center">
                   <Package className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{t('stock.currentStock')}</p>
+                  <p className="text-sm text-muted-foreground">Current Stock</p>
                   <p className="text-xl font-mono font-bold">{history.stock.currentQty.toFixed(2)}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-4 text-center">
                   <BarChart2 className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">{t('stock.valuation')}</p>
+                  <p className="text-sm text-muted-foreground">Valuation</p>
                   <p className="text-xl font-mono font-bold">₹{history.stock.valuation.toFixed(2)}</p>
                 </CardContent>
               </Card>
@@ -219,10 +206,10 @@ function ItemHistoryDialog({
             <Tabs defaultValue="purchases" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="purchases" data-testid="tab-purchases">
-                  {t('stock.purchases')} ({history.purchases.length})
+                  Purchases ({history.purchases.length})
                 </TabsTrigger>
                 <TabsTrigger value="sales" data-testid="tab-sales">
-                  {t('stock.sales')} ({history.sales.length})
+                  Sales ({history.sales.length})
                 </TabsTrigger>
               </TabsList>
               
@@ -231,12 +218,12 @@ function ItemHistoryDialog({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t('common.date')}</TableHead>
-                        <TableHead>{t('stock.purchaseNo')}</TableHead>
-                        <TableHead>{t('stock.party')}</TableHead>
-                        <TableHead className="text-right">{t('stock.qty')}</TableHead>
-                        <TableHead className="text-right">{t('stock.rate')}</TableHead>
-                        <TableHead className="text-right">{t('stock.amount')}</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Purchase No</TableHead>
+                        <TableHead>Party</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -262,7 +249,7 @@ function ItemHistoryDialog({
                   </Table>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    {t('stock.noPurchaseHistory')}
+                    No purchase history found
                   </div>
                 )}
               </TabsContent>
@@ -272,13 +259,13 @@ function ItemHistoryDialog({
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>{t('common.date')}</TableHead>
-                        <TableHead>{t('stock.invoice')}</TableHead>
-                        <TableHead>{t('stock.type')}</TableHead>
-                        <TableHead>{t('stock.party')}</TableHead>
-                        <TableHead className="text-right">{t('stock.qty')}</TableHead>
-                        <TableHead className="text-right">{t('stock.rate')}</TableHead>
-                        <TableHead className="text-right">{t('stock.amount')}</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Invoice</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Party</TableHead>
+                        <TableHead className="text-right">Qty</TableHead>
+                        <TableHead className="text-right">Rate</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -293,7 +280,7 @@ function ItemHistoryDialog({
                               {sale.billType}
                             </Badge>
                           </TableCell>
-                          <TableCell>{sale.partyName || t('stock.cash')}</TableCell>
+                          <TableCell>{sale.partyName || "Cash"}</TableCell>
                           <TableCell className="text-right font-mono">
                             {parseFloat(sale.quantity).toFixed(2)}
                           </TableCell>
@@ -309,7 +296,7 @@ function ItemHistoryDialog({
                   </Table>
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
-                    {t('stock.noSalesHistory')}
+                    No sales history found
                   </div>
                 )}
               </TabsContent>
@@ -317,7 +304,7 @@ function ItemHistoryDialog({
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            {t('stock.failedToLoad')}
+            Failed to load item history
           </div>
         )}
       </DialogContent>
@@ -329,35 +316,33 @@ function StockReportPrint({
   items, 
   totals, 
   companyName,
-  filters,
-  t
+  filters
 }: { 
   items: StockItem[]; 
   totals: { totalItems: number; totalQty: number; totalValue: number };
   companyName: string;
   filters: string;
-  t: any;
 }) {
   return (
     <div className="p-8 bg-white text-black">
       <div className="text-center mb-6">
         <h1 className="text-xl font-bold">{companyName}</h1>
-        <h2 className="text-lg font-semibold">{t('stock.inventoryReport')}</h2>
-        <p className="text-sm text-gray-600">{t('stock.generated')}: {format(new Date(), "dd/MM/yyyy HH:mm")}</p>
+        <h2 className="text-lg font-semibold">Stock Inventory Report</h2>
+        <p className="text-sm text-gray-600">Generated: {format(new Date(), "dd/MM/yyyy HH:mm")}</p>
         {filters && <p className="text-sm text-gray-600">{filters}</p>}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6 text-center">
         <div className="border p-2">
-          <p className="text-sm text-gray-600">{t('stock.totalItems')}</p>
+          <p className="text-sm text-gray-600">Total Items</p>
           <p className="text-lg font-bold">{totals.totalItems}</p>
         </div>
         <div className="border p-2">
-          <p className="text-sm text-gray-600">{t('stock.totalQuantity')}</p>
+          <p className="text-sm text-gray-600">Total Quantity</p>
           <p className="text-lg font-bold">{totals.totalQty.toFixed(3)}</p>
         </div>
         <div className="border p-2">
-          <p className="text-sm text-gray-600">{t('stock.totalValue')}</p>
+          <p className="text-sm text-gray-600">Total Value</p>
           <p className="text-lg font-bold">₹{totals.totalValue.toFixed(2)}</p>
         </div>
       </div>
@@ -365,13 +350,13 @@ function StockReportPrint({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b-2 border-black">
-            <th className="text-left py-1 px-1">{t('stock.code')}</th>
-            <th className="text-left py-1 px-1">{t('stock.itemName')}</th>
-            <th className="text-left py-1 px-1">{t('stock.category')}</th>
-            <th className="text-left py-1 px-1">{t('stock.pack')}</th>
-            <th className="text-right py-1 px-1">{t('stock.rate')}</th>
-            <th className="text-right py-1 px-1">{t('stock.qty')}</th>
-            <th className="text-right py-1 px-1">{t('stock.value')}</th>
+            <th className="text-left py-1 px-1">Code</th>
+            <th className="text-left py-1 px-1">Item Name</th>
+            <th className="text-left py-1 px-1">Category</th>
+            <th className="text-left py-1 px-1">Pack</th>
+            <th className="text-right py-1 px-1">Rate</th>
+            <th className="text-right py-1 px-1">Qty</th>
+            <th className="text-right py-1 px-1">Value</th>
           </tr>
         </thead>
         <tbody>
@@ -391,7 +376,7 @@ function StockReportPrint({
         </tbody>
         <tfoot>
           <tr className="border-t-2 border-black font-bold">
-            <td colSpan={5} className="py-2 px-1">{t('common.total')}</td>
+            <td colSpan={5} className="py-2 px-1">Total</td>
             <td className="text-right py-2 px-1">{totals.totalQty.toFixed(3)}</td>
             <td className="text-right py-2 px-1">₹{totals.totalValue.toFixed(2)}</td>
           </tr>
@@ -402,7 +387,6 @@ function StockReportPrint({
 }
 
 export default function Stock() {
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [packTypeFilter, setPackTypeFilter] = useState("all");
@@ -496,9 +480,9 @@ export default function Stock() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('stock.title')}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Stock Inventory</h1>
           <p className="text-muted-foreground mt-2">
-            {t('stock.subtitle')}
+            View and analyze current stock levels
           </p>
         </div>
         <div className="flex gap-2">
@@ -507,7 +491,7 @@ export default function Stock() {
           </Button>
           <Button onClick={() => handlePrint()} disabled={!filteredStock?.length} data-testid="button-print-stock">
             <Printer className="h-4 w-4 mr-2" />
-            {t('common.print')}
+            Print
           </Button>
         </div>
       </div>
@@ -516,7 +500,7 @@ export default function Stock() {
       <div className="grid gap-6 sm:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('stock.totalItems')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Items</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -528,7 +512,7 @@ export default function Stock() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('stock.totalQuantity')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Quantity</CardTitle>
             <BarChart2 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -540,7 +524,7 @@ export default function Stock() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('stock.stockValue')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Stock Value</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold font-mono" data-testid="text-stock-value">
@@ -551,14 +535,14 @@ export default function Stock() {
 
         <Card className={lowStockItems.length + outOfStockItems.length > 0 ? "border-orange-200 dark:border-orange-900" : ""}>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{t('stock.alerts')}</CardTitle>
+            <CardTitle className="text-sm font-medium">Alerts</CardTitle>
             <AlertCircle className="h-4 w-4 text-orange-600" />
           </CardHeader>
           <CardContent>
             <div className="text-sm">
-              <span className="text-orange-600 font-medium">{lowStockItems.length}</span> {t('stock.lowStock')}
+              <span className="text-orange-600 font-medium">{lowStockItems.length}</span> Low Stock
               <span className="mx-2">|</span>
-              <span className="text-red-600 font-medium">{outOfStockItems.length}</span> {t('stock.outOfStock')}
+              <span className="text-red-600 font-medium">{outOfStockItems.length}</span> Out of Stock
             </div>
           </CardContent>
         </Card>
@@ -567,17 +551,17 @@ export default function Stock() {
       {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('stock.filters')}</CardTitle>
+          <CardTitle>Filters</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-6">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="search">{t('common.search')}</Label>
+              <Label htmlFor="search">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder={t('stock.searchPlaceholder')}
+                  placeholder="Search by name, code, party..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -586,13 +570,13 @@ export default function Stock() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="party">{t('stock.supplier')}</Label>
+              <Label htmlFor="party">Supplier</Label>
               <Select value={partyFilter} onValueChange={setPartyFilter}>
                 <SelectTrigger id="party" data-testid="select-party">
-                  <SelectValue placeholder={t('stock.allSuppliers')} />
+                  <SelectValue placeholder="All Suppliers" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('stock.allSuppliers')}</SelectItem>
+                  <SelectItem value="all">All Suppliers</SelectItem>
                   {parties?.map((party) => (
                     <SelectItem key={party.id} value={party.id.toString()}>
                       {party.code} - {party.name}
@@ -602,7 +586,7 @@ export default function Stock() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="item">{t('stock.item')}</Label>
+              <Label htmlFor="item">Item</Label>
               <Button
                 type="button"
                 variant="outline"
@@ -612,17 +596,17 @@ export default function Stock() {
               >
                 {itemFilter && itemFilter !== "all" 
                   ? items.find(i => i?.id.toString() === itemFilter)?.name 
-                  : t('stock.allItems')}
+                  : "All Items"}
               </Button>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category">{t('stock.category')}</Label>
+              <Label htmlFor="category">Category</Label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger id="category" data-testid="select-category">
-                  <SelectValue placeholder={t('stock.allCategories')} />
+                  <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('stock.allCategories')}</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((cat) => (
                     <SelectItem key={cat} value={cat!}>{cat}</SelectItem>
                   ))}
@@ -630,13 +614,13 @@ export default function Stock() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="packType">{t('stock.packType')}</Label>
+              <Label htmlFor="packType">Pack Type</Label>
               <Select value={packTypeFilter} onValueChange={setPackTypeFilter}>
                 <SelectTrigger id="packType" data-testid="select-pack-type">
-                  <SelectValue placeholder={t('stock.allPackTypes')} />
+                  <SelectValue placeholder="All Pack Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('stock.allPackTypes')}</SelectItem>
+                  <SelectItem value="all">All Pack Types</SelectItem>
                   {packTypes.map((pt) => (
                     <SelectItem key={pt} value={pt}>{pt}</SelectItem>
                   ))}
@@ -644,16 +628,16 @@ export default function Stock() {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="status">{t('stock.stockStatus')}</Label>
+              <Label htmlFor="status">Stock Status</Label>
               <Select value={stockStatusFilter} onValueChange={setStockStatusFilter}>
                 <SelectTrigger id="status" data-testid="select-status">
-                  <SelectValue placeholder={t('common.all')} />
+                  <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('common.all')}</SelectItem>
-                  <SelectItem value="instock">{t('stock.inStockAbove10')}</SelectItem>
-                  <SelectItem value="low">{t('stock.lowStock1to10')}</SelectItem>
-                  <SelectItem value="out">{t('stock.outOfStock')}</SelectItem>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="instock">In Stock (&gt;10)</SelectItem>
+                  <SelectItem value="low">Low Stock (1-10)</SelectItem>
+                  <SelectItem value="out">Out of Stock</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -665,7 +649,7 @@ export default function Stock() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>{t('stock.stockList')}</CardTitle>
+            <CardTitle>Stock List</CardTitle>
             {activeFilters && (
               <Badge variant="outline" className="text-xs">
                 {activeFilters}
@@ -685,16 +669,16 @@ export default function Stock() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t('stock.code')}</TableHead>
-                    <TableHead>{t('stock.itemName')}</TableHead>
-                    <TableHead>{t('stock.supplier')}</TableHead>
-                    <TableHead>{t('stock.category')}</TableHead>
-                    <TableHead>{t('stock.packType')}</TableHead>
-                    <TableHead className="text-right">{t('stock.rate')}</TableHead>
-                    <TableHead className="text-right">{t('stock.quantity')}</TableHead>
-                    <TableHead className="text-right">{t('stock.value')}</TableHead>
-                    <TableHead className="text-center">{t('common.status')}</TableHead>
-                    <TableHead className="text-center">{t('common.actions')}</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Item Name</TableHead>
+                    <TableHead>Supplier</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Pack Type</TableHead>
+                    <TableHead className="text-right">Rate</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Value</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -722,11 +706,11 @@ export default function Stock() {
                         </TableCell>
                         <TableCell className="text-center">
                           {isOut ? (
-                            <Badge variant="destructive" className="text-xs">{t('stock.outOfStock')}</Badge>
+                            <Badge variant="destructive" className="text-xs">Out of Stock</Badge>
                           ) : isLow ? (
-                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200">{t('stock.lowStock')}</Badge>
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-950 dark:text-orange-200">Low Stock</Badge>
                           ) : (
-                            <Badge variant="default" className="text-xs">{t('stock.inStock')}</Badge>
+                            <Badge variant="default" className="text-xs">In Stock</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-center">
@@ -752,8 +736,8 @@ export default function Stock() {
                 <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-sm text-muted-foreground mb-1">
                   {searchQuery || categoryFilter !== "all" || packTypeFilter !== "all" || stockStatusFilter !== "all" 
-                    ? t('stock.noItemsMatchingFilters') 
-                    : t('stock.noStockData')}
+                    ? "No items found matching filters" 
+                    : "No stock data available"}
                 </p>
               </div>
             )
@@ -777,11 +761,11 @@ export default function Stock() {
                         </div>
                         <div className="flex items-center gap-2">
                           {isOut ? (
-                            <Badge variant="destructive" className="text-xs">{t('stock.out')}</Badge>
+                            <Badge variant="destructive" className="text-xs">Out</Badge>
                           ) : isLow ? (
-                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">{t('stock.low')}</Badge>
+                            <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800">Low</Badge>
                           ) : (
-                            <Badge variant="default" className="text-xs">{t('stock.ok')}</Badge>
+                            <Badge variant="default" className="text-xs">OK</Badge>
                           )}
                           <Button
                             variant="ghost"
@@ -798,19 +782,19 @@ export default function Stock() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <p className="text-muted-foreground text-xs">{t('stock.category')}</p>
+                          <p className="text-muted-foreground text-xs">Category</p>
                           <p>{item.category || "—"}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">{t('stock.pack')}</p>
+                          <p className="text-muted-foreground text-xs">Pack</p>
                           <p>{item.packType}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">{t('stock.quantity')}</p>
+                          <p className="text-muted-foreground text-xs">Quantity</p>
                           <p className="font-mono font-medium">{qty.toFixed(3)}</p>
                         </div>
                         <div>
-                          <p className="text-muted-foreground text-xs">{t('stock.value')}</p>
+                          <p className="text-muted-foreground text-xs">Value</p>
                           <p className="font-mono">₹{value.toFixed(2)}</p>
                         </div>
                       </div>
@@ -831,7 +815,6 @@ export default function Stock() {
             totals={totals}
             companyName={currentCompany?.name || "Company"}
             filters={activeFilters}
-            t={t}
           />
         </div>
       </div>
@@ -855,7 +838,7 @@ export default function Stock() {
           setShowItemSearch(false);
         }}
         onClose={() => setShowItemSearch(false)}
-        title={t('stock.searchSelectItem')}
+        title="Search & Select Item"
       />
     </div>
   );

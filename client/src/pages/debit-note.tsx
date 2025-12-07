@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useKeyboardNavigation } from "@/hooks/useKeyboardNavigation";
 import { PartySearchModal } from "@/components/party-search-modal";
@@ -83,7 +82,6 @@ interface DebitNoteLineItem {
 }
 
 export default function DebitNote() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -446,9 +444,9 @@ export default function DebitNote() {
     <div ref={formContainerRef} className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("debitNote.title")}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Debit Note (Damage/Loss)</h1>
           <p className="text-muted-foreground mt-2">
-            {t("debitNote.description")}
+            Issue debit notes for damaged items and stock loss - reduces inventory
           </p>
         </div>
         <div className="flex gap-2">
@@ -458,7 +456,7 @@ export default function DebitNote() {
             data-testid="button-save-debit-note"
           >
             <Save className="mr-2 h-4 w-4" />
-            {saveMutation.isPending ? t("common.saving") : t("debitNote.saveAndPrint")}
+            {saveMutation.isPending ? "Saving..." : "Save & Print"}
           </Button>
         </div>
       </div>
@@ -469,11 +467,11 @@ export default function DebitNote() {
             <div className="flex items-center justify-between flex-wrap gap-4">
               <CardTitle className="flex items-center gap-2">
                 <CreditCard className="h-5 w-5" />
-                {t("debitNote.details")}
+                Debit Note Details
               </CardTitle>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <Label htmlFor="inclusive-tax" className="text-sm">{t("debitNote.taxInclusive")}</Label>
+                  <Label htmlFor="inclusive-tax" className="text-sm">Tax Inclusive</Label>
                   <Switch
                     id="inclusive-tax"
                     checked={inclusiveTax}
@@ -487,7 +485,7 @@ export default function DebitNote() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-2">
-                <Label htmlFor="invoiceDate">{t("common.date")}</Label>
+                <Label htmlFor="invoiceDate">Date</Label>
                 <Input
                   id="invoiceDate"
                   type="date"
@@ -497,7 +495,7 @@ export default function DebitNote() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="party">{t("debitNote.partyVendor")}</Label>
+                <Label htmlFor="party">Party/Vendor *</Label>
                 <Button
                   type="button"
                   variant="outline"
@@ -509,25 +507,25 @@ export default function DebitNote() {
                   {selectedParty ? (
                     <span className="text-sm">{selectedParty.name} - {selectedParty.city}</span>
                   ) : (
-                    <span className="text-muted-foreground text-sm">{t("debitNote.selectPartyPlaceholder")}</span>
+                    <span className="text-muted-foreground text-sm">Click to search party...</span>
                   )}
                 </Button>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reason">{t("debitNote.reason")}</Label>
+                <Label htmlFor="reason">Reason *</Label>
                 <Input
                   id="reason"
-                  placeholder={t("debitNote.reasonPlaceholder")}
+                  placeholder="Damage, Loss, Expired, etc"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   data-testid="input-reason"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="originalInvoice">{t("debitNote.originalInvoiceNo")}</Label>
+                <Label htmlFor="originalInvoice">Original Invoice No.</Label>
                 <Input
                   id="originalInvoice"
-                  placeholder={t("debitNote.referenceBillPlaceholder")}
+                  placeholder="Reference Bill (optional)"
                   value={originalInvoiceNo}
                   onChange={(e) => setOriginalInvoiceNo(e.target.value)}
                   data-testid="input-original-invoice"
@@ -559,7 +557,7 @@ export default function DebitNote() {
                   data-testid="button-search-mode-barcode"
                 >
                   <Barcode className="mr-1 h-3 w-3" />
-                  {t("debitNote.barcodeScan")}
+                  Barcode Scan
                 </Button>
                 <Button
                   size="sm"
@@ -568,14 +566,14 @@ export default function DebitNote() {
                   data-testid="button-search-mode-item"
                 >
                   <Search className="mr-1 h-3 w-3" />
-                  {t("debitNote.itemSearch")}
+                  Item Search
                 </Button>
               </div>
               {searchMode === "barcode" && (
                 <div className="flex-1 flex gap-2">
                   <Input
                     ref={barcodeInputRef}
-                    placeholder={t("debitNote.scanBarcodeePlaceholder")}
+                    placeholder="Scan barcode..."
                     value={barcodeInput}
                     onChange={(e) => setBarcodeInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
@@ -584,7 +582,7 @@ export default function DebitNote() {
                     data-testid="input-barcode"
                   />
                   <Button onClick={handleBarcodeSearch} data-testid="button-barcode-add">
-                    {t("common.add")}
+                    Add
                   </Button>
                 </div>
               )}
@@ -592,7 +590,7 @@ export default function DebitNote() {
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label>{t("debitNote.damageOrLostItems")} ({lineItems.length})</Label>
+                <Label>Damaged/Lost Items ({lineItems.length})</Label>
                 {searchMode === "item" && (
                   <Button 
                     size="sm" 
@@ -627,7 +625,7 @@ export default function DebitNote() {
                     data-testid="button-add-line-item"
                   >
                     <Plus className="mr-1 h-3 w-3" />
-                    {t("debitNote.addItem")}
+                    Add Item
                   </Button>
                 )}
               </div>
@@ -636,12 +634,12 @@ export default function DebitNote() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[200px]">{t("common.item")}</TableHead>
-                      <TableHead className="w-[70px]">{t("common.stock")}</TableHead>
-                      <TableHead className="w-[70px]">{t("common.quantity")}</TableHead>
-                      <TableHead className="w-[90px]">{t("common.rate")}</TableHead>
-                      <TableHead className="w-[70px]">{t("debitNote.discPercent")}</TableHead>
-                      <TableHead className="w-[100px] text-right">{t("common.amount")}</TableHead>
+                      <TableHead className="w-[200px]">Item</TableHead>
+                      <TableHead className="w-[70px]">Stock</TableHead>
+                      <TableHead className="w-[70px]">Qty</TableHead>
+                      <TableHead className="w-[90px]">Rate</TableHead>
+                      <TableHead className="w-[70px]">Disc%</TableHead>
+                      <TableHead className="w-[100px] text-right">Amount</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -649,7 +647,7 @@ export default function DebitNote() {
                     {lineItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          {t("debitNote.addItemsToCreate")}
+                          Add items to create debit note
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -676,7 +674,7 @@ export default function DebitNote() {
                                 {item.itemName ? (
                                   <span className="text-sm">{item.itemName}</span>
                                 ) : (
-                                  <span className="text-muted-foreground text-sm">{t("debitNote.selectItemPlaceholder")}</span>
+                                  <span className="text-muted-foreground text-sm">Click to search item...</span>
                                 )}
                               </Button>
                             )}

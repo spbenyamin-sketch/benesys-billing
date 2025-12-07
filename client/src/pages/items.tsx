@@ -36,7 +36,6 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { useTranslation } from "react-i18next";
 
 // Universal pack types
 const PACK_TYPES = [
@@ -96,7 +95,6 @@ interface Item {
 }
 
 export default function Items() {
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -131,15 +129,15 @@ export default function Items() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/items"] });
       toast({
-        title: t('common.success'),
-        description: t('items.itemCreated'),
+        title: "Success",
+        description: "Item created successfully",
       });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: t('common.error'),
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -153,8 +151,8 @@ export default function Items() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/items"] });
       toast({
-        title: t('common.success'),
-        description: t('items.itemUpdated'),
+        title: "Success",
+        description: "Item updated successfully",
       });
       setIsDialogOpen(false);
       setEditingItem(null);
@@ -162,7 +160,7 @@ export default function Items() {
     },
     onError: (error: Error) => {
       toast({
-        title: t('common.error'),
+        title: "Error",
         description: error.message,
         variant: "destructive",
       });
@@ -212,30 +210,30 @@ export default function Items() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('items.title')}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Items</h1>
           <p className="text-muted-foreground mt-2">
-            {t('items.subtitle')}
+            Manage your product catalog and pricing
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewItem} data-testid="button-add-item">
               <Plus className="mr-2 h-4 w-4" />
-              {t('items.newItem')}
+              Add Item
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingItem ? t('items.editItem') : t('items.addNewItem')}</DialogTitle>
+              <DialogTitle>{editingItem ? "Edit Item" : "Add New Item"}</DialogTitle>
               <DialogDescription>
-                {editingItem ? t('items.updateItemDetails') : t('items.enterItemDetails')}
+                {editingItem ? "Update item details" : "Enter item details below"}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 {editingItem && (
                   <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm text-muted-foreground">{t('items.itemCode')}: <span className="font-mono font-semibold text-foreground">{editingItem.code}</span></p>
+                    <p className="text-sm text-muted-foreground">Item Code: <span className="font-mono font-semibold text-foreground">{editingItem.code}</span></p>
                   </div>
                 )}
                 
@@ -244,7 +242,7 @@ export default function Items() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('items.name')} *</FormLabel>
+                      <FormLabel>Name *</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-item-name" />
                       </FormControl>
@@ -259,7 +257,7 @@ export default function Items() {
                     name="hsnCode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.hsnCode')} *</FormLabel>
+                        <FormLabel>HSN Code *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-item-hsn" />
                         </FormControl>
@@ -272,7 +270,7 @@ export default function Items() {
                     name="tax"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.taxPercent')} *</FormLabel>
+                        <FormLabel>Tax (%) *</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} data-testid="input-item-tax" />
                         </FormControl>
@@ -292,7 +290,7 @@ export default function Items() {
                     name="category"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.category')}</FormLabel>
+                        <FormLabel>Category</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-item-category" />
                         </FormControl>
@@ -305,9 +303,9 @@ export default function Items() {
                     name="floor"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.floorLocation')}</FormLabel>
+                        <FormLabel>Floor/Location</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder={t('items.floorPlaceholder')} data-testid="input-item-floor" />
+                          <Input {...field} placeholder="e.g., Floor 1, Rack A" data-testid="input-item-floor" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -321,7 +319,7 @@ export default function Items() {
                     name="packType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.packType')}</FormLabel>
+                        <FormLabel>Pack Type</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger data-testid="select-pack-type">
@@ -345,7 +343,7 @@ export default function Items() {
                     name="cost"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.cost')}</FormLabel>
+                        <FormLabel>Cost</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} data-testid="input-item-cost" />
                         </FormControl>
@@ -361,9 +359,9 @@ export default function Items() {
                     name="mrp"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.mrp')}</FormLabel>
+                        <FormLabel>MRP (Rounded)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="1" {...field} placeholder={t('items.mrpPlaceholder')} data-testid="input-item-mrp" />
+                          <Input type="number" step="1" {...field} placeholder="Maximum Retail Price" data-testid="input-item-mrp" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -374,9 +372,9 @@ export default function Items() {
                     name="sellingPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t('items.sellingPrice')}</FormLabel>
+                        <FormLabel>Selling Price (Rounded)</FormLabel>
                         <FormControl>
-                          <Input type="number" step="1" {...field} placeholder={t('items.sellingPricePlaceholder')} data-testid="input-item-selling-price" />
+                          <Input type="number" step="1" {...field} placeholder="Sale price" data-testid="input-item-selling-price" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -390,9 +388,9 @@ export default function Items() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">{t('items.shareAcrossCompanies')}</FormLabel>
+                        <FormLabel className="text-base">Share Across Companies</FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          {t('items.shareAcrossCompaniesDesc')}
+                          Enable to make this item available in all companies
                         </p>
                       </div>
                       <FormControl>
@@ -417,14 +415,14 @@ export default function Items() {
                     }}
                     data-testid="button-cancel"
                   >
-                    {t('common.cancel')}
+                    Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
                     data-testid="button-save-item"
                   >
-                    {createMutation.isPending || updateMutation.isPending ? t('common.saving') : t('common.save')}
+                    {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save"}
                   </Button>
                 </div>
               </form>
@@ -436,11 +434,11 @@ export default function Items() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>{t('items.itemList')}</CardTitle>
+            <CardTitle>Item List</CardTitle>
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder={t('items.searchPlaceholder')}
+                placeholder="Search by name, code, or category..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -460,17 +458,17 @@ export default function Items() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{t('items.code')}</TableHead>
-                  <TableHead>{t('items.name')}</TableHead>
-                  <TableHead>{t('items.hsnCode')}</TableHead>
-                  <TableHead>{t('items.category')}</TableHead>
-                  <TableHead>{t('items.pack')}</TableHead>
-                  <TableHead className="text-right">{t('items.cost')}</TableHead>
-                  <TableHead className="text-right">{t('items.mrp')}</TableHead>
-                  <TableHead className="text-right">{t('items.selling')}</TableHead>
-                  <TableHead className="text-right">{t('items.taxPercent')}</TableHead>
-                  <TableHead className="text-center">{t('common.status')}</TableHead>
-                  <TableHead className="text-right">{t('common.actions')}</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>HSN Code</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Pack</TableHead>
+                  <TableHead className="text-right">Cost</TableHead>
+                  <TableHead className="text-right">MRP</TableHead>
+                  <TableHead className="text-right">Selling</TableHead>
+                  <TableHead className="text-right">Tax %</TableHead>
+                  <TableHead className="text-center">Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -482,7 +480,7 @@ export default function Items() {
                         {item.name}
                         {item.isShared && (
                           <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                            {t('items.shared')}
+                            Shared
                           </Badge>
                         )}
                       </div>
@@ -504,9 +502,9 @@ export default function Items() {
                     </TableCell>
                     <TableCell className="text-center">
                       {item.active ? (
-                        <Badge variant="default" className="text-xs">{t('common.active')}</Badge>
+                        <Badge variant="default" className="text-xs">Active</Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-xs">{t('common.inactive')}</Badge>
+                        <Badge variant="secondary" className="text-xs">Inactive</Badge>
                       )}
                     </TableCell>
                     <TableCell className="text-right">
@@ -527,11 +525,11 @@ export default function Items() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <p className="text-sm text-muted-foreground mb-1">
-                {searchQuery ? t('items.noItemsFound') : t('items.noItemsYet')}
+                {searchQuery ? "No items found" : "No items yet"}
               </p>
               {!searchQuery && (
                 <p className="text-xs text-muted-foreground mb-4">
-                  {t('items.getStarted')}
+                  Add your first item to get started
                 </p>
               )}
             </div>

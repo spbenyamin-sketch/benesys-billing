@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +39,6 @@ interface Sale {
 }
 
 export default function Sales() {
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
@@ -86,20 +84,20 @@ export default function Sales() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t('sales.title')}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Sales Invoices</h1>
           <p className="text-muted-foreground mt-2">
-            {t('sales.subtitle')}
+            View and manage all sales transactions
           </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => handlePrintList()} data-testid="button-print-list">
             <Printer className="mr-2 h-4 w-4" />
-            {t('common.print')}
+            Print List
           </Button>
           <Button asChild data-testid="button-new-sale">
             <Link href="/sales/new">
               <Plus className="mr-2 h-4 w-4" />
-              {t('sales.newSale')}
+              New Sale
             </Link>
           </Button>
         </div>
@@ -108,24 +106,24 @@ export default function Sales() {
       <Card>
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>{t('sales.invoiceList')}</CardTitle>
+            <CardTitle>Invoice List</CardTitle>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <Select value={saleTypeFilter} onValueChange={setSaleTypeFilter}>
                 <SelectTrigger className="w-full sm:w-40" data-testid="select-sale-type-filter">
                   <Filter className="mr-2 h-4 w-4" />
-                  <SelectValue placeholder={t('sales.allTypes')} />
+                  <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">{t('sales.allTypes')}</SelectItem>
-                  <SelectItem value="B2B">{t('sales.b2bCredit')}</SelectItem>
-                  <SelectItem value="B2C">{t('sales.b2cCash')}</SelectItem>
-                  <SelectItem value="ESTIMATE">{t('sales.estimate')}</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="B2B">B2B (Credit)</SelectItem>
+                  <SelectItem value="B2C">B2C (Cash/Retail)</SelectItem>
+                  <SelectItem value="ESTIMATE">Estimate</SelectItem>
                 </SelectContent>
               </Select>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder={t('sales.searchInvoices')}
+                  placeholder="Search invoices..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9"
@@ -155,14 +153,14 @@ export default function Sales() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('sales.invoiceNo')}</TableHead>
-                      <TableHead>{t('common.date')}</TableHead>
-                      <TableHead>{t('sales.saleType')}</TableHead>
-                      <TableHead>{t('sales.customer')}</TableHead>
-                      <TableHead>{t('sales.city')}</TableHead>
-                      <TableHead className="text-right">{t('sales.qty')}</TableHead>
-                      <TableHead className="text-right">{t('common.amount')}</TableHead>
-                      <TableHead className="print:hidden">{t('common.actions')}</TableHead>
+                      <TableHead>Invoice No</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>City</TableHead>
+                      <TableHead className="text-right">Qty</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead className="print:hidden">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -177,7 +175,7 @@ export default function Sales() {
                             {sale.saleType}
                           </Badge>
                         </TableCell>
-                        <TableCell>{sale.partyName || t('sales.cashSale')}</TableCell>
+                        <TableCell>{sale.partyName || "Cash Sale"}</TableCell>
                         <TableCell className="text-muted-foreground">{sale.partyCity || "—"}</TableCell>
                         <TableCell className="text-right font-mono">{parseFloat(sale.totalQty).toFixed(2)}</TableCell>
                         <TableCell className="text-right font-mono font-medium">
@@ -220,11 +218,11 @@ export default function Sales() {
                 </Table>
                 <div className="mt-4 flex justify-between items-center border-t pt-4">
                   <p className="text-sm text-muted-foreground">
-                    {t('sales.showing', { count: filteredSales.length })}
+                    Showing {filteredSales.length} invoice{filteredSales.length !== 1 ? "s" : ""}
                   </p>
                   <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">{t('sales.totalQty')}: <span className="font-mono font-medium">{totalQty.toFixed(2)}</span></span>
-                    <span className="text-sm text-muted-foreground">{t('common.total')}:</span>
+                    <span className="text-sm text-muted-foreground">Total Qty: <span className="font-mono font-medium">{totalQty.toFixed(2)}</span></span>
+                    <span className="text-sm text-muted-foreground">Total:</span>
                     <span className="text-lg font-semibold font-mono" data-testid="text-total-amount">
                       ₹{totalAmount.toFixed(2)}
                     </span>
@@ -236,11 +234,11 @@ export default function Sales() {
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <p className="text-sm text-muted-foreground mb-1">
-                {searchQuery || dateFilter ? t('sales.noInvoicesFound') : t('sales.noSalesYet')}
+                {searchQuery || dateFilter ? "No invoices found" : "No sales yet"}
               </p>
               {!searchQuery && !dateFilter && (
                 <Button asChild className="mt-4" size="sm">
-                  <Link href="/sales/new" data-testid="button-create-first-invoice">{t('sales.createFirstInvoice')}</Link>
+                  <Link href="/sales/new" data-testid="button-create-first-invoice">Create First Invoice</Link>
                 </Button>
               )}
             </div>

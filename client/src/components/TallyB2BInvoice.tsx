@@ -1,6 +1,5 @@
 import { forwardRef } from "react";
 import { format } from "date-fns";
-import { useTranslation } from "react-i18next";
 import { numberToWords } from "@/lib/number-to-words";
 
 interface InvoiceItem {
@@ -74,14 +73,13 @@ interface TallyB2BInvoiceProps {
 
 export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
   ({ invoice, template, companyName, companyAddress, companyGst, companyPhone, companyState, companyPincode }, ref) => {
-    const { t } = useTranslation();
     const totalTax = invoice.totalCgst + invoice.totalSgst;
     const taxableAmount = invoice.subtotal - invoice.totalDiscount;
 
-    // Group items by HSN for tax summary table (use empty string as key for items without HSN)
+    // Group items by HSN for tax summary table
     const hsnGrouped: { [key: string]: { qty: number; amount: number; rate: number; cgst: number; sgst: number; igst: number } } = {};
     invoice.items.forEach(item => {
-      const hsn = item.hsnCode || "";
+      const hsn = item.hsnCode || "N/A";
       if (!hsnGrouped[hsn]) {
         hsnGrouped[hsn] = { qty: 0, amount: 0, rate: item.taxPercent || 0, cgst: 0, sgst: 0, igst: 0 };
       }
@@ -129,7 +127,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                 {template.logoUrl && (
                   <img
                     src={template.logoUrl}
-                    alt={t("common.companyLogo")}
+                    alt="Company Logo"
                     style={{ maxHeight: "50px", maxWidth: "50px", objectFit: "contain" }}
                   />
                 )}
@@ -139,9 +137,9 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                 <div style={{ fontSize: "10px" }}>{companyAddress}</div>
               </td>
               <td style={{ border: "none", width: "20%", textAlign: "right" }}>
-                <div style={{ fontSize: "14px", fontWeight: "bold" }}>{t("invoice.taxInvoice")}</div>
-                <div style={{ fontSize: "10px" }}>{t("invoice.invoiceNo")}: {invoice.invoiceNo}</div>
-                <div style={{ fontSize: "10px" }}>{t("invoice.date")}: {format(new Date(invoice.date), "dd-MMM-yyyy")}</div>
+                <div style={{ fontSize: "14px", fontWeight: "bold" }}>INVOICE</div>
+                <div style={{ fontSize: "10px" }}>No.: {invoice.invoiceNo}</div>
+                <div style={{ fontSize: "10px" }}>Date: {format(new Date(invoice.date), "dd-MMM-yyyy")}</div>
               </td>
             </tr>
           </table>
@@ -152,16 +150,16 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <tbody>
             <tr>
               <td style={{ width: "25%" }}>
-                <strong>{t("invoice.gstin")}:</strong> {companyGst || t("common.notAvailable")}
+                <strong>GSTIN/UIN:</strong> {companyGst || "N/A"}
               </td>
               <td style={{ width: "25%" }}>
-                <strong>{t("invoice.state")}:</strong> {companyState || t("common.notAvailable")}
+                <strong>State:</strong> {companyState || "N/A"}
               </td>
               <td style={{ width: "25%" }}>
-                <strong>{t("invoice.pincode")}:</strong> {companyPincode || t("common.notAvailable")}
+                <strong>Pin Code:</strong> {companyPincode || "N/A"}
               </td>
               <td style={{ width: "25%" }}>
-                <strong>{t("invoice.phone")}:</strong> {companyPhone || t("common.notAvailable")}
+                <strong>Phone:</strong> {companyPhone || "N/A"}
               </td>
             </tr>
           </tbody>
@@ -173,39 +171,39 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
             <tr>
               <td style={{ width: "50%", verticalAlign: "top" }}>
                 <div style={{ marginBottom: "4px" }}>
-                  <strong>{t("invoice.consignee")}:</strong>
+                  <strong>Consignee (Ship to):</strong>
                 </div>
                 <div style={{ fontWeight: "600", marginBottom: "2px" }}>
-                  {invoice.shipName || invoice.partyName || t("common.notAvailable")}
+                  {invoice.shipName || invoice.partyName || "N/A"}
                 </div>
                 <div style={{ fontSize: "8px" }}>
-                  {invoice.shipAddress || invoice.partyAddress || t("common.notAvailable")}
+                  {invoice.shipAddress || invoice.partyAddress || "N/A"}
                 </div>
                 <div style={{ fontSize: "8px" }}>
-                  {invoice.shipCity || invoice.partyCity || t("common.notAvailable")}
+                  {invoice.shipCity || invoice.partyCity || "N/A"}
                   {invoice.shipState && ` - ${invoice.shipState}`}
                 </div>
                 {invoice.shipPincode && (
                   <div style={{ fontSize: "8px" }}>
-                    {t("invoice.pincode")}: {invoice.shipPincode}
+                    Pin: {invoice.shipPincode}
                   </div>
                 )}
               </td>
               <td style={{ width: "50%", verticalAlign: "top" }}>
                 <div style={{ marginBottom: "4px" }}>
-                  <strong>{t("invoice.buyer")}:</strong>
+                  <strong>Buyer (Bill to):</strong>
                 </div>
-                <div style={{ fontWeight: "600", marginBottom: "2px" }}>{invoice.partyName || t("common.notAvailable")}</div>
-                <div style={{ fontSize: "8px" }}>{invoice.partyAddress || t("common.notAvailable")}</div>
+                <div style={{ fontWeight: "600", marginBottom: "2px" }}>{invoice.partyName || "N/A"}</div>
+                <div style={{ fontSize: "8px" }}>{invoice.partyAddress || "N/A"}</div>
                 <div style={{ fontSize: "8px" }}>
-                  {invoice.partyCity || t("common.notAvailable")}
+                  {invoice.partyCity || "N/A"}
                   {invoice.partyState && ` - ${invoice.partyState}`}
                 </div>
                 <div style={{ fontSize: "8px" }}>
-                  <strong>{t("invoice.gstin")}:</strong> {invoice.partyGstNo || t("common.notAvailable")}
+                  <strong>GSTIN/UIN:</strong> {invoice.partyGstNo || "N/A"}
                 </div>
                 <div style={{ fontSize: "8px" }}>
-                  <strong>{t("invoice.phone")}:</strong> {invoice.partyPhone || t("common.notAvailable")}
+                  <strong>Phone:</strong> {invoice.partyPhone || "N/A"}
                 </div>
               </td>
             </tr>
@@ -217,11 +215,11 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <thead>
             <tr>
               <th style={{ width: "5%", textAlign: "center" }}>#</th>
-              <th style={{ width: "25%", textAlign: "left" }}>{t("invoice.itemDescription")}</th>
-              {template.showHsnCode && <th style={{ width: "8%", textAlign: "center" }}>{t("invoice.hsnSac")}</th>}
-              <th style={{ width: "8%", textAlign: "right" }}>{t("invoice.qty")}</th>
-              <th style={{ width: "12%", textAlign: "right" }}>{t("invoice.rate")}</th>
-              <th style={{ width: "12%", textAlign: "right" }}>{t("invoice.amount")}</th>
+              <th style={{ width: "25%", textAlign: "left" }}>Description of Goods</th>
+              {template.showHsnCode && <th style={{ width: "8%", textAlign: "center" }}>HSN/SAC</th>}
+              <th style={{ width: "8%", textAlign: "right" }}>Quantity</th>
+              <th style={{ width: "12%", textAlign: "right" }}>Rate</th>
+              <th style={{ width: "12%", textAlign: "right" }}>Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -231,13 +229,13 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                 <td style={{ textAlign: "left" }}>
                   <div style={{ fontWeight: "500" }}>{item.itemName}</div>
                   {template.showItemCode && item.itemCode && (
-                    <div style={{ fontSize: "7px", color: "#666" }}>{t("invoice.code")}: {item.itemCode}</div>
+                    <div style={{ fontSize: "7px", color: "#666" }}>Code: {item.itemCode}</div>
                   )}
                   {item.barcode && (
-                    <div style={{ fontSize: "7px", color: "#666" }}>{t("invoice.barcode")}: {item.barcode}</div>
+                    <div style={{ fontSize: "7px", color: "#666" }}>Barcode: {item.barcode}</div>
                   )}
                 </td>
-                {template.showHsnCode && <td style={{ textAlign: "center" }}>{item.hsnCode || t("common.notAvailable")}</td>}
+                {template.showHsnCode && <td style={{ textAlign: "center" }}>{item.hsnCode || "N/A"}</td>}
                 <td style={{ textAlign: "right" }}>{item.quantity}</td>
                 <td style={{ textAlign: "right" }}>₹{item.rate.toFixed(2)}</td>
                 <td style={{ textAlign: "right", fontWeight: "500" }}>₹{item.amount.toFixed(2)}</td>
@@ -251,24 +249,24 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <table style={{ marginBottom: "8px", fontSize: "8px" }}>
             <thead>
               <tr>
-                <th style={{ textAlign: "center" }}>{t("invoice.hsnSac")}</th>
-                <th style={{ textAlign: "right" }}>{t("invoice.taxableValue")}</th>
-                <th style={{ textAlign: "center" }}>{t("invoice.taxPercent")}</th>
+                <th style={{ textAlign: "center" }}>HSN/SAC</th>
+                <th style={{ textAlign: "right" }}>Taxable Value</th>
+                <th style={{ textAlign: "center" }}>Tax Rate %</th>
                 {!invoice.isInterState ? (
                   <>
-                    <th style={{ textAlign: "right" }}>{t("invoice.cgst")}</th>
-                    <th style={{ textAlign: "right" }}>{t("invoice.sgst")}</th>
+                    <th style={{ textAlign: "right" }}>CGST %</th>
+                    <th style={{ textAlign: "right" }}>SGST %</th>
                   </>
                 ) : (
-                  <th style={{ textAlign: "right" }}>{t("invoice.igst")}</th>
+                  <th style={{ textAlign: "right" }}>IGST %</th>
                 )}
-                <th style={{ textAlign: "right" }}>{t("invoice.taxAmount")}</th>
+                <th style={{ textAlign: "right" }}>Tax Amount</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(hsnGrouped).map(([hsn, data]) => (
-                <tr key={hsn || "no-hsn"}>
-                  <td style={{ textAlign: "center" }}>{hsn || t("common.notAvailable")}</td>
+                <tr key={hsn}>
+                  <td style={{ textAlign: "center" }}>{hsn}</td>
                   <td style={{ textAlign: "right" }}>₹{data.amount.toFixed(2)}</td>
                   <td style={{ textAlign: "center" }}>{data.rate}%</td>
                   {!invoice.isInterState ? (
@@ -292,50 +290,50 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "8px" }}>
           <div style={{ fontSize: "8px" }}>
             <div style={{ marginBottom: "2px" }}>
-              <strong>{t("invoice.totalInWords")}:</strong>
+              <strong>Amount Chargeable (in words):</strong>
             </div>
             <div style={{ fontStyle: "italic", paddingTop: "2px" }}>
-              {numberToWords(invoice.grandTotal)} {t("invoice.rupeesOnly")}
+              {numberToWords(invoice.grandTotal)} Rupees Only
             </div>
           </div>
           <table style={{ fontSize: "8px" }}>
             <tbody>
               <tr>
-                <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{t("invoice.subtotal")}:</td>
+                <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>Subtotal:</td>
                 <td style={{ width: "30%", textAlign: "right" }}>₹{invoice.subtotal.toFixed(2)}</td>
               </tr>
               {invoice.totalDiscount > 0 && (
                 <tr>
-                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{t("invoice.discountAmt")}:</td>
+                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>Discount:</td>
                   <td style={{ width: "30%", textAlign: "right" }}>- ₹{invoice.totalDiscount.toFixed(2)}</td>
                 </tr>
               )}
               {template.showTaxBreakup && !invoice.isInterState && (
                 <>
                   <tr>
-                    <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{t("invoice.cgst")}:</td>
+                    <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>CGST:</td>
                     <td style={{ width: "30%", textAlign: "right" }}>₹{invoice.totalCgst.toFixed(2)}</td>
                   </tr>
                   <tr>
-                    <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{t("invoice.sgst")}:</td>
+                    <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>SGST:</td>
                     <td style={{ width: "30%", textAlign: "right" }}>₹{invoice.totalSgst.toFixed(2)}</td>
                   </tr>
                 </>
               )}
               {template.showTaxBreakup && invoice.isInterState && (
                 <tr>
-                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{t("invoice.igst")}:</td>
+                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>IGST:</td>
                   <td style={{ width: "30%", textAlign: "right" }}>₹{invoice.totalIgst.toFixed(2)}</td>
                 </tr>
               )}
               {invoice.roundOff !== 0 && (
                 <tr>
-                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>{t("invoice.roundOff")}:</td>
+                  <td style={{ width: "70%", textAlign: "right", fontWeight: "500" }}>Round Off:</td>
                   <td style={{ width: "30%", textAlign: "right" }}>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</td>
                 </tr>
               )}
               <tr style={{ borderTop: "2px solid black" }}>
-                <td style={{ width: "70%", textAlign: "right", fontWeight: "bold", fontSize: "10px" }}>{t("invoice.grandTotal")}:</td>
+                <td style={{ width: "70%", textAlign: "right", fontWeight: "bold", fontSize: "10px" }}>TOTAL:</td>
                 <td style={{ width: "30%", textAlign: "right", fontWeight: "bold", fontSize: "10px" }}>₹{invoice.grandTotal.toFixed(2)}</td>
               </tr>
             </tbody>
@@ -344,16 +342,16 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
 
         {/* ========== DECLARATION ========== */}
         <div style={{ border: "1px solid black", padding: "6px", marginBottom: "8px", fontSize: "8px" }}>
-          <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{t("invoice.declaration")}:</div>
+          <div style={{ fontWeight: "bold", marginBottom: "2px" }}>Declaration:</div>
           <div>
-            {t("invoice.declarationText")}
+            We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
           </div>
         </div>
 
         {/* ========== BANK DETAILS ========== */}
         {template.showBankDetails && template.bankDetails && (
           <div style={{ border: "1px solid black", padding: "6px", marginBottom: "8px", fontSize: "8px" }}>
-            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{t("invoice.bankDetails")}:</div>
+            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>Bank Details:</div>
             <div style={{ whiteSpace: "pre-line" }}>{template.bankDetails}</div>
           </div>
         )}
@@ -361,7 +359,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
         {/* ========== TERMS & CONDITIONS ========== */}
         {template.termsAndConditions && (
           <div style={{ border: "1px solid black", padding: "6px", marginBottom: "8px", fontSize: "7px" }}>
-            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>{t("invoice.termsConditions")}:</div>
+            <div style={{ fontWeight: "bold", marginBottom: "2px" }}>Terms & Conditions:</div>
             <div style={{ whiteSpace: "pre-line" }}>{template.termsAndConditions}</div>
           </div>
         )}
@@ -370,12 +368,12 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginTop: "12px", fontSize: "9px" }}>
           <div style={{ textAlign: "center" }}>
             <div style={{ borderTop: "1px solid black", paddingTop: "4px", marginTop: "30px" }}>
-              <strong>{t("invoice.customerSign")}</strong>
+              <strong>Customer's Seal and Signature</strong>
             </div>
           </div>
           <div style={{ textAlign: "center" }}>
             <div style={{ borderTop: "1px solid black", paddingTop: "4px", marginTop: "30px" }}>
-              <strong>{t("invoice.authorizedSign")}</strong>
+              <strong>Authorised Signatory</strong>
             </div>
           </div>
         </div>

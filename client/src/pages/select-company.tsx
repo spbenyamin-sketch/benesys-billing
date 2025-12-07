@@ -1,4 +1,3 @@
-import { useTranslation } from "react-i18next";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,6 @@ import { useAuth } from "@/hooks/useAuth";
 import type { Company } from "@shared/schema";
 
 export default function SelectCompany() {
-  const { t } = useTranslation();
   const { setCurrentCompany, currentCompany, userCompanies, isLoading, resetCompanySelection } = useCompany();
   const { user } = useAuth();
 
@@ -45,7 +43,7 @@ export default function SelectCompany() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold" data-testid="text-page-title">
-              {t("common.select")}
+              Select Company
             </h1>
             <p className="text-muted-foreground mt-1">
               Welcome, {user?.firstName || user?.username}! Choose a company to continue.

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,7 +46,6 @@ import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function Companies() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -152,17 +150,17 @@ export default function Companies() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Building2 className="h-8 w-8" />
-            {t("nav.companySettings")}
+            Company Management
           </h1>
           <p className="text-muted-foreground mt-1">
-            {t("common.actions")}
+            Manage companies in your system
           </p>
         </div>
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-company">
               <Plus className="h-4 w-4 mr-2" />
-              {t("common.add")}
+              Add Company
             </Button>
           </DialogTrigger>
           <DialogContent>

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -108,7 +107,6 @@ const createUserSchema = z.object({
 type CreateUserForm = z.infer<typeof createUserSchema>;
 
 export default function UserManagement() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -126,9 +124,9 @@ export default function UserManagement() {
           <CardContent className="py-12">
             <div className="text-center space-y-4">
               <Shield className="w-12 h-12 mx-auto text-red-600" />
-              <h2 className="text-2xl font-bold">{t("userManagement.accessDenied")}</h2>
+              <h2 className="text-2xl font-bold">Access Denied</h2>
               <p className="text-muted-foreground">
-                {t("userManagement.onlyAdminsCanAccess")}
+                Only Super Admins can access user management
               </p>
             </div>
           </CardContent>
@@ -385,9 +383,9 @@ export default function UserManagement() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("nav.userManagement")}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">User Management</h1>
           <p className="text-muted-foreground mt-2">
-            {t("common.actions")}
+            Manage user roles and permissions (Super Admin only)
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -398,14 +396,14 @@ export default function UserManagement() {
               title={!isAdmin ? "Only admins can create users" : ""}
             >
               <Plus className="mr-2 h-4 w-4" />
-              {t("common.add")}
+              Create User
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{t("users.newUser")}</DialogTitle>
+              <DialogTitle>Create New User</DialogTitle>
               <DialogDescription>
-                {t("common.submit")}
+                Create a new user account with username and password
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>

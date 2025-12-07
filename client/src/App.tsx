@@ -11,12 +11,10 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { CompanyProvider, useCompany } from "@/contexts/CompanyContext";
 import { CompanySelector } from "@/components/CompanySelector";
 import { CompanySwitcher } from "@/components/CompanySwitcher";
-import { LanguageSelectorCompact } from "@/components/LanguageSelector";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Setup from "@/pages/setup";
 import { Building2 } from "lucide-react";
-import '@/lib/i18n';
 import Dashboard from "@/pages/dashboard";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
@@ -171,11 +169,8 @@ function AppContent() {
             <div className="flex flex-col flex-1 overflow-hidden">
               <header className="flex items-center justify-between border-b px-4 py-3">
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-muted-foreground">
-                    No company selected - Create a company to get started
-                  </div>
-                  <LanguageSelectorCompact />
+                <div className="text-sm text-muted-foreground">
+                  No company selected - Create a company to get started
                 </div>
               </header>
               <main className="flex-1 overflow-y-auto">
@@ -206,7 +201,6 @@ function AppContent() {
                 </span>
               </div>
               <CompanySwitcher />
-              <LanguageSelectorCompact />
             </div>
           </header>
           <main className="flex-1 overflow-y-auto">

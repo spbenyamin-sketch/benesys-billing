@@ -3,7 +3,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { ItemSearchModal } from "@/components/item-search-modal";
 import type { Item } from "@shared/schema";
@@ -100,7 +99,6 @@ interface PurchaseItem {
 }
 
 export default function StockInward() {
-  const { t } = useTranslation();
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   const searchString = useSearch();
@@ -582,14 +580,14 @@ export default function StockInward() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold" data-testid="text-page-title">{t("stockInward.title")}</h1>
-              <p className="text-muted-foreground mt-1">{t("stockInward.description")}</p>
+              <h1 className="text-3xl font-bold" data-testid="text-page-title">Stock Inward</h1>
+              <p className="text-muted-foreground mt-1">Phase 2: Add items and generate barcodes</p>
             </div>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle>{t("stockInward.selectPurchaseEntry")}</CardTitle>
+              <CardTitle>Select Purchase Entry</CardTitle>
             </CardHeader>
             <CardContent>
               {!pendingPurchases || pendingPurchases.length === 0 ? (

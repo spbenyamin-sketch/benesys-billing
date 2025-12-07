@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,7 +51,6 @@ interface Ledger {
 }
 
 export default function Outstanding() {
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
   const [ledgerSearchQuery, setLedgerSearchQuery] = useState("");

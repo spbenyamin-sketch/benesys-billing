@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -65,7 +64,6 @@ interface Agent {
 }
 
 export default function Agents() {
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
@@ -182,16 +180,16 @@ export default function Agents() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">{t("nav.agents")}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Agents</h1>
           <p className="text-muted-foreground mt-2">
-            {t("common.actions")}
+            Manage sales agents and commission rates
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewAgent} data-testid="button-add-agent">
               <Plus className="mr-2 h-4 w-4" />
-              {t("common.add")}
+              Add Agent
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +18,6 @@ import { Search, Barcode, AlertCircle, CheckCircle2, Clock, TrendingUp, Package,
 import { format } from "date-fns";
 
 export default function BarcodeLookup() {
-  const { t } = useTranslation();
   const [searchBarcode, setSearchBarcode] = useState("");
   const [lookupBarcode, setLookupBarcode] = useState("");
 
