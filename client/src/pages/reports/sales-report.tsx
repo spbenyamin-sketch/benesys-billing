@@ -192,24 +192,43 @@ export default function SalesReport() {
       params.set("startDate", startDate);
       params.set("endDate", endDate);
       if (saleType) params.set("saleType", saleType);
+      params.set("_t", Date.now().toString());
 
-      const [gstr1Response, hsnResponse] = await Promise.all([
-        fetch(`/api/reports/gstr1?${params}`, {
-          credentials: "include",
-          headers: { "X-Company-Id": companyId },
-        }),
-        fetch(`/api/reports/hsn-summary?${params}`, {
-          credentials: "include",
-          headers: { "X-Company-Id": companyId },
-        }),
-      ]);
+      console.log("[GST Export] Starting export with params:", Object.fromEntries(params), "companyId:", companyId);
 
-      if (!gstr1Response.ok || !hsnResponse.ok) {
-        throw new Error("Failed to fetch GST data");
+      const gstr1Response = await fetch(`/api/reports/gstr1?${params}`, {
+        credentials: "include",
+        headers: { 
+          "X-Company-Id": companyId,
+          "Cache-Control": "no-cache",
+        },
+      });
+      console.log("[GST Export] GSTR1 response status:", gstr1Response.status);
+
+      if (!gstr1Response.ok) {
+        const errorData = await gstr1Response.json().catch(() => ({}));
+        console.error("[GST Export] GSTR1 error:", errorData);
+        throw new Error(errorData.message || `GSTR1 fetch failed: ${gstr1Response.status}`);
       }
-
       const gstr1Data = await gstr1Response.json();
+      console.log("[GST Export] GSTR1 data count:", gstr1Data?.length);
+
+      const hsnResponse = await fetch(`/api/reports/hsn-summary?${params}`, {
+        credentials: "include",
+        headers: { 
+          "X-Company-Id": companyId,
+          "Cache-Control": "no-cache",
+        },
+      });
+      console.log("[GST Export] HSN response status:", hsnResponse.status);
+
+      if (!hsnResponse.ok) {
+        const errorData = await hsnResponse.json().catch(() => ({}));
+        console.error("[GST Export] HSN error:", errorData);
+        throw new Error(errorData.message || `HSN fetch failed: ${hsnResponse.status}`);
+      }
       const hsnData = await hsnResponse.json();
+      console.log("[GST Export] HSN data:", { b2b: hsnData.b2b?.length, b2c: hsnData.b2c?.length });
 
       const gstr1Sheet = XLSX.utils.json_to_sheet(gstr1Data.map((row: any) => ({
         "GSTIN": row.gstin || '',
@@ -261,11 +280,11 @@ export default function SalesReport() {
         title: "GST Files Generated",
         description: "GSTR1, HSN B2B, and HSN B2C files have been downloaded",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error exporting GST files:", error);
       toast({
         title: "Export Failed",
-        description: "Failed to generate GST files. Please try again.",
+        description: error.message || "Failed to generate GST files. Please try again.",
         variant: "destructive",
       });
     } finally {

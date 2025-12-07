@@ -978,13 +978,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/gstr1", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
+      console.log("[GSTR1] User:", req.user?.id, "Company:", req.companyId);
       const { startDate, endDate, saleType } = req.query;
+      console.log("[GSTR1] Params:", { startDate, endDate, saleType });
       const gstrData = await storage.getGSTR1Data(
         req.companyId,
         startDate as string,
         endDate as string,
         saleType as string
       );
+      console.log("[GSTR1] Data count:", gstrData?.length);
       res.json(gstrData);
     } catch (error) {
       console.error("Error fetching GSTR1 data:", error);
