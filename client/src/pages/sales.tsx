@@ -95,13 +95,6 @@ export default function Sales() {
             <span className="hidden sm:inline">Print List</span>
             <span className="sm:hidden">Print</span>
           </Button>
-          <Button asChild data-testid="button-new-sale" size="sm" className="flex-1 sm:flex-none">
-            <Link href="/sales/new">
-              <Plus className="mr-1 sm:mr-2 h-4 w-4" />
-              <span className="hidden sm:inline">New Sale</span>
-              <span className="sm:hidden">New</span>
-            </Link>
-          </Button>
         </div>
       </div>
 
