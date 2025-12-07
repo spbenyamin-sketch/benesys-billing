@@ -94,6 +94,16 @@ const PAGE_OPTIONS = [
   { id: "users", label: "User Management", icon: "👤" },
 ];
 
+// Helper function to get allowed pages based on role
+const getFilteredPages = (role: string) => {
+  if (role === "admin") {
+    // Admin (Customer) can only assign User Management permission
+    return PAGE_OPTIONS.filter((p) => p.id === "users");
+  }
+  // Super Admin and Normal User can see all pages
+  return PAGE_OPTIONS;
+};
+
 const createUserSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
@@ -545,48 +555,52 @@ export default function UserManagement() {
                 <FormField
                   control={form.control}
                   name="pagePermissions"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Page Access Permissions</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded">
-                        {PAGE_OPTIONS.map((page) => (
-                          <FormField
-                            key={page.id}
-                            control={form.control}
-                            name="pagePermissions"
-                            render={({ field }) => {
-                              return (
-                                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(page.id)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([
-                                              ...(field.value || []),
-                                              page.id,
-                                            ])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== page.id
-                                              )
-                                            );
-                                      }}
-                                      data-testid={`checkbox-page-${page.id}`}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal text-xs">
-                                    {page.label}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={() => {
+                    const selectedRole = form.watch("role");
+                    const filteredPages = getFilteredPages(selectedRole);
+                    return (
+                      <FormItem>
+                        <FormLabel>Page Access Permissions</FormLabel>
+                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded">
+                          {filteredPages.map((page) => (
+                            <FormField
+                              key={page.id}
+                              control={form.control}
+                              name="pagePermissions"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(page.id)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([
+                                                ...(field.value || []),
+                                                page.id,
+                                              ])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== page.id
+                                                )
+                                              );
+                                        }}
+                                        data-testid={`checkbox-page-${page.id}`}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal text-xs">
+                                      {page.label}
+                                    </FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
                 <FormField
                   control={form.control}
@@ -712,48 +726,52 @@ export default function UserManagement() {
                 <FormField
                   control={editForm.control}
                   name="pagePermissions"
-                  render={() => (
-                    <FormItem>
-                      <FormLabel>Page Access Permissions</FormLabel>
-                      <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded">
-                        {PAGE_OPTIONS.map((page) => (
-                          <FormField
-                            key={page.id}
-                            control={editForm.control}
-                            name="pagePermissions"
-                            render={({ field }) => {
-                              return (
-                                <FormItem className="flex flex-row items-start space-x-2 space-y-0">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value?.includes(page.id)}
-                                      onCheckedChange={(checked) => {
-                                        return checked
-                                          ? field.onChange([
-                                              ...(field.value || []),
-                                              page.id,
-                                            ])
-                                          : field.onChange(
-                                              field.value?.filter(
-                                                (value) => value !== page.id
-                                              )
-                                            );
-                                      }}
-                                      data-testid={`edit-checkbox-page-${page.id}`}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal text-xs">
-                                    {page.label}
-                                  </FormLabel>
-                                </FormItem>
-                              );
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={() => {
+                    const selectedRole = editForm.watch("role");
+                    const filteredPages = getFilteredPages(selectedRole);
+                    return (
+                      <FormItem>
+                        <FormLabel>Page Access Permissions</FormLabel>
+                        <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border rounded">
+                          {filteredPages.map((page) => (
+                            <FormField
+                              key={page.id}
+                              control={editForm.control}
+                              name="pagePermissions"
+                              render={({ field }) => {
+                                return (
+                                  <FormItem className="flex flex-row items-start space-x-2 space-y-0">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value?.includes(page.id)}
+                                        onCheckedChange={(checked) => {
+                                          return checked
+                                            ? field.onChange([
+                                                ...(field.value || []),
+                                                page.id,
+                                              ])
+                                            : field.onChange(
+                                                field.value?.filter(
+                                                  (value) => value !== page.id
+                                                )
+                                              );
+                                        }}
+                                        data-testid={`edit-checkbox-page-${page.id}`}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal text-xs">
+                                      {page.label}
+                                    </FormLabel>
+                                  </FormItem>
+                                );
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
                 <div className="flex gap-2 justify-end">
                   <Button
@@ -826,7 +844,7 @@ export default function UserManagement() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="user">Normal User</SelectItem>
-                              <SelectItem value="admin">Admin (Customer)</SelectItem>
+                              {isSuperAdmin && <SelectItem value="admin">Admin (Customer)</SelectItem>}
                               {isSuperAdmin && <SelectItem value="superadmin">Super Admin</SelectItem>}
                             </SelectContent>
                           </Select>
