@@ -163,7 +163,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="border-b border-sidebar-border px-2 py-3">
         <Link href="/" className="flex items-center justify-center w-full">
-          <img src={logoUrl} alt="BeneSys" className="h-12 w-auto object-contain" />
+          <img src={logoUrl} alt="BeneSys" className="h-12 w-auto object-contain brightness-125" />
         </Link>
       </SidebarHeader>
 

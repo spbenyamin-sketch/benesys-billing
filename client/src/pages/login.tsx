@@ -9,6 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LogIn, Loader2 } from "lucide-react";
+import logoUrl from "@assets/logo_1765091352986.jpg";
 
 export default function Login() {
   const { toast } = useToast();
@@ -127,14 +128,12 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <LogIn className="h-6 w-6" />
-            </div>
-            <div>
-              <CardTitle className="text-2xl">Login</CardTitle>
-              <CardDescription>Sign in to your account</CardDescription>
-            </div>
+          <div className="flex justify-center mb-4">
+            <img src={logoUrl} alt="BeneSys" className="h-14 w-auto object-contain brightness-125" />
+          </div>
+          <div className="text-center">
+            <CardTitle className="text-2xl">Login</CardTitle>
+            <CardDescription>Sign in to your account</CardDescription>
           </div>
         </CardHeader>
         <CardContent>

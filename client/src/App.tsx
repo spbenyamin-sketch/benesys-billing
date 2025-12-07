@@ -171,7 +171,7 @@ function AppContent() {
               <header className="flex items-center justify-between border-b px-4 py-2">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain" />
+                  <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain brightness-125" />
                 </div>
                 <div className="text-sm text-muted-foreground">
                   No company selected - Create a company to get started
@@ -198,7 +198,7 @@ function AppContent() {
           <header className="flex items-center justify-between border-b px-4 py-2">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain" />
+              <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain brightness-125" />
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
