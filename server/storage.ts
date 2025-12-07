@@ -1668,8 +1668,8 @@ export class DatabaseStorage implements IStorage {
         saleType: sales.saleType,
         date: sales.date,
         partyName: sales.partyName,
-        partyGstin: sales.partyGstin,
-        partyState: sales.partyState,
+        partyGstNo: sales.partyGstNo,
+        partyCity: sales.partyCity,
         saleValue: sales.saleValue,
         taxValue: sales.taxValue,
         cgstTotal: sales.cgstTotal,
@@ -1681,13 +1681,33 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .orderBy(sales.date, sales.invoiceNo);
 
+    const getStateFromGstin = (gstin: string | null) => {
+      if (!gstin || gstin.length < 2) return 'Tamil Nadu';
+      const stateCode = gstin.substring(0, 2);
+      const stateCodes: { [key: string]: string } = {
+        '01': 'Jammu & Kashmir', '02': 'Himachal Pradesh', '03': 'Punjab',
+        '04': 'Chandigarh', '05': 'Uttarakhand', '06': 'Haryana',
+        '07': 'Delhi', '08': 'Rajasthan', '09': 'Uttar Pradesh',
+        '10': 'Bihar', '11': 'Sikkim', '12': 'Arunachal Pradesh',
+        '13': 'Nagaland', '14': 'Manipur', '15': 'Mizoram',
+        '16': 'Tripura', '17': 'Meghalaya', '18': 'Assam',
+        '19': 'West Bengal', '20': 'Jharkhand', '21': 'Odisha',
+        '22': 'Chhattisgarh', '23': 'Madhya Pradesh', '24': 'Gujarat',
+        '26': 'Dadra & Nagar Haveli', '27': 'Maharashtra', '29': 'Karnataka',
+        '30': 'Goa', '31': 'Lakshadweep', '32': 'Kerala', '33': 'Tamil Nadu',
+        '34': 'Puducherry', '35': 'Andaman & Nicobar', '36': 'Telangana',
+        '37': 'Andhra Pradesh', '38': 'Ladakh'
+      };
+      return stateCodes[stateCode] || 'Tamil Nadu';
+    };
+
     return salesData.map(sale => ({
-      gstin: sale.partyGstin || '',
+      gstin: sale.partyGstNo || '',
       partyName: sale.partyName || 'Cash Sale',
       invoiceNo: `${sale.saleType}-${sale.invoiceNo}`,
       date: sale.date,
       totalValue: parseFloat(String(sale.grandTotal || 0)),
-      placeOfSupply: sale.partyState ? `${sale.partyState}` : 'Tamil Nadu',
+      placeOfSupply: getStateFromGstin(sale.partyGstNo),
       reverseCharge: 'N',
       invoiceType: 'Regular',
       ecomGstin: '',
@@ -1695,9 +1715,9 @@ export class DatabaseStorage implements IStorage {
       taxableValue: parseFloat(String(sale.saleValue || 0)),
       cgst: parseFloat(String(sale.cgstTotal || 0)),
       sgst: parseFloat(String(sale.sgstTotal || 0)),
-      igst: sale.gstType === 'IGST' ? parseFloat(String(sale.taxValue || 0)) : 0,
+      igst: sale.gstType === 1 ? parseFloat(String(sale.taxValue || 0)) : 0,
       cess: 0,
-      gstType: sale.gstType || 'CGST/SGST',
+      gstType: sale.gstType === 1 ? 'IGST' : 'CGST/SGST',
       saleType: sale.saleType,
     }));
   }
@@ -1872,8 +1892,8 @@ export class DatabaseStorage implements IStorage {
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
 
-    const b2bConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstin}, '')) = 15`];
-    const b2cConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstin}, '')) != 15`];
+    const b2bConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstNo}, '')) = 15`];
+    const b2cConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstNo}, '')) != 15`];
 
     const fetchHSNData = async (conds: any[]) => {
       const hsnData = await db
