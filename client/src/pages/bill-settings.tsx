@@ -953,6 +953,15 @@ export default function BillSettings() {
                         data-testid="switch-cash-return"
                       />
                     </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="enableTamilPrint" className="font-normal">தமிழ் Tamil Print</Label>
+                      <Switch
+                        id="enableTamilPrint"
+                        checked={formData.enableTamilPrint}
+                        onCheckedChange={(checked) => setFormData({ ...formData, enableTamilPrint: checked })}
+                        data-testid="switch-thermal-tamil-print"
+                      />
+                    </div>
                   </div>
                 </div>
 
