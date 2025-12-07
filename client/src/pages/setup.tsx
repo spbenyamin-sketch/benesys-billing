@@ -99,7 +99,11 @@ export default function Setup() {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-background">
+      <div className="text-center mb-6">
+        <h1 className="text-3xl font-bold text-primary">BeneSys</h1>
+        <p className="text-sm text-muted-foreground">Store Management & Billing System</p>
+      </div>
       <Card className="w-full max-w-md mx-4">
         <CardHeader>
           <div className="flex items-center gap-3 mb-2">
@@ -206,6 +210,9 @@ export default function Setup() {
           </Form>
         </CardContent>
       </Card>
+      <div className="text-center mt-6 text-xs text-muted-foreground">
+        Powered by BeneSys
+      </div>
     </div>
   );
 }
