@@ -296,7 +296,7 @@ export default function Companies() {
                           type="date"
                           data-testid="input-company-expiry"
                           value={field.value ? (typeof field.value === "string" ? field.value.split("T")[0] : format(new Date(field.value), "yyyy-MM-dd")) : ""}
-                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                          onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
                         />
                       </FormControl>
                       <FormMessage />
@@ -483,7 +483,7 @@ export default function Companies() {
                       <Input
                         type="date"
                         value={field.value ? (typeof field.value === "string" ? field.value.split("T")[0] : format(new Date(field.value), "yyyy-MM-dd")) : ""}
-                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value).toISOString() : undefined)}
                       />
                     </FormControl>
                     <FormMessage />
