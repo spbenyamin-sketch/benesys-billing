@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { DollarSign, Users, Package, AlertCircle, FileText, TrendingUp, ShoppingCart, Calendar, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -72,6 +73,7 @@ interface DashboardMetrics {
 const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const { data: metrics, isLoading } = useQuery<DashboardMetrics>({
     queryKey: ["/api/dashboard/metrics"],
     staleTime: 0,
@@ -136,16 +138,16 @@ export default function Dashboard() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{t('dashboard.title')}</h1>
         <p className="text-muted-foreground mt-2">
-          Overview of your store's performance and key metrics
+          {t('dashboard.subtitle')}
         </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.todaySales')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -153,14 +155,14 @@ export default function Dashboard() {
               ₹{(parseFloat(metrics?.todaysSales?.toString() || "0")).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              From all sales today
+              {t('dashboard.fromAllSalesToday')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.thisMonth')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -168,14 +170,14 @@ export default function Dashboard() {
               ₹{(metrics?.monthSales || 0).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Purchases: ₹{(metrics?.monthPurchases || 0).toFixed(2)}
+              {t('dashboard.purchases')}: ₹{(metrics?.monthPurchases || 0).toFixed(2)}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Outstanding</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.totalOutstanding')}</CardTitle>
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -183,14 +185,14 @@ export default function Dashboard() {
               ₹{(parseFloat(metrics?.totalOutstanding?.toString() || "0")).toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Total receivables
+              {t('dashboard.totalReceivables')}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Low Stock</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('dashboard.lowStockItems')}</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -198,7 +200,7 @@ export default function Dashboard() {
               {metrics?.lowStockCount || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Items below threshold
+              {t('dashboard.itemsBelowThreshold')}
             </p>
           </CardContent>
         </Card>
@@ -209,7 +211,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
-              Sales Trend (Last 7 Days)
+              {t('dashboard.salesTrendLast7Days')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -248,7 +250,7 @@ export default function Dashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <TrendingUp className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-sm text-muted-foreground">No sales data yet</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.noSalesData')}</p>
               </div>
             )}
           </CardContent>
@@ -258,7 +260,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
-              Sales by Type
+              {t('dashboard.salesByType')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -294,7 +296,7 @@ export default function Dashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center h-64 text-center">
                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                <p className="text-sm text-muted-foreground">No sales data yet</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.noSalesData')}</p>
               </div>
             )}
           </CardContent>
@@ -307,10 +309,10 @@ export default function Dashboard() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Top Selling Items
+                {t('dashboard.topSellingItems')}
               </CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
-                Best performers by quantity
+                {t('dashboard.bestPerformers')}
               </p>
             </div>
           </CardHeader>
@@ -320,9 +322,9 @@ export default function Dashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-8">#</TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead className="text-right">Qty Sold</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>{t('dashboard.itemName')}</TableHead>
+                    <TableHead className="text-right">{t('dashboard.qtySold')}</TableHead>
+                    <TableHead className="text-right">{t('common.amount')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -353,10 +355,10 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-orange-500" />
-              Expiring Soon
+              {t('dashboard.expiringItems')}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Items expiring in 30 days
+              {t('dashboard.itemsExpiringIn30Days')}
             </p>
           </CardHeader>
           <CardContent>
@@ -376,7 +378,7 @@ export default function Dashboard() {
                         variant={days <= 7 ? "destructive" : days <= 14 ? "secondary" : "outline"}
                         className="ml-2 shrink-0"
                       >
-                        {days <= 0 ? 'Expired' : `${days}d`}
+                        {days <= 0 ? t('dashboard.expired') : `${days}d`}
                       </Badge>
                     </div>
                   );
@@ -392,7 +394,7 @@ export default function Dashboard() {
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Calendar className="h-10 w-10 text-muted-foreground/50 mb-3" />
-                <p className="text-sm text-muted-foreground">No items expiring soon</p>
+                <p className="text-sm text-muted-foreground">{t('dashboard.noItemsExpiring')}</p>
               </div>
             )}
           </CardContent>
@@ -403,13 +405,13 @@ export default function Dashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Recent Sales</CardTitle>
+              <CardTitle>{t('dashboard.recentSales')}</CardTitle>
               <p className="text-sm text-muted-foreground mt-1">
                 Latest 5 invoices
               </p>
             </div>
             <Button asChild variant="outline" size="sm">
-              <Link href="/sales" data-testid="link-view-all-sales">View All</Link>
+              <Link href="/sales" data-testid="link-view-all-sales">{t('dashboard.viewAll')}</Link>
             </Button>
           </CardHeader>
           <CardContent>
@@ -418,9 +420,9 @@ export default function Dashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Invoice</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead>{t('common.date')}</TableHead>
                     <TableHead>Customer</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead className="text-right">{t('common.amount')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -454,7 +456,7 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+            <CardTitle>{t('dashboard.title')}</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">
               Common tasks and shortcuts
             </p>
