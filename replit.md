@@ -35,13 +35,14 @@ A comprehensive store management and billing system designed for retail business
 
 - **Replit Auth Integration:** OpenID Connect (OIDC) via Passport.js strategy.
 - **Session Management:** PostgreSQL-backed sessions (`sessions` table) with a 7-day TTL, secure HTTP-only cookies.
-- **User Roles:** Supports 'user', 'admin', 'agent'.
+- **User Roles:** Three-tier hierarchy - 'superadmin' (creates companies with expiry dates), 'admin' (customer role, manages users and all pages), 'user' (normal user with restricted access).
 - **Multi-Company Implementation:** Enterprise-grade data isolation using `companyId` on all transactional tables, `user_companies` junction table for user-company relationships, `X-Company-Id` headers for API requests, and `validateCompanyAccess` middleware for security. All queries are filtered by `companyId` with defensive joins.
 
 ### Database Schema & Design
 
 **Core Entities:**
-- **Users:** Authentication and profile data (UUID PK, email, name, role).
+- **Users:** Authentication and profile data (UUID PK, email, name, role: superadmin/admin/user).
+- **Companies:** Business entities with software license control (expiryDate field for software license expiry).
 - **Parties:** Customer/vendor records (code-based ID, address, GSTIN, agent assignment, opening balance).
 - **Items:** Product catalog (code, name, HSN, category, pack type, cost, tax rates, active status).
 - **Sales:** Transaction headers (auto-incrementing invoice, party reference, GST type, comprehensive totals).
@@ -216,6 +217,32 @@ const { shouldAutoPrint, getPrintCopies, showConfirmation } = usePrintSettings()
 **Browser Limitations:**
 - Browser security requires print dialog (cannot bypass)
 - Users should set browser to "remember my choice" for faster printing
+
+## Software Licensing & Role-Based Access Control
+
+### Three-Tier Role Hierarchy
+1. **Super Admin**
+   - Creates new companies
+   - Sets and manages software license expiry dates per company
+   - Creates admin users (customer role)
+   - Can view and manage all admin users
+
+2. **Admin (Customer Role)**
+   - Manages their company's operations
+   - Creates and manages normal users
+   - Access to all pages within their company: Sales, Purchases, Parties, Items, Stock, Reports, Bill Settings
+   - Can use all features but cannot create new companies
+
+3. **Normal User**
+   - Limited access based on assigned page permissions
+   - Cannot create users or manage company settings
+   - View-only or restricted access to assigned pages
+
+### Company Expiry Date
+- Field: `expiryDate` in companies table (timestamp)
+- Only Super Admin can set/edit company expiry dates
+- Once expired: Company is locked - users cannot access any features
+- UI shows warning when expiry date is approaching or expired
 
 ## Stock Management
 

@@ -68,7 +68,7 @@ interface UserCompany {
 }
 
 const editUserSchema = z.object({
-  role: z.enum(["user", "admin"]),
+  role: z.enum(["user", "admin", "superadmin"]),
   password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
   pagePermissions: z.array(z.string()).optional(),
 });
@@ -100,7 +100,7 @@ const createUserSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
-  role: z.enum(["user", "admin"]),
+  role: z.enum(["user", "admin", "superadmin"]),
   pagePermissions: z.array(z.string()).optional(),
   companyIds: z.array(z.number()).optional(),
 });
@@ -116,7 +116,8 @@ export default function UserManagement() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   // Only admins can access this page
-  const isAdmin = currentUser?.role === "admin";
+  const isSuperAdmin = currentUser?.role === "superadmin";
+  const isAdmin = isSuperAdmin || currentUser?.role === "admin";
 
   if (!isAdmin) {
     return (
@@ -127,7 +128,7 @@ export default function UserManagement() {
               <Shield className="w-12 h-12 mx-auto text-red-600" />
               <h2 className="text-2xl font-bold">Access Denied</h2>
               <p className="text-muted-foreground">
-                Only Super Admins can access user management
+                Only Super Admin or Admin can access user management
               </p>
             </div>
           </CardContent>
@@ -533,7 +534,8 @@ export default function UserManagement() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="user">Normal User</SelectItem>
-                          <SelectItem value="admin">Super Admin</SelectItem>
+                          <SelectItem value="admin">Admin (Customer)</SelectItem>
+                          {isSuperAdmin && <SelectItem value="superadmin">Super Admin</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -699,7 +701,8 @@ export default function UserManagement() {
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="user">Normal User</SelectItem>
-                          <SelectItem value="admin">Super Admin</SelectItem>
+                          <SelectItem value="admin">Admin (Customer)</SelectItem>
+                          {isSuperAdmin && <SelectItem value="superadmin">Super Admin</SelectItem>}
                         </SelectContent>
                       </Select>
                       <FormMessage />

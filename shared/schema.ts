@@ -40,7 +40,7 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role", { length: 20 }).default("user").notNull(), // user, admin, agent
+  role: varchar("role", { length: 20 }).default("user").notNull(), // superadmin, admin, user
   pagePermissions: jsonb("page_permissions").default(sql`'[]'::jsonb`).notNull(), // Array of accessible page routes
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -63,6 +63,7 @@ export const companies = pgTable("companies", {
   phone: varchar("phone", { length: 50 }),
   email: varchar("email", { length: 100 }),
   logoUrl: text("logo_url"),
+  expiryDate: timestamp("expiry_date"), // Software license expiry date
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
@@ -73,6 +74,8 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+}).extend({
+  expiryDate: z.date().optional(),
 });
 
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
