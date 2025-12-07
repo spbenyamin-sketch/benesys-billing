@@ -392,7 +392,7 @@ export default function UserManagement() {
   const handleEditClick = (user: User) => {
     setEditingUser(user);
     editForm.reset({
-      role: user.role,
+      role: user.role as "user" | "admin" | "superadmin",
       pagePermissions: user.pagePermissions || [],
     });
     setEditDialogOpen(true);
