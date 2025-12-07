@@ -133,6 +133,11 @@ export function AppSidebar() {
       icon: FileText,
     },
     {
+      title: "Sales Total Report",
+      url: "/reports/sales-total",
+      icon: BarChart3,
+    },
+    {
       title: "Purchase Report",
       url: "/reports/purchases",
       icon: ShoppingCart,

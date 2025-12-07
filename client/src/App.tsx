@@ -38,6 +38,7 @@ import StockInward from "@/pages/stock-inward";
 import BarcodeManagement from "@/pages/barcode-management";
 import Outstanding from "@/pages/reports/outstanding";
 import SalesReport from "@/pages/reports/sales-report";
+import SalesTotalReport from "@/pages/reports/sales-total-report";
 import ItemsReport from "@/pages/reports/items-report";
 import CategoriesReport from "@/pages/reports/categories-report";
 import PurchaseReport from "@/pages/reports/purchase-report";
@@ -98,6 +99,7 @@ function Router() {
       <ProtectedRoute path="/stock" component={Stock} />
       <ProtectedRoute path="/reports/outstanding" component={Outstanding} />
       <ProtectedRoute path="/reports/sales" component={SalesReport} />
+      <ProtectedRoute path="/reports/sales-total" component={SalesTotalReport} />
       <ProtectedRoute path="/reports/purchases" component={PurchaseReport} />
       <ProtectedRoute path="/reports/items" component={ItemsReport} />
       <ProtectedRoute path="/reports/categories" component={CategoriesReport} />

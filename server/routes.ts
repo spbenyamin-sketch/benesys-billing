@@ -960,6 +960,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/reports/sales-total", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { fromDate, toDate, billType } = req.query;
+      const reportData = await storage.getSalesTotalReport(
+        req.companyId,
+        fromDate as string,
+        toDate as string,
+        billType as string
+      );
+      res.json(reportData);
+    } catch (error) {
+      console.error("Error fetching sales total report:", error);
+      res.status(500).json({ message: "Failed to fetch sales total report" });
+    }
+  });
+
   app.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const partyId = parseInt(req.params.partyId);

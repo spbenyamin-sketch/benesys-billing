@@ -119,6 +119,7 @@ export interface IStorage {
   getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string, category?: string): Promise<any[]>;
   getCategoriesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
   getPaymentsReport(companyId: number, startDate?: string, endDate?: string, type?: string): Promise<any[]>;
+  getSalesTotalReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any>;
   getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any>;
 
   // Bill Template operations
@@ -1543,6 +1544,55 @@ export class DatabaseStorage implements IStorage {
     }));
 
     return result;
+  }
+
+  async getSalesTotalReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any> {
+    const conditions = [eq(sales.companyId, companyId)];
+    if (startDate) conditions.push(gte(sales.date, startDate));
+    if (endDate) conditions.push(lte(sales.date, endDate));
+    if (billType && billType !== 'ALL') conditions.push(eq(sales.saleType, billType));
+
+    const salesData = await db
+      .select({
+        date: sales.date,
+        saleType: sales.saleType,
+        grandTotal: sales.grandTotal,
+      })
+      .from(sales)
+      .where(and(...conditions))
+      .orderBy(sales.date);
+
+    // Group by date and calculate cash/card totals
+    const groupedByDate: Record<string, { cashTotal: number; cardTotal: number; netTotal: number }> = {};
+    
+    salesData.forEach(sale => {
+      const dateKey = sale.date;
+      if (!groupedByDate[dateKey]) {
+        groupedByDate[dateKey] = { cashTotal: 0, cardTotal: 0, netTotal: 0 };
+      }
+      
+      const amount = sale.grandTotal || 0;
+      // B2C/ESTIMATE = Cash, B2B = Card/Credit
+      if (sale.saleType === 'B2C' || sale.saleType === 'ESTIMATE') {
+        groupedByDate[dateKey].cashTotal += amount;
+      } else if (sale.saleType === 'B2B') {
+        groupedByDate[dateKey].cardTotal += amount;
+      }
+      groupedByDate[dateKey].netTotal += amount;
+    });
+
+    const data = Object.entries(groupedByDate).map(([date, totals]) => ({
+      date,
+      ...totals,
+    }));
+
+    const totals = {
+      cashTotal: data.reduce((sum, row) => sum + row.cashTotal, 0),
+      cardTotal: data.reduce((sum, row) => sum + row.cardTotal, 0),
+      netTotal: data.reduce((sum, row) => sum + row.netTotal, 0),
+    };
+
+    return { data, totals };
   }
 
   async getItemsReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string, category?: string): Promise<any[]> {
