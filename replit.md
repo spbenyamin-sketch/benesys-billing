@@ -182,9 +182,38 @@ Templates can be assigned to specific transaction types:
 
 ### Available Reports (all with print functionality)
 - **Sales Report:** Filter by date range and sale type (B2B/B2C/Estimate)
+- **Sales Total Report:** Daily sales aggregation by payment method with CSV download
 - **Outstanding Report:** Party-wise outstanding balances
 - **Purchase Report:** Purchase history with item details
 - **Party Ledger:** Transaction history with opening balance calculation for filtered date range
+
+### GST Filing Export
+Location: Reports > Sales Report > "Generate GST Files" button
+
+**Generated Files:**
+1. **GSTR1.xlsx** - Invoice-level data with:
+   - GSTIN, Party Name, Invoice No, Date
+   - Invoice Value, Place of Supply, Reverse Charge
+   - Invoice Type, Taxable Value, Tax Rate
+   - CGST, SGST, IGST, Cess
+
+2. **HSN-B2B.xlsx** - HSN summary for B2B transactions (parties with 15-character GSTIN):
+   - HSN Code, Description, UQC, Total Qty
+   - Total Value, Tax Rate, Taxable Value
+   - IGST, CGST, SGST, Cess
+
+3. **HSN-B2C.xlsx** - HSN summary for B2C transactions (parties without GSTIN):
+   - Same structure as HSN-B2B
+
+**API Endpoints:**
+- `GET /api/reports/gstr1` - GSTR1 invoice data
+- `GET /api/reports/hsn-summary` - HSN summary with B2B/B2C split
+
+**Usage:**
+1. Select date range in Sales Report
+2. Optionally filter by sale type (B2B/B2C/Estimate)
+3. Click "Generate GST Files" button
+4. Three Excel files are automatically downloaded
 
 ### Printing Implementation
 - Uses react-to-print v3.x with contentRef pattern

@@ -121,7 +121,7 @@ export interface IStorage {
   getPaymentsReport(companyId: number, startDate?: string, endDate?: string, type?: string): Promise<any[]>;
   getSalesTotalReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any>;
   getGSTR1Data(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
-  getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
+  getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<{b2b: any[], b2c: any[]}>;
   getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any>;
 
   // Bill Template operations
@@ -1701,42 +1701,54 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
+  async getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<{b2b: any[], b2c: any[]}> {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
     if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
 
-    const hsnData = await db
-      .select({
-        hsnCode: saleItems.hsnCode,
-        uqc: sql<string>`'NOS-NUMBERS'`,
-        totalQty: sql<string>`SUM(${saleItems.quantity})`,
-        totalValue: sql<string>`SUM(${saleItems.amount})`,
-        taxRate: saleItems.tax,
-        taxableValue: sql<string>`SUM(${saleItems.saleValue})`,
-        cgst: sql<string>`SUM(${saleItems.cgst})`,
-        sgst: sql<string>`SUM(${saleItems.sgst})`,
-      })
-      .from(saleItems)
-      .innerJoin(sales, eq(saleItems.saleId, sales.id))
-      .where(and(...conditions))
-      .groupBy(saleItems.hsnCode, saleItems.tax)
-      .orderBy(saleItems.hsnCode);
+    const b2bConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstin}, '')) = 15`];
+    const b2cConditions = [...conditions, sql`LENGTH(COALESCE(${sales.partyGstin}, '')) != 15`];
 
-    return hsnData.map(row => ({
-      hsnCode: row.hsnCode || '',
-      description: '',
-      uqc: row.uqc,
-      totalQty: parseFloat(String(row.totalQty || 0)),
-      totalValue: parseFloat(String(row.totalValue || 0)),
-      taxRate: parseFloat(String(row.taxRate || 0)),
-      taxableValue: parseFloat(String(row.taxableValue || 0)),
-      igst: 0,
-      cgst: parseFloat(String(row.cgst || 0)),
-      sgst: parseFloat(String(row.sgst || 0)),
-      cess: 0,
-    }));
+    const fetchHSNData = async (conds: any[]) => {
+      const hsnData = await db
+        .select({
+          hsnCode: saleItems.hsnCode,
+          uqc: sql<string>`'NOS-NUMBERS'`,
+          totalQty: sql<string>`SUM(${saleItems.quantity})`,
+          totalValue: sql<string>`SUM(${saleItems.amount})`,
+          taxRate: saleItems.tax,
+          taxableValue: sql<string>`SUM(${saleItems.saleValue})`,
+          cgst: sql<string>`SUM(${saleItems.cgst})`,
+          sgst: sql<string>`SUM(${saleItems.sgst})`,
+        })
+        .from(saleItems)
+        .innerJoin(sales, eq(saleItems.saleId, sales.id))
+        .where(and(...conds))
+        .groupBy(saleItems.hsnCode, saleItems.tax)
+        .orderBy(saleItems.hsnCode);
+
+      return hsnData.map(row => ({
+        hsnCode: row.hsnCode || '',
+        description: '',
+        uqc: row.uqc,
+        totalQty: parseFloat(String(row.totalQty || 0)),
+        totalValue: parseFloat(String(row.totalValue || 0)),
+        taxRate: parseFloat(String(row.taxRate || 0)),
+        taxableValue: parseFloat(String(row.taxableValue || 0)),
+        igst: 0,
+        cgst: parseFloat(String(row.cgst || 0)),
+        sgst: parseFloat(String(row.sgst || 0)),
+        cess: 0,
+      }));
+    };
+
+    const [b2b, b2c] = await Promise.all([
+      fetchHSNData(b2bConditions),
+      fetchHSNData(b2cConditions),
+    ]);
+
+    return { b2b, b2c };
   }
 
   async getPaymentsReport(companyId: number, startDate?: string, endDate?: string, type?: string): Promise<any[]> {

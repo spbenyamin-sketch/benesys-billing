@@ -211,41 +211,39 @@ export default function SalesReport() {
       const gstr1Data = await gstr1Response.json();
       const hsnData = await hsnResponse.json();
 
-      const b2bData = gstr1Data.filter((row: any) => row.gstin && row.gstin.length === 15);
-      const b2cData = gstr1Data.filter((row: any) => !row.gstin || row.gstin.length !== 15);
-
       const gstr1Sheet = XLSX.utils.json_to_sheet(gstr1Data.map((row: any) => ({
-        "GSTIN": row.gstin,
-        "Party Name": row.partyName,
-        "Invoice No": row.invoiceNo,
-        "Date": row.date,
-        "Invoice Value": row.totalValue,
-        "Place of Supply": row.placeOfSupply,
-        "Reverse Charge": row.reverseCharge,
-        "Invoice Type": row.invoiceType,
-        "Taxable Value": row.taxableValue,
-        "Tax Rate": row.taxRate,
-        "CGST": row.cgst,
-        "SGST": row.sgst,
-        "IGST": row.igst,
-        "Cess": row.cess,
+        "GSTIN": row.gstin || '',
+        "Party Name": row.partyName || 'Cash Sale',
+        "Invoice No": row.invoiceNo || '',
+        "Date": row.date || '',
+        "Invoice Value": Number(row.totalValue) || 0,
+        "Place of Supply": row.placeOfSupply || 'Tamil Nadu',
+        "Reverse Charge": row.reverseCharge || 'N',
+        "Invoice Type": row.invoiceType || 'Regular',
+        "Taxable Value": Number(row.taxableValue) || 0,
+        "Tax Rate": Number(row.taxRate) || 0,
+        "CGST": Number(row.cgst) || 0,
+        "SGST": Number(row.sgst) || 0,
+        "IGST": Number(row.igst) || 0,
+        "Cess": Number(row.cess) || 0,
       })));
 
-      const hsnB2BData = hsnData.map((row: any) => ({
-        "HSN Code": row.hsnCode,
-        "Description": row.description,
-        "UQC": row.uqc,
-        "Total Qty": row.totalQty,
-        "Total Value": row.totalValue,
-        "Tax Rate": row.taxRate,
-        "Taxable Value": row.taxableValue,
-        "IGST": row.igst,
-        "CGST": row.cgst,
-        "SGST": row.sgst,
-        "Cess": row.cess,
-      }));
-      const hsnB2BSheet = XLSX.utils.json_to_sheet(hsnB2BData);
-      const hsnB2CSheet = XLSX.utils.json_to_sheet(hsnB2BData);
+      const formatHSNRow = (row: any) => ({
+        "HSN Code": row.hsnCode || '',
+        "Description": row.description || '',
+        "UQC": row.uqc || 'NOS-NUMBERS',
+        "Total Qty": Number(row.totalQty) || 0,
+        "Total Value": Number(row.totalValue) || 0,
+        "Tax Rate": Number(row.taxRate) || 0,
+        "Taxable Value": Number(row.taxableValue) || 0,
+        "IGST": Number(row.igst) || 0,
+        "CGST": Number(row.cgst) || 0,
+        "SGST": Number(row.sgst) || 0,
+        "Cess": Number(row.cess) || 0,
+      });
+
+      const hsnB2BSheet = XLSX.utils.json_to_sheet((hsnData.b2b || []).map(formatHSNRow));
+      const hsnB2CSheet = XLSX.utils.json_to_sheet((hsnData.b2c || []).map(formatHSNRow));
 
       const wb1 = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb1, gstr1Sheet, "GSTR1");
