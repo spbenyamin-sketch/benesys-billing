@@ -113,10 +113,15 @@ const getAvailableRoles = (currentUserRole: string) => {
       { value: "admin", label: "Admin (Customer)" },
     ];
   }
-  // Admin can only create normal users
-  return [
-    { value: "user", label: "Normal User" },
-  ];
+  if (currentUserRole === "admin") {
+    // Admin can create admin and normal users
+    return [
+      { value: "user", label: "Normal User" },
+      { value: "admin", label: "Admin (Customer)" },
+    ];
+  }
+  // Normal users can't create users
+  return [];
 };
 
 const createUserSchema = z.object({
@@ -473,8 +478,8 @@ export default function UserManagement() {
           <DialogTrigger asChild>
             <Button 
               data-testid="button-create-user"
-              disabled={!isSuperAdmin}
-              title={!isSuperAdmin ? "Only Super Admin can create users" : ""}
+              disabled={!canAccessUserMgmt}
+              title={!canAccessUserMgmt ? "You don't have permission to create users" : ""}
             >
               <Plus className="mr-2 h-4 w-4" />
               Create User

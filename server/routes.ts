@@ -230,9 +230,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const validated = createUserSchema.parse(req.body);
       
-      // Admin (customer) users can only create normal users, not admin users
-      if (currentUser?.role === 'admin' && validated.role !== 'user') {
-        return res.status(403).json({ message: "Admin users can only create normal users" });
+      // Admin users can create admin and normal users, but NOT superadmin
+      // Superadmin can create admin and normal users
+      if (validated.role === 'superadmin') {
+        return res.status(403).json({ message: "Cannot create superadmin users" });
       }
       
       // Convert empty strings to undefined for optional fields
