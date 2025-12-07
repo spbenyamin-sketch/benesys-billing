@@ -826,7 +826,8 @@ export default function UserManagement() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="user">Normal User</SelectItem>
-                              <SelectItem value="admin">Super Admin</SelectItem>
+                              <SelectItem value="admin">Admin (Customer)</SelectItem>
+                              {isSuperAdmin && <SelectItem value="superadmin">Super Admin</SelectItem>}
                             </SelectContent>
                           </Select>
                         )}
