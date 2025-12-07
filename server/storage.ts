@@ -1673,7 +1673,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
-    if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
+    if (saleType && saleType !== 'ALL') {
+      conditions.push(eq(sales.saleType, saleType));
+    } else {
+      // Default: only include B2B and B2C sales for GST export
+      conditions.push(sql`${sales.saleType} IN ('B2B', 'B2C')`);
+    }
 
     const salesData = await db
       .select({
@@ -1904,7 +1909,12 @@ export class DatabaseStorage implements IStorage {
     const conditions = [eq(sales.companyId, companyId)];
     if (startDate) conditions.push(gte(sales.date, startDate));
     if (endDate) conditions.push(lte(sales.date, endDate));
-    if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
+    if (saleType && saleType !== 'ALL') {
+      conditions.push(eq(sales.saleType, saleType));
+    } else {
+      // Default: only include B2B and B2C sales for GST export
+      conditions.push(sql`${sales.saleType} IN ('B2B', 'B2C')`);
+    }
 
     const fetchHSNData = async (isB2B: boolean) => {
       const baseConditions = [...conditions];
