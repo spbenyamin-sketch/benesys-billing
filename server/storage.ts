@@ -1339,7 +1339,7 @@ export class DatabaseStorage implements IStorage {
         id: stockInwardItems.id,
         barcode: stockInwardItems.barcode,
         itemName: stockInwardItems.itname,
-        expiryDate: stockInwardItems.expirydate,
+        expiryDate: stockInwardItems.expdate,
         rate: stockInwardItems.rate,
         status: stockInwardItems.status,
       })
@@ -1348,11 +1348,11 @@ export class DatabaseStorage implements IStorage {
         and(
           eq(stockInwardItems.companyId, companyId),
           eq(stockInwardItems.status, "available"),
-          isNotNull(stockInwardItems.expirydate),
-          lte(stockInwardItems.expirydate, expiryDateStr)
+          isNotNull(stockInwardItems.expdate),
+          lte(stockInwardItems.expdate, expiryDateStr)
         )
       )
-      .orderBy(stockInwardItems.expirydate)
+      .orderBy(stockInwardItems.expdate)
       .limit(10);
 
     // This month's sales total
