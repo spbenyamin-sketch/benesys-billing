@@ -822,7 +822,15 @@ export default function UserManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users?.map((user) => (
+                {users
+                  ?.filter((user) => {
+                    // Admin (Customer) should not see Super Admin users
+                    if (isAdminCustomer && user.role === "superadmin") {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-mono text-sm" data-testid={`text-username-${user.id}`}>
                       {user.username}
