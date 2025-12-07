@@ -976,6 +976,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/reports/gstr1", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { startDate, endDate, saleType } = req.query;
+      const gstrData = await storage.getGSTR1Data(
+        req.companyId,
+        startDate as string,
+        endDate as string,
+        saleType as string
+      );
+      res.json(gstrData);
+    } catch (error) {
+      console.error("Error fetching GSTR1 data:", error);
+      res.status(500).json({ message: "Failed to fetch GSTR1 data" });
+    }
+  });
+
+  app.get("/api/reports/hsn-summary", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { startDate, endDate, saleType } = req.query;
+      const hsnData = await storage.getHSNSummaryData(
+        req.companyId,
+        startDate as string,
+        endDate as string,
+        saleType as string
+      );
+      res.json(hsnData);
+    } catch (error) {
+      console.error("Error fetching HSN summary data:", error);
+      res.status(500).json({ message: "Failed to fetch HSN summary data" });
+    }
+  });
+
   app.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const partyId = parseInt(req.params.partyId);

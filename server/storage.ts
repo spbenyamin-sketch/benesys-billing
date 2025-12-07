@@ -120,6 +120,8 @@ export interface IStorage {
   getCategoriesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
   getPaymentsReport(companyId: number, startDate?: string, endDate?: string, type?: string): Promise<any[]>;
   getSalesTotalReport(companyId: number, startDate?: string, endDate?: string, billType?: string): Promise<any>;
+  getGSTR1Data(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
+  getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]>;
   getPartyLedger(partyId: number, companyId: number, startDate?: string, endDate?: string): Promise<any>;
 
   // Bill Template operations
@@ -1650,6 +1652,91 @@ export class DatabaseStorage implements IStorage {
       .where(and(...conditions))
       .groupBy(items.category)
       .orderBy(sql`SUM(${saleItems.amount}) DESC`);
+  }
+
+  async getGSTR1Data(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
+    const conditions = [eq(sales.companyId, companyId)];
+    if (startDate) conditions.push(gte(sales.date, startDate));
+    if (endDate) conditions.push(lte(sales.date, endDate));
+    if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
+
+    const salesData = await db
+      .select({
+        id: sales.id,
+        invoiceNo: sales.invoiceNo,
+        saleType: sales.saleType,
+        date: sales.date,
+        partyName: sales.partyName,
+        partyGstin: sales.partyGstin,
+        partyState: sales.partyState,
+        saleValue: sales.saleValue,
+        taxValue: sales.taxValue,
+        cgstTotal: sales.cgstTotal,
+        sgstTotal: sales.sgstTotal,
+        grandTotal: sales.grandTotal,
+        gstType: sales.gstType,
+      })
+      .from(sales)
+      .where(and(...conditions))
+      .orderBy(sales.date, sales.invoiceNo);
+
+    return salesData.map(sale => ({
+      gstin: sale.partyGstin || '',
+      partyName: sale.partyName || 'Cash Sale',
+      invoiceNo: `${sale.saleType}-${sale.invoiceNo}`,
+      date: sale.date,
+      totalValue: parseFloat(String(sale.grandTotal || 0)),
+      placeOfSupply: sale.partyState ? `${sale.partyState}` : 'Tamil Nadu',
+      reverseCharge: 'N',
+      invoiceType: 'Regular',
+      ecomGstin: '',
+      taxRate: 0,
+      taxableValue: parseFloat(String(sale.saleValue || 0)),
+      cgst: parseFloat(String(sale.cgstTotal || 0)),
+      sgst: parseFloat(String(sale.sgstTotal || 0)),
+      igst: sale.gstType === 'IGST' ? parseFloat(String(sale.taxValue || 0)) : 0,
+      cess: 0,
+      gstType: sale.gstType || 'CGST/SGST',
+      saleType: sale.saleType,
+    }));
+  }
+
+  async getHSNSummaryData(companyId: number, startDate?: string, endDate?: string, saleType?: string): Promise<any[]> {
+    const conditions = [eq(sales.companyId, companyId)];
+    if (startDate) conditions.push(gte(sales.date, startDate));
+    if (endDate) conditions.push(lte(sales.date, endDate));
+    if (saleType && saleType !== 'ALL') conditions.push(eq(sales.saleType, saleType));
+
+    const hsnData = await db
+      .select({
+        hsnCode: saleItems.hsnCode,
+        uqc: sql<string>`'NOS-NUMBERS'`,
+        totalQty: sql<string>`SUM(${saleItems.quantity})`,
+        totalValue: sql<string>`SUM(${saleItems.amount})`,
+        taxRate: saleItems.tax,
+        taxableValue: sql<string>`SUM(${saleItems.saleValue})`,
+        cgst: sql<string>`SUM(${saleItems.cgst})`,
+        sgst: sql<string>`SUM(${saleItems.sgst})`,
+      })
+      .from(saleItems)
+      .innerJoin(sales, eq(saleItems.saleId, sales.id))
+      .where(and(...conditions))
+      .groupBy(saleItems.hsnCode, saleItems.tax)
+      .orderBy(saleItems.hsnCode);
+
+    return hsnData.map(row => ({
+      hsnCode: row.hsnCode || '',
+      description: '',
+      uqc: row.uqc,
+      totalQty: parseFloat(String(row.totalQty || 0)),
+      totalValue: parseFloat(String(row.totalValue || 0)),
+      taxRate: parseFloat(String(row.taxRate || 0)),
+      taxableValue: parseFloat(String(row.taxableValue || 0)),
+      igst: 0,
+      cgst: parseFloat(String(row.cgst || 0)),
+      sgst: parseFloat(String(row.sgst || 0)),
+      cess: 0,
+    }));
   }
 
   async getPaymentsReport(companyId: number, startDate?: string, endDate?: string, type?: string): Promise<any[]> {
