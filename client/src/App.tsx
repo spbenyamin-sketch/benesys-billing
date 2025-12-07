@@ -221,15 +221,15 @@ function AppContent() {
       <div className="flex h-screen w-full">
         <AppSidebar />
         <div className="flex flex-col flex-1 overflow-hidden">
-          <header className="flex items-center justify-between border-b px-4 py-2">
-            <div className="flex items-center gap-2">
+          <header className="flex items-center justify-between border-b px-2 sm:px-4 py-2 gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <span className="text-xs text-muted-foreground">BeneSys</span>
+              <span className="text-xs text-muted-foreground hidden sm:inline">BeneSys</span>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium" data-testid="text-company-name">
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                <Building2 className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs sm:text-sm font-medium truncate max-w-[100px] sm:max-w-[200px]" data-testid="text-company-name">
                   {currentCompany.name}
                 </span>
               </div>
@@ -257,8 +257,8 @@ function AppContent() {
               </Alert>
             </div>
           )}
-          <footer className="border-t px-4 py-2 text-xs text-muted-foreground text-center">
-            <p>BeneSys {currentCompany.expiryDate && `| Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
+          <footer className="border-t px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs text-muted-foreground text-center">
+            <p className="truncate">BeneSys {currentCompany.expiryDate && `| Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
           </footer>
           <main className="flex-1 overflow-y-auto">
             <Router />

@@ -238,17 +238,17 @@ export default function Parties() {
   const activeAgents = agents?.filter(agent => agent.active) || [];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Customers</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
             Manage your customer and supplier database
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleNewParty} data-testid="button-add-customer">
+            <Button onClick={handleNewParty} data-testid="button-add-customer" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Customer
             </Button>

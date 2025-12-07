@@ -464,11 +464,11 @@ export default function UserManagement() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">User Management</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">User Management</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
             {isSuperAdmin 
               ? "Manage all users and their roles" 
               : "Manage users in your company"}
@@ -480,6 +480,7 @@ export default function UserManagement() {
               data-testid="button-create-user"
               disabled={!canAccessUserMgmt}
               title={!canAccessUserMgmt ? "You don't have permission to create users" : ""}
+              className="w-full sm:w-auto"
             >
               <Plus className="mr-2 h-4 w-4" />
               Create User
@@ -524,7 +525,7 @@ export default function UserManagement() {
                     </FormItem>
                   )}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="firstName"

@@ -81,23 +81,25 @@ export default function Sales() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Sales Invoices</h1>
-          <p className="text-muted-foreground mt-2">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Sales Invoices</h1>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
             View and manage all sales transactions
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => handlePrintList()} data-testid="button-print-list">
-            <Printer className="mr-2 h-4 w-4" />
-            Print List
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={() => handlePrintList()} data-testid="button-print-list" size="sm" className="flex-1 sm:flex-none">
+            <Printer className="mr-1 sm:mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Print List</span>
+            <span className="sm:hidden">Print</span>
           </Button>
-          <Button asChild data-testid="button-new-sale">
+          <Button asChild data-testid="button-new-sale" size="sm" className="flex-1 sm:flex-none">
             <Link href="/sales/new">
-              <Plus className="mr-2 h-4 w-4" />
-              New Sale
+              <Plus className="mr-1 sm:mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">New Sale</span>
+              <span className="sm:hidden">New</span>
             </Link>
           </Button>
         </div>
