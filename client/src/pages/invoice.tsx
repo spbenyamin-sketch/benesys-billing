@@ -80,6 +80,7 @@ interface BillTemplate {
   showPartyBalance: boolean;
   showBankDetails: boolean;
   showCashReturn: boolean;
+  enableTamilPrint: boolean;
   bankDetails: string | null;
   termsAndConditions: string | null;
   fontSize: number;

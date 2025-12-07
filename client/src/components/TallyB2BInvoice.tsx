@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { format } from "date-fns";
 import { numberToWords } from "@/lib/number-to-words";
+import { translateToTamil } from "@/lib/tamil-translator";
 
 interface InvoiceItem {
   id?: number;
@@ -55,6 +56,7 @@ interface BillTemplate {
   showPartyBalance?: boolean;
   showBankDetails?: boolean;
   showCashReturn?: boolean;
+  enableTamilPrint?: boolean;
   bankDetails?: string | null;
   termsAndConditions?: string | null;
   fontSize: number;
@@ -138,9 +140,9 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
                 <div style={{ fontSize: "10px" }}>{companyAddress}</div>
               </td>
               <td style={{ border: "none", width: "20%", textAlign: "right" }}>
-                <div style={{ fontSize: "14px", fontWeight: "bold" }}>INVOICE</div>
+                <div style={{ fontSize: "14px", fontWeight: "bold" }}>{translateToTamil("INVOICE", enableTamilPrint)}</div>
                 <div style={{ fontSize: "10px" }}>No.: {invoice.invoiceNo}</div>
-                <div style={{ fontSize: "10px" }}>Date: {format(new Date(invoice.date), "dd-MMM-yyyy")}</div>
+                <div style={{ fontSize: "10px" }}>{translateToTamil("Date", enableTamilPrint)}: {format(new Date(invoice.date), "dd-MMM-yyyy")}</div>
               </td>
             </tr>
           </table>
@@ -151,7 +153,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
           <tbody>
             <tr>
               <td style={{ width: "25%" }}>
-                <strong>GSTIN/UIN:</strong> {companyGst || "N/A"}
+                <strong>{translateToTamil("GST", enableTamilPrint)}/UIN:</strong> {companyGst || "N/A"}
               </td>
               <td style={{ width: "25%" }}>
                 <strong>State:</strong> {companyState || "N/A"}
@@ -172,7 +174,7 @@ export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
             <tr>
               <td style={{ width: "50%", verticalAlign: "top" }}>
                 <div style={{ marginBottom: "4px" }}>
-                  <strong>Consignee (Ship to):</strong>
+                  <strong>{translateToTamil("Bill To", enableTamilPrint)} (Ship to):</strong>
                 </div>
                 <div style={{ fontWeight: "600", marginBottom: "2px" }}>
                   {invoice.shipName || invoice.partyName || "N/A"}
