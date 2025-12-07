@@ -21,7 +21,6 @@ import { format } from "date-fns";
 import Parties from "@/pages/parties";
 import Items from "@/pages/items";
 import Agents from "@/pages/agents";
-import logoUrl from "@assets/logo_1765091352986.jpg";
 import SalesBilling from "@/pages/sales-billing";
 import BillEntry from "@/pages/bill-entry";
 import SalesB2B from "@/pages/sales-b2b";
@@ -173,7 +172,6 @@ function AppContent() {
               <header className="flex items-center justify-between border-b px-4 py-2">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
-                  <img src={logoUrl} alt="BeneSys" className="h-8 w-auto object-contain brightness-125" />
                 </div>
                 <div className="text-sm text-muted-foreground">
                   No company selected - Create a company to get started
@@ -226,7 +224,6 @@ function AppContent() {
           <header className="flex items-center justify-between border-b px-4 py-2">
             <div className="flex items-center gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <span className="text-xs text-muted-foreground">BeneSys</span>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
@@ -260,7 +257,7 @@ function AppContent() {
             </div>
           )}
           <footer className="border-t px-4 py-2 text-xs text-muted-foreground text-center">
-            <p>BeneSys {currentCompany.expiryDate && `| Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
+            <p>{currentCompany.expiryDate && `Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
           </footer>
           <main className="flex-1 overflow-y-auto">
             <Router />
