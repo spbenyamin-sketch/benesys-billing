@@ -235,3 +235,38 @@ const { shouldAutoPrint, getPrintCopies, showConfirmation } = usePrintSettings()
 - Returns consolidated data: item details, stock level, purchases, sales, movement summary
 - Shows total purchased/sold quantities and current balance
 - Accessible from Stock page grid/list view via history button
+
+## Progressive Web App (PWA)
+
+The application is fully configured as a Progressive Web App, allowing users to install it on their mobile devices like a native app.
+
+### PWA Features Implemented
+- **Service Worker:** Caching strategy for offline support and faster load times
+- **Manifest:** App name, icons, colors, and display settings
+- **Meta Tags:** Apple mobile web app support, theme colors, and descriptions
+- **Installation:** Users can install on home screen (Android and iOS)
+
+### How to Use on Mobile
+
+**Android:**
+1. Open the app in Chrome
+2. Tap the menu (three dots)
+3. Select "Install app" or "Add to Home Screen"
+4. The app will be installed with a home screen icon
+
+**iPhone:**
+1. Open the app in Safari
+2. Tap the Share button
+3. Select "Add to Home Screen"
+4. The app will appear as a full-screen app on your home screen
+
+### Offline Capabilities
+- Static assets (HTML, CSS, JS) are cached for offline access
+- API requests require network connection (fail gracefully)
+- Data syncs when device returns online
+- Service worker automatically updates app when new version is available
+
+### Files
+- `public/manifest.json` - App metadata and icon configuration
+- `public/service-worker.js` - Offline caching and network strategies
+- `client/index.html` - PWA meta tags and manifest link
