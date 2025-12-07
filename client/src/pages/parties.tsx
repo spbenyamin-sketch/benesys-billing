@@ -37,6 +37,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { INDIA_STATES, getStateFromGSTCode, isIGSTParty } from "@/lib/india-states";
 
 const partyFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -108,6 +109,20 @@ export default function Parties() {
   const { data: agents } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
   });
+
+  const { data: company } = useQuery({
+    queryKey: ["/api/company"],
+    queryFn: async () => {
+      const res = await fetch("/api/company", { 
+        credentials: "include",
+        headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" }
+      });
+      if (!res.ok) throw new Error("Failed to fetch company");
+      return res.json();
+    },
+  });
+
+  const companyStateCode = company?.gstNo ? getStateFromGSTCode(company.gstNo)?.code : null;
 
   const form = useForm<PartyFormValues>({
     resolver: zodResolver(partyFormSchema),
@@ -330,10 +345,26 @@ export default function Parties() {
                     name="state"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <FormControl>
-                          <Input {...field} data-testid="input-party-state" />
-                        </FormControl>
+                        <FormLabel>State *</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-party-state">
+                              <SelectValue placeholder="Select state" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {INDIA_STATES.map((state) => (
+                              <SelectItem key={state.code} value={state.name}>
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {field.value && isIGSTParty(company?.gstNo, field.value) && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            This is an inter-state customer (IGST)
+                          </p>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
