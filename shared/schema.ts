@@ -611,6 +611,7 @@ export const billTemplates = pgTable("bill_templates", {
   showCashReturn: boolean("show_cash_return").default(true).notNull(), // B2C: show cash given/return on invoice
   showPartyBalance: boolean("show_party_balance").default(false).notNull(), // Show party outstanding balance
   showBankDetails: boolean("show_bank_details").default(false).notNull(), // Show company bank details
+  enableTamilPrint: boolean("enable_tamil_print").default(false).notNull(), // Enable Tamil language labels on invoice
   bankDetails: text("bank_details"), // Bank account details for payment
   termsAndConditions: text("terms_and_conditions"), // Terms and conditions text
   paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(), // A4, B4, 3inch, 4inch

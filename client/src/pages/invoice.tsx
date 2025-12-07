@@ -95,11 +95,8 @@ export default function Invoice() {
   const [templateReady, setTemplateReady] = useState(false);
   const [enableTamilPrint, setEnableTamilPrint] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const { shouldAutoPrint, enableTamilPrint: globalTamilPrint } = usePrintSettings();
+  const { shouldAutoPrint } = usePrintSettings();
   const { currentCompany } = useCompany();
-  
-  // Use global Tamil setting or local override
-  const isTamilEnabled = enableTamilPrint || globalTamilPrint;
   
   const searchParams = new URLSearchParams(searchString);
   const autoPrintRequested = searchParams.get("print") === "auto";
@@ -292,6 +289,9 @@ export default function Invoice() {
   const isThermal = activeTemplate.formatType.includes("thermal") || activeTemplate.formatType.includes("inch");
   const isB2B = sale?.saleType === "B2B";
   const isTallyTemplate = activeTemplate.assignedTo === "b2b" && isB2B;
+  
+  // Use template's Tamil setting or local override
+  const isTamilEnabled = enableTamilPrint || activeTemplate.enableTamilPrint;
 
   return (
     <div className="p-6">

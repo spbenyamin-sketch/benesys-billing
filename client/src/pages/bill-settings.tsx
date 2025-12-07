@@ -52,6 +52,7 @@ interface BillTemplate {
   showCashReturn: boolean;
   showPartyBalance: boolean;
   showBankDetails: boolean;
+  enableTamilPrint: boolean;
   bankDetails: string | null;
   termsAndConditions: string | null;
   paperSize: string;
@@ -90,6 +91,7 @@ const defaultFormData = {
   showCashReturn: true,
   showPartyBalance: false,
   showBankDetails: false,
+  enableTamilPrint: false,
   bankDetails: "",
   termsAndConditions: "",
   paperSize: "A4",
@@ -473,6 +475,7 @@ export default function BillSettings() {
       showCashReturn: template.showCashReturn,
       showPartyBalance: template.showPartyBalance || false,
       showBankDetails: template.showBankDetails || false,
+      enableTamilPrint: template.enableTamilPrint || false,
       bankDetails: template.bankDetails || "",
       termsAndConditions: template.termsAndConditions || "",
       paperSize: template.paperSize,
@@ -720,6 +723,15 @@ export default function BillSettings() {
                         checked={formData.showOutstandingDefault}
                         onCheckedChange={(checked) => setFormData({ ...formData, showOutstandingDefault: checked })}
                         data-testid="switch-outstanding"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="enableTamilPrint" className="font-normal">தமிழ் Tamil Print</Label>
+                      <Switch
+                        id="enableTamilPrint"
+                        checked={formData.enableTamilPrint}
+                        onCheckedChange={(checked) => setFormData({ ...formData, enableTamilPrint: checked })}
+                        data-testid="switch-tamil-print"
                       />
                     </div>
                   </div>
