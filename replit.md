@@ -117,6 +117,7 @@ Templates can be assigned to specific transaction types:
 - Bank details section
 - Terms and conditions
 - Configurable font size
+- **Tamil Language Support:** Toggle to enable Tamil language labels on invoices (database field: `enableTamilPrint` boolean, default: false)
 
 ### API Endpoints
 - `GET /api/bill-templates` - List all templates
@@ -124,6 +125,35 @@ Templates can be assigned to specific transaction types:
 - `POST /api/bill-templates` - Create new template
 - `PUT /api/bill-templates/:id` - Update template
 - `DELETE /api/bill-templates/:id` - Delete template
+
+## Tamil Language Support
+
+### Database Schema
+- **Table:** `bill_templates`
+- **Field:** `enableTamilPrint` (boolean, default: false)
+- **Migration:** Already synced via `npm run db:push --force`
+
+### Implementation
+- **Translator Library:** `client/src/lib/tamil-translator.ts`
+- **Supported Labels:** Invoice headers, date, GST, bill-to, item details, amounts, totals, and more
+- **Components Updated:** InvoiceA4Print, InvoiceThermalPrint, TallyB2BInvoice
+
+### How It Works
+1. **Create Template with Tamil Enabled:** Go to Bill Settings → Create template → Toggle "தமிழ் Tamil Print" → Save
+2. **Automatic Application:** When printing invoices with that template, all labels appear in Tamil
+3. **Manual Override:** Checkbox on invoice page allows temporary Tamil toggle
+4. **Template Assignment:** Assign template to B2B/B2C/Estimate for consistent Tamil printing
+
+### Tamil Translations (Partial List)
+- INVOICE → இன்வாய்ஸ்
+- Date → தேதி:
+- Bill To → பரிமாணம்:
+- GST → GST
+- Item Name → பொருளின் பெயர்
+- Quantity → அ.க
+- Rate → விகிதம்
+- Amount → தொகை
+- Grand Total → பொதுத் தொகை
 
 ## Invoice Management
 
