@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { PartySearchModal } from "@/components/party-search-modal";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,9 +72,10 @@ interface Party {
 interface PaymentReceipt {
   payment: Payment;
   companyName: string;
+  t: (key: string) => string;
 }
 
-function PaymentReceiptPrint({ payment, companyName }: PaymentReceipt) {
+function PaymentReceiptPrint({ payment, companyName, t }: PaymentReceipt) {
   const isCredit = parseFloat(payment.credit) > 0;
   const amount = isCredit ? parseFloat(payment.credit) : parseFloat(payment.debit);
   
@@ -82,40 +84,40 @@ function PaymentReceiptPrint({ payment, companyName }: PaymentReceipt) {
       <div className="text-center border-b-2 border-black pb-4 mb-4">
         <h1 className="text-xl font-bold">{companyName}</h1>
         <p className="text-lg font-semibold mt-2">
-          {isCredit ? "PAYMENT RECEIPT" : "PAYMENT VOUCHER"}
+          {isCredit ? t('payments.receipt') : t('payments.voucher')}
         </p>
       </div>
       
       <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
         <div>
-          <span className="text-gray-600">Receipt No:</span>
+          <span className="text-gray-600">{t('payments.receiptNo')}</span>
           <span className="font-medium ml-2">#{payment.id}</span>
         </div>
         <div className="text-right">
-          <span className="text-gray-600">Date:</span>
+          <span className="text-gray-600">{t('common.date')}:</span>
           <span className="font-medium ml-2">{format(new Date(payment.date), "dd MMM yyyy")}</span>
         </div>
       </div>
       
       <div className="border rounded-lg p-4 mb-6 bg-gray-50">
         <div className="mb-3">
-          <span className="text-gray-600 text-sm">Received From / Paid To:</span>
-          <p className="font-semibold text-lg">{payment.partyName || "Cash"}</p>
+          <span className="text-gray-600 text-sm">{t('payments.receivedFromPaidTo')}</span>
+          <p className="font-semibold text-lg">{payment.partyName || t('payments.cash')}</p>
         </div>
         
         <div className="mb-3">
-          <span className="text-gray-600 text-sm">Amount:</span>
+          <span className="text-gray-600 text-sm">{t('payments.amountLabel')}</span>
           <p className="font-bold text-2xl text-green-700">₹{amount.toFixed(2)}</p>
         </div>
         
         <div className="mb-3">
-          <span className="text-gray-600 text-sm">Amount in Words:</span>
-          <p className="font-medium">{numberToWords(amount)} Rupees Only</p>
+          <span className="text-gray-600 text-sm">{t('payments.amountInWords')}</span>
+          <p className="font-medium">{numberToWords(amount)} {t('payments.rupeesOnly')}</p>
         </div>
         
         {payment.details && (
           <div>
-            <span className="text-gray-600 text-sm">Details:</span>
+            <span className="text-gray-600 text-sm">{t('payments.details')}:</span>
             <p className="font-medium">{payment.details}</p>
           </div>
         )}
@@ -124,18 +126,18 @@ function PaymentReceiptPrint({ payment, companyName }: PaymentReceipt) {
       <div className="grid grid-cols-2 gap-8 mt-12 pt-8 border-t">
         <div className="text-center">
           <div className="border-t border-gray-400 pt-2 mt-8">
-            <p className="text-sm text-gray-600">Receiver's Signature</p>
+            <p className="text-sm text-gray-600">{t('payments.receiverSignature')}</p>
           </div>
         </div>
         <div className="text-center">
           <div className="border-t border-gray-400 pt-2 mt-8">
-            <p className="text-sm text-gray-600">Authorized Signature</p>
+            <p className="text-sm text-gray-600">{t('payments.authorizedSignature')}</p>
           </div>
         </div>
       </div>
       
       <div className="text-center mt-8 text-xs text-gray-500">
-        This is a computer generated receipt
+        {t('payments.computerGeneratedReceipt')}
       </div>
     </div>
   );
@@ -160,6 +162,7 @@ function numberToWords(num: number): string {
 }
 
 export default function Payments() {
+  const { t } = useTranslation();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingPaymentId, setEditingPaymentId] = useState<number | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -194,13 +197,13 @@ export default function Payments() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
-        title: "Success",
-        description: "Payment deleted successfully",
+        title: t('common.success'),
+        description: t('payments.paymentDeleted'),
       });
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -213,7 +216,7 @@ export default function Payments() {
   };
 
   const handleDelete = (id: number) => {
-    if (confirm("Are you sure you want to delete this payment?")) {
+    if (confirm(t('payments.deleteConfirm'))) {
       deleteMutation.mutate(id);
     }
   };
@@ -258,15 +261,15 @@ export default function Payments() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
-        title: "Success",
-        description: "Payment entry created successfully",
+        title: t('common.success'),
+        description: t('payments.paymentCreated'),
       });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -291,8 +294,8 @@ export default function Payments() {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       toast({
-        title: "Success",
-        description: "Payment entry updated successfully",
+        title: t('common.success'),
+        description: t('payments.paymentUpdated'),
       });
       setIsDialogOpen(false);
       setEditingPaymentId(null);
@@ -300,7 +303,7 @@ export default function Payments() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('common.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -347,23 +350,23 @@ export default function Payments() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Payments</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t('payments.title')}</h1>
           <p className="text-muted-foreground mt-2">
-            Record payment receipts and transactions
+            {t('payments.subtitle')}
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={(open) => !open ? handleCloseDialog() : setIsDialogOpen(true)}>
           <DialogTrigger asChild>
             <Button data-testid="button-add-payment">
               <Plus className="mr-2 h-4 w-4" />
-              Add Payment
+              {t('payments.newPayment')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingPaymentId ? "Edit Payment Entry" : "Add Payment Entry"}</DialogTitle>
+              <DialogTitle>{editingPaymentId ? t('payments.editPaymentEntry') : t('payments.addPaymentEntry')}</DialogTitle>
               <DialogDescription>
-                {editingPaymentId ? "Update payment details" : "Record a payment or receipt transaction"}
+                {editingPaymentId ? t('payments.updatePaymentDetails') : t('payments.recordPaymentTransaction')}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -373,7 +376,7 @@ export default function Payments() {
                   name="date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Date *</FormLabel>
+                      <FormLabel>{t('common.date')} *</FormLabel>
                       <FormControl>
                         <Input type="date" {...field} data-testid="input-payment-date" />
                       </FormControl>
@@ -387,7 +390,7 @@ export default function Payments() {
                   name="partyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Party (Optional)</FormLabel>
+                      <FormLabel>{t('payments.partyOptional')}</FormLabel>
                       <Button
                         type="button"
                         variant="outline"
@@ -395,7 +398,7 @@ export default function Payments() {
                         onClick={() => setShowPartySearch(true)}
                         data-testid="button-search-payment-party"
                       >
-                        {field.value ? parties?.find(p => p.id === field.value)?.name : "Click to search party..."}
+                        {field.value ? parties?.find(p => p.id === field.value)?.name : t('payments.clickToSearchParty')}
                       </Button>
                       <FormMessage />
                     </FormItem>
@@ -407,7 +410,7 @@ export default function Payments() {
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Transaction Type *</FormLabel>
+                      <FormLabel>{t('payments.transactionType')} *</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger data-testid="select-payment-type">
@@ -415,8 +418,8 @@ export default function Payments() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="credit">Payment Received (Credit)</SelectItem>
-                          <SelectItem value="debit">Payment Made (Debit)</SelectItem>
+                          <SelectItem value="credit">{t('payments.paymentReceivedCredit')}</SelectItem>
+                          <SelectItem value="debit">{t('payments.paymentMadeDebit')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -429,7 +432,7 @@ export default function Payments() {
                   name="amount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Amount *</FormLabel>
+                      <FormLabel>{t('payments.amount')} *</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -448,11 +451,11 @@ export default function Payments() {
                   name="details"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Details</FormLabel>
+                      <FormLabel>{t('payments.details')}</FormLabel>
                       <FormControl>
                         <Textarea
                           {...field}
-                          placeholder="Payment details, reference, etc."
+                          placeholder={t('payments.detailsPlaceholder')}
                           data-testid="input-payment-details"
                         />
                       </FormControl>
@@ -468,7 +471,7 @@ export default function Payments() {
                     onClick={handleCloseDialog}
                     data-testid="button-cancel"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     type="submit"
@@ -476,8 +479,8 @@ export default function Payments() {
                     data-testid="button-save-payment"
                   >
                     {editingPaymentId
-                      ? updateMutation.isPending ? "Updating..." : "Update"
-                      : createMutation.isPending ? "Saving..." : "Save"}
+                      ? updateMutation.isPending ? t('payments.updating') : t('payments.update')
+                      : createMutation.isPending ? t('common.saving') : t('common.save')}
                   </Button>
                 </div>
               </form>
@@ -489,7 +492,7 @@ export default function Payments() {
       <div className="grid gap-6 sm:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Received</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('payments.totalReceived')}</CardTitle>
             <ArrowDownCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
@@ -501,7 +504,7 @@ export default function Payments() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Paid</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('payments.totalPaid')}</CardTitle>
             <ArrowUpCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
@@ -513,7 +516,7 @@ export default function Payments() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('payments.netBalance')}</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -526,7 +529,7 @@ export default function Payments() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Payment History</CardTitle>
+          <CardTitle>{t('payments.paymentHistory')}</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -539,12 +542,12 @@ export default function Payments() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Party</TableHead>
-                  <TableHead>Details</TableHead>
-                  <TableHead className="text-right">Credit</TableHead>
-                  <TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="w-16">Actions</TableHead>
+                  <TableHead>{t('common.date')}</TableHead>
+                  <TableHead>{t('payments.party')}</TableHead>
+                  <TableHead>{t('payments.details')}</TableHead>
+                  <TableHead className="text-right">{t('payments.credit')}</TableHead>
+                  <TableHead className="text-right">{t('payments.debit')}</TableHead>
+                  <TableHead className="w-16">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -567,7 +570,7 @@ export default function Payments() {
                           size="icon"
                           variant="ghost"
                           onClick={() => handleEditPayment(payment)}
-                          title="Edit Payment"
+                          title={t('payments.editPayment')}
                           data-testid={`button-edit-payment-${payment.id}`}
                         >
                           <Pencil className="h-4 w-4" />
@@ -576,7 +579,7 @@ export default function Payments() {
                           size="icon"
                           variant="ghost"
                           onClick={() => printReceipt(payment)}
-                          title="Print Receipt"
+                          title={t('payments.printReceipt')}
                           data-testid={`button-print-receipt-${payment.id}`}
                         >
                           <Printer className="h-4 w-4" />
@@ -585,7 +588,7 @@ export default function Payments() {
                           size="icon"
                           variant="ghost"
                           onClick={() => handleDelete(payment.id)}
-                          title="Delete Payment"
+                          title={t('payments.deletePayment')}
                           data-testid={`button-delete-payment-${payment.id}`}
                         >
                           <Trash2 className="h-4 w-4 text-red-600" />
@@ -599,9 +602,9 @@ export default function Payments() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Wallet className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-sm text-muted-foreground mb-1">No payments yet</p>
+              <p className="text-sm text-muted-foreground mb-1">{t('payments.noPaymentsYet')}</p>
               <p className="text-xs text-muted-foreground mb-4">
-                Add your first payment entry to get started
+                {t('payments.addFirstPayment')}
               </p>
             </div>
           )}
@@ -613,7 +616,8 @@ export default function Payments() {
           <div ref={printRef}>
             <PaymentReceiptPrint 
               payment={selectedPayment} 
-              companyName={currentCompany?.name || "Your Company"} 
+              companyName={currentCompany?.name || "Your Company"}
+              t={t}
             />
           </div>
         </div>

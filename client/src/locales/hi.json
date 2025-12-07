@@ -50,7 +50,9 @@
     "pending": "लंबित",
     "language": "भाषा",
     "none": "कोई नहीं",
-    "saving": "सहेज रहा है..."
+    "saving": "सहेज रहा है...",
+    "success": "सफलता",
+    "error": "त्रुटि"
   },
   "nav": {
     "dashboard": "डैशबोर्ड",
@@ -116,10 +118,12 @@
     "viewAll": "सभी देखें"
   },
   "sales": {
-    "title": "बिक्री",
+    "title": "बिक्री चालान",
+    "subtitle": "सभी बिक्री लेनदेन देखें और प्रबंधित करें",
     "newSale": "नई बिक्री",
     "invoiceNo": "बिल नंबर",
     "invoiceDate": "बिल तारीख",
+    "invoiceList": "चालान सूची",
     "party": "पार्टी",
     "selectParty": "पार्टी चुनें",
     "cashSale": "नकद बिक्री",
@@ -153,7 +157,20 @@
     "salesList": "बिक्री सूची",
     "viewInvoice": "बिल देखें",
     "editSale": "बिक्री संपादित करें",
-    "deleteSale": "बिक्री हटाएं"
+    "deleteSale": "बिक्री हटाएं",
+    "allTypes": "सभी प्रकार",
+    "b2bCredit": "B2B (उधार)",
+    "b2cCash": "B2C (नकद/खुदरा)",
+    "estimate": "अनुमान",
+    "searchInvoices": "चालान खोजें...",
+    "customer": "ग्राहक",
+    "city": "शहर",
+    "noInvoicesFound": "कोई चालान नहीं मिला",
+    "noSalesYet": "अभी तक कोई बिक्री नहीं",
+    "createFirstInvoice": "पहला चालान बनाएं",
+    "totalQty": "कुल मात्रा",
+    "showing": "{{count}} चालान दिखा रहा है",
+    "showing_plural": "{{count}} चालान दिखा रहे हैं"
   },
   "purchases": {
     "title": "खरीद",
@@ -338,7 +355,12 @@
     "getStarted": "शुरू करने के लिए अपना पहला आइटम जोड़ें",
     "shareAcrossCompanies": "सभी कंपनियों में साझा करें",
     "shareAcrossCompaniesDesc": "इस आइटम को सभी कंपनियों में उपलब्ध कराने के लिए सक्षम करें",
-    "shared": "साझा"
+    "shared": "साझा",
+    "floorPlaceholder": "जैसे, फ्लोर 1, रैक A",
+    "mrpPlaceholder": "अधिकतम खुदरा मूल्य",
+    "sellingPricePlaceholder": "विक्रय मूल्य",
+    "itemCreated": "आइटम सफलतापूर्वक बनाया गया",
+    "itemUpdated": "आइटम सफलतापूर्वक अपडेट किया गया"
   },
   "reports": {
     "title": "रिपोर्ट",

@@ -50,7 +50,9 @@
     "pending": "બાકી",
     "language": "ભાષા",
     "none": "કોઈ નહીં",
-    "saving": "સાચવી રહ્યા છે..."
+    "saving": "સાચવી રહ્યા છે...",
+    "success": "સફળતા",
+    "error": "ભૂલ"
   },
   "nav": {
     "dashboard": "ડેશબોર્ડ",
@@ -116,10 +118,12 @@
     "viewAll": "બધું જુઓ"
   },
   "sales": {
-    "title": "વેચાણ",
+    "title": "વેચાણ ઇન્વોઇસ",
+    "subtitle": "બધા વેચાણ વ્યવહારો જુઓ અને મેનેજ કરો",
     "newSale": "નવું વેચાણ",
     "invoiceNo": "ઇન્વોઇસ નંબર",
     "invoiceDate": "ઇન્વોઇસ તારીખ",
+    "invoiceList": "ઇન્વોઇસ યાદી",
     "party": "પાર્ટી",
     "selectParty": "પાર્ટી પસંદ કરો",
     "cashSale": "રોકડ વેચાણ",
@@ -153,7 +157,20 @@
     "salesList": "વેચાણ યાદી",
     "viewInvoice": "ઇન્વોઇસ જુઓ",
     "editSale": "વેચાણ સંપાદિત કરો",
-    "deleteSale": "વેચાણ કાઢી નાખો"
+    "deleteSale": "વેચાણ કાઢી નાખો",
+    "allTypes": "બધા પ્રકાર",
+    "b2bCredit": "B2B (ઉધાર)",
+    "b2cCash": "B2C (રોકડ/રિટેલ)",
+    "estimate": "અંદાજ",
+    "searchInvoices": "ઇન્વોઇસ શોધો...",
+    "customer": "ગ્રાહક",
+    "city": "શહેર",
+    "noInvoicesFound": "કોઈ ઇન્વોઇસ મળ્યા નથી",
+    "noSalesYet": "હજુ સુધી કોઈ વેચાણ નથી",
+    "createFirstInvoice": "પ્રથમ ઇન્વોઇસ બનાવો",
+    "totalQty": "કુલ જથ્થો",
+    "showing": "{{count}} ઇન્વોઇસ બતાવી રહ્યા છે",
+    "showing_plural": "{{count}} ઇન્વોઇસ બતાવી રહ્યા છે"
   },
   "purchases": {
     "title": "ખરીદી",
@@ -338,7 +355,12 @@
     "getStarted": "શરૂ કરવા માટે તમારી પ્રથમ આઇટમ ઉમેરો",
     "shareAcrossCompanies": "બધી કંપનીઓમાં શેર કરો",
     "shareAcrossCompaniesDesc": "આ આઇટમને બધી કંપનીઓમાં ઉપલબ્ધ કરાવવા માટે સક્ષમ કરો",
-    "shared": "શેર કરેલ"
+    "shared": "શેર કરેલ",
+    "floorPlaceholder": "દા.ત., ફ્લોર 1, રેક A",
+    "mrpPlaceholder": "મહત્તમ છૂટક ભાવ",
+    "sellingPricePlaceholder": "વેચાણ ભાવ",
+    "itemCreated": "આઇટમ સફળતાપૂર્વક બનાવવામાં આવી",
+    "itemUpdated": "આઇટમ સફળતાપૂર્વક અપડેટ થઈ"
   },
   "reports": {
     "title": "રિપોર્ટ્સ",
