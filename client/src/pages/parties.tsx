@@ -37,6 +37,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useTranslation } from "react-i18next";
 
 const partyFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -100,6 +101,7 @@ export default function Parties() {
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [shippingOpen, setShippingOpen] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const { data: parties, isLoading } = useQuery<Party[]>({
     queryKey: ["/api/parties"],
@@ -145,15 +147,15 @@ export default function Parties() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parties"] });
       toast({
-        title: "Success",
-        description: "Customer created successfully",
+        title: t('messages.success'),
+        description: t('messages.customerCreated'),
       });
       setIsDialogOpen(false);
       form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('messages.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -171,8 +173,8 @@ export default function Parties() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/parties"] });
       toast({
-        title: "Success",
-        description: "Customer updated successfully",
+        title: t('messages.success'),
+        description: t('messages.customerUpdated'),
       });
       setIsDialogOpen(false);
       setEditingParty(null);
@@ -180,7 +182,7 @@ export default function Parties() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Error",
+        title: t('messages.error'),
         description: error.message,
         variant: "destructive",
       });
@@ -241,30 +243,30 @@ export default function Parties() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Customers</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{t('nav.customers')}</h1>
           <p className="text-muted-foreground mt-2">
-            Manage your customer and supplier database
+            {t('parties.subtitle')}
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewParty} data-testid="button-add-customer">
               <Plus className="mr-2 h-4 w-4" />
-              Add Customer
+              {t('parties.addCustomer')}
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editingParty ? "Edit Customer" : "Add New Customer"}</DialogTitle>
+              <DialogTitle>{editingParty ? t('parties.editCustomer') : t('parties.addNewCustomer')}</DialogTitle>
               <DialogDescription>
-                {editingParty ? "Update customer details" : "Enter customer details below"}
+                {editingParty ? t('parties.updateCustomerDetails') : t('parties.enterCustomerDetails')}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                 {editingParty && (
                   <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm text-muted-foreground">Customer Code: <span className="font-mono font-semibold text-foreground">{editingParty.code}</span></p>
+                    <p className="text-sm text-muted-foreground">{t('parties.customerCode')}: <span className="font-mono font-semibold text-foreground">{editingParty.code}</span></p>
                   </div>
                 )}
                 
@@ -274,7 +276,7 @@ export default function Parties() {
                     name="name"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Name *</FormLabel>
+                        <FormLabel>{t('parties.name')} *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-name" />
                         </FormControl>
@@ -287,9 +289,9 @@ export default function Parties() {
                     name="shortName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Short Name</FormLabel>
+                        <FormLabel>{t('parties.shortName')}</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="Short alias" data-testid="input-party-shortname" />
+                          <Input {...field} placeholder={t('parties.shortAlias')} data-testid="input-party-shortname" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -302,7 +304,7 @@ export default function Parties() {
                   name="address"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Address</FormLabel>
+                      <FormLabel>{t('parties.address')}</FormLabel>
                       <FormControl>
                         <Input {...field} data-testid="input-party-address" />
                       </FormControl>
@@ -317,7 +319,7 @@ export default function Parties() {
                     name="city"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City *</FormLabel>
+                        <FormLabel>{t('parties.city')} *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-city" />
                         </FormControl>
@@ -330,7 +332,7 @@ export default function Parties() {
                     name="state"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State</FormLabel>
+                        <FormLabel>{t('parties.state')}</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-state" />
                         </FormControl>
@@ -343,7 +345,7 @@ export default function Parties() {
                     name="pincode"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Pincode *</FormLabel>
+                        <FormLabel>{t('parties.pincode')} *</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-pincode" />
                         </FormControl>
@@ -359,7 +361,7 @@ export default function Parties() {
                     name="gstNo"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>GST No</FormLabel>
+                        <FormLabel>{t('parties.gstNo')}</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-gst" />
                         </FormControl>
@@ -372,7 +374,7 @@ export default function Parties() {
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone</FormLabel>
+                        <FormLabel>{t('parties.phone')}</FormLabel>
                         <FormControl>
                           <Input {...field} data-testid="input-party-phone" />
                         </FormControl>
@@ -387,18 +389,18 @@ export default function Parties() {
                   name="agentId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Agent</FormLabel>
+                      <FormLabel>{t('parties.agent')}</FormLabel>
                       <Select 
                         onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
                         value={field.value || "none"}
                       >
                         <FormControl>
                           <SelectTrigger data-testid="select-party-agent">
-                            <SelectValue placeholder="Select agent (optional)" />
+                            <SelectValue placeholder={t('parties.selectAgentOptional')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
+                          <SelectItem value="none">{t('common.none')}</SelectItem>
                           {activeAgents.map((agent) => (
                             <SelectItem key={agent.id} value={agent.id.toString()}>
                               {agent.code} - {agent.name}
@@ -417,7 +419,7 @@ export default function Parties() {
                     name="openingDebit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Opening Debit</FormLabel>
+                        <FormLabel>{t('parties.openingDebit')}</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} data-testid="input-party-debit" />
                         </FormControl>
@@ -430,7 +432,7 @@ export default function Parties() {
                     name="openingCredit"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Opening Credit</FormLabel>
+                        <FormLabel>{t('parties.openingCredit')}</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" {...field} data-testid="input-party-credit" />
                         </FormControl>
@@ -443,7 +445,7 @@ export default function Parties() {
                 <Collapsible open={shippingOpen} onOpenChange={setShippingOpen}>
                   <CollapsibleTrigger asChild>
                     <Button variant="outline" type="button" className="w-full justify-between">
-                      <span>Shipping Address (Optional)</span>
+                      <span>{t('parties.shippingAddressOptional')}</span>
                       {shippingOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
                   </CollapsibleTrigger>
@@ -453,9 +455,9 @@ export default function Parties() {
                       name="shipName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Shipping Name</FormLabel>
+                          <FormLabel>{t('parties.shippingName')}</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="Recipient name" data-testid="input-party-shipping-name" />
+                            <Input {...field} placeholder={t('parties.recipientName')} data-testid="input-party-shipping-name" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -466,7 +468,7 @@ export default function Parties() {
                       name="shipAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Shipping Address</FormLabel>
+                          <FormLabel>{t('parties.shippingAddress')}</FormLabel>
                           <FormControl>
                             <Input {...field} data-testid="input-party-shipping-address" />
                           </FormControl>
@@ -480,7 +482,7 @@ export default function Parties() {
                         name="shipCity"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Shipping City</FormLabel>
+                            <FormLabel>{t('parties.shippingCity')}</FormLabel>
                             <FormControl>
                               <Input {...field} data-testid="input-party-shipping-city" />
                             </FormControl>
@@ -493,7 +495,7 @@ export default function Parties() {
                         name="shipState"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Shipping State</FormLabel>
+                            <FormLabel>{t('parties.shippingState')}</FormLabel>
                             <FormControl>
                               <Input {...field} data-testid="input-party-shipping-state" />
                             </FormControl>
@@ -506,7 +508,7 @@ export default function Parties() {
                         name="shipPincode"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Shipping Pincode</FormLabel>
+                            <FormLabel>{t('parties.shippingPincode')}</FormLabel>
                             <FormControl>
                               <Input {...field} data-testid="input-party-shipping-pincode" />
                             </FormControl>
@@ -524,9 +526,9 @@ export default function Parties() {
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                       <div className="space-y-0.5">
-                        <FormLabel className="text-base">Share Across Companies</FormLabel>
+                        <FormLabel className="text-base">{t('parties.shareAcrossCompanies')}</FormLabel>
                         <p className="text-sm text-muted-foreground">
-                          Enable to make this customer available in all companies
+                          {t('parties.shareAcrossCompaniesDesc')}
                         </p>
                       </div>
                       <FormControl>
@@ -551,14 +553,14 @@ export default function Parties() {
                     }}
                     data-testid="button-cancel"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     type="submit"
                     disabled={createMutation.isPending || updateMutation.isPending}
                     data-testid="button-save-party"
                   >
-                    {createMutation.isPending || updateMutation.isPending ? "Saving..." : "Save"}
+                    {createMutation.isPending || updateMutation.isPending ? t('common.saving') : t('common.save')}
                   </Button>
                 </div>
               </form>
@@ -570,11 +572,11 @@ export default function Parties() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between gap-4">
-            <CardTitle>Customer List</CardTitle>
+            <CardTitle>{t('parties.customerList')}</CardTitle>
             <div className="relative w-full max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name, code, or city..."
+                placeholder={t('parties.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -594,15 +596,15 @@ export default function Parties() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>City</TableHead>
-                  <TableHead>Pincode</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>GST No</TableHead>
-                  <TableHead className="text-right">Op. Debit</TableHead>
-                  <TableHead className="text-right">Op. Credit</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t('parties.code')}</TableHead>
+                  <TableHead>{t('parties.name')}</TableHead>
+                  <TableHead>{t('parties.city')}</TableHead>
+                  <TableHead>{t('parties.pincode')}</TableHead>
+                  <TableHead>{t('parties.phone')}</TableHead>
+                  <TableHead>{t('parties.gstNo')}</TableHead>
+                  <TableHead className="text-right">{t('parties.opDebit')}</TableHead>
+                  <TableHead className="text-right">{t('parties.opCredit')}</TableHead>
+                  <TableHead className="text-right">{t('common.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -613,7 +615,7 @@ export default function Parties() {
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{party.name}</span>
                         {party.isShared && (
-                          <Badge variant="outline" className="text-xs">Shared</Badge>
+                          <Badge variant="outline" className="text-xs">{t('parties.shared')}</Badge>
                         )}
                       </div>
                       {party.shortName && (
@@ -653,9 +655,9 @@ export default function Parties() {
           ) : (
             <div className="flex flex-col items-center justify-center py-12">
               <Users className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-lg font-medium text-muted-foreground">No customers found</p>
+              <p className="text-lg font-medium text-muted-foreground">{t('parties.noCustomersFound')}</p>
               <p className="text-sm text-muted-foreground">
-                Get started by adding your first customer
+                {t('parties.getStarted')}
               </p>
             </div>
           )}
