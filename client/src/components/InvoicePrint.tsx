@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { format } from "date-fns";
 import { numberToWords } from "@/lib/number-to-words";
+import { translateToTamil } from "@/lib/tamil-translator";
 
 interface InvoiceItem {
   id?: number;
@@ -70,10 +71,11 @@ interface InvoicePrintProps {
   companyPhone?: string;
   companyState?: string;
   companyPincode?: string;
+  enableTamilPrint?: boolean;
 }
 
 export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
-  ({ invoice, template, companyName, companyAddress, companyGst, companyPhone }, ref) => {
+  ({ invoice, template, companyName, companyAddress, companyGst, companyPhone, enableTamilPrint }, ref) => {
     const isB4 = template.formatType === "B4";
     const pageWidth = isB4 ? "250mm" : "210mm";
     const pageHeight = isB4 ? "353mm" : "297mm";
@@ -137,7 +139,7 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
         <div style={{ border: "1px solid black", padding: "10px", marginBottom: "10px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
             <div>
-              <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "11px" }}>Bill To:</div>
+              <div style={{ fontWeight: 700, marginBottom: "4px", fontSize: "11px" }}>{translateToTamil("Bill To", enableTamilPrint)}:</div>
               <div style={{ fontWeight: 600, fontSize: "12px" }}>{invoice.partyName || "Cash Customer"}</div>
               {invoice.partyAddress && <div style={{ fontSize: "10px" }}>{invoice.partyAddress}</div>}
               {invoice.partyCity && <div style={{ fontSize: "10px" }}>{invoice.partyCity}{invoice.partyState ? `, ${invoice.partyState}` : ""}</div>}
@@ -433,7 +435,7 @@ export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintPro
 InvoiceB4CenteredPrint.displayName = "InvoiceB4CenteredPrint";
 
 export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>(
-  ({ invoice, template, companyName }, ref) => {
+  ({ invoice, template, companyName, enableTamilPrint }, ref) => {
     const is3Inch = template.formatType === "thermal_3inch" || template.formatType === "3inch";
     const width = is3Inch ? "80mm" : "112mm";
 

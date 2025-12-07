@@ -69,10 +69,11 @@ interface TallyB2BInvoiceProps {
   companyPhone?: string;
   companyState?: string;
   companyPincode?: string;
+  enableTamilPrint?: boolean;
 }
 
 export const TallyB2BInvoice = forwardRef<HTMLDivElement, TallyB2BInvoiceProps>(
-  ({ invoice, template, companyName, companyAddress, companyGst, companyPhone, companyState, companyPincode }, ref) => {
+  ({ invoice, template, companyName, companyAddress, companyGst, companyPhone, companyState, companyPincode, enableTamilPrint }, ref) => {
     const totalTax = invoice.totalCgst + invoice.totalSgst;
     const taxableAmount = invoice.subtotal - invoice.totalDiscount;
 

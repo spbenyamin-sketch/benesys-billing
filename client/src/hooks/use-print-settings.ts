@@ -13,6 +13,7 @@ export interface PrintSettings {
   printCopiesDebitNote: number;
   showPrintConfirmation: boolean;
   defaultPrinterName: string;
+  enableTamilPrint: boolean;
 }
 
 const DEFAULT_PRINT_SETTINGS: PrintSettings = {
@@ -28,6 +29,7 @@ const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   printCopiesDebitNote: 2,
   showPrintConfirmation: true,
   defaultPrinterName: "",
+  enableTamilPrint: false,
 };
 
 const PRINT_SETTINGS_KEY = "printSettings";
@@ -108,5 +110,6 @@ export function usePrintSettings() {
     shouldAutoPrint,
     getPrintCopies,
     showConfirmation: settings.showPrintConfirmation,
+    enableTamilPrint: settings.enableTamilPrint,
   };
 }

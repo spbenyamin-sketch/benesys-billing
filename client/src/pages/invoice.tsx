@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Printer, ArrowLeft, Edit } from "lucide-react";
+import { Printer, ArrowLeft, Edit, Globe } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import { format } from "date-fns";
@@ -20,6 +20,7 @@ import { InvoiceA4Print, InvoiceThermalPrint } from "@/components/InvoicePrint";
 import { TallyB2BInvoice } from "@/components/TallyB2BInvoice";
 import { usePrintSettings } from "@/hooks/use-print-settings";
 import { useCompany } from "@/contexts/CompanyContext";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface SaleItem {
   id: number;
@@ -92,9 +93,13 @@ export default function Invoice() {
   const saleId = params.id;
   const [hasPrinted, setHasPrinted] = useState(false);
   const [templateReady, setTemplateReady] = useState(false);
+  const [enableTamilPrint, setEnableTamilPrint] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, enableTamilPrint: globalTamilPrint } = usePrintSettings();
   const { currentCompany } = useCompany();
+  
+  // Use global Tamil setting or local override
+  const isTamilEnabled = enableTamilPrint || globalTamilPrint;
   
   const searchParams = new URLSearchParams(searchString);
   const autoPrintRequested = searchParams.get("print") === "auto";
@@ -290,17 +295,31 @@ export default function Invoice() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6 print:hidden">
+      <div className="flex items-center justify-between mb-6 print:hidden gap-4">
         <Button variant="outline" asChild>
           <Link href="/sales">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Sales
           </Link>
         </Button>
-        <Button onClick={() => handlePrint()} data-testid="button-print">
-          <Printer className="mr-2 h-4 w-4" />
-          Print Invoice
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 border rounded-md px-3 py-2">
+            <Checkbox 
+              id="tamil-print" 
+              checked={enableTamilPrint}
+              onCheckedChange={(checked) => setEnableTamilPrint(checked as boolean)}
+              data-testid="checkbox-tamil-print"
+            />
+            <label htmlFor="tamil-print" className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+              <Globe className="h-4 w-4" />
+              தமிழ் (Tamil)
+            </label>
+          </div>
+          <Button onClick={() => handlePrint()} data-testid="button-print">
+            <Printer className="mr-2 h-4 w-4" />
+            Print Invoice
+          </Button>
+        </div>
       </div>
 
       <div style={{ position: 'absolute', left: '-9999px', top: '0' }}>
@@ -315,6 +334,7 @@ export default function Invoice() {
             companyPhone={currentCompany?.phone}
             companyState={currentCompany?.state}
             companyPincode={currentCompany?.city}
+            enableTamilPrint={isTamilEnabled}
           />
         ) : isThermal ? (
           <InvoiceThermalPrint
@@ -322,6 +342,7 @@ export default function Invoice() {
             invoice={prepareInvoiceData()}
             template={activeTemplate}
             companyName={currentCompany?.name || "Your Company Name"}
+            enableTamilPrint={isTamilEnabled}
           />
         ) : (
           <InvoiceA4Print
@@ -332,6 +353,7 @@ export default function Invoice() {
             companyAddress={currentCompany?.address}
             companyGst={currentCompany?.gstNo}
             companyPhone={currentCompany?.phone}
+            enableTamilPrint={isTamilEnabled}
           />
         )}
       </div>
