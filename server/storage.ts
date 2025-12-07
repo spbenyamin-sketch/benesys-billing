@@ -1500,19 +1500,33 @@ export class DatabaseStorage implements IStorage {
           sgstTotal: sales.sgstTotal,
           grandTotal: sales.grandTotal,
           totalQty: sales.totalQty,
+          gstType: sales.gstType,
         })
         .from(sales)
         .innerJoin(saleItems, eq(saleItems.saleId, sales.id))
         .where(and(and(...conditions), eq(saleItems.itemId, itemIdNum)))
         .orderBy(desc(sales.date), desc(sales.id));
-      return salesWithItem;
+      
+      return salesWithItem.map(row => ({
+        ...row,
+        igstTotal: row.gstType === 1 ? row.taxValue : "0",
+        cgstTotal: row.gstType === 1 ? "0" : row.cgstTotal,
+        sgstTotal: row.gstType === 1 ? "0" : row.sgstTotal,
+      }));
     }
 
-    return await db
+    const salesData = await db
       .select()
       .from(sales)
       .where(and(...conditions))
       .orderBy(desc(sales.date), desc(sales.id));
+    
+    return salesData.map(row => ({
+      ...row,
+      igstTotal: row.gstType === 1 ? row.taxValue : "0",
+      cgstTotal: row.gstType === 1 ? "0" : row.cgstTotal,
+      sgstTotal: row.gstType === 1 ? "0" : row.sgstTotal,
+    }));
   }
 
   async getPurchasesReport(companyId: number, startDate?: string, endDate?: string): Promise<any[]> {

@@ -40,8 +40,10 @@ interface SaleReport {
   taxValue: string;
   cgstTotal: string;
   sgstTotal: string;
+  igstTotal: string;
   grandTotal: string;
   totalQty: string;
+  gstType: number;
 }
 
 export default function SalesReport() {
@@ -89,10 +91,11 @@ export default function SalesReport() {
       taxValue: acc.taxValue + parseFloat(sale.taxValue),
       cgst: acc.cgst + parseFloat(sale.cgstTotal),
       sgst: acc.sgst + parseFloat(sale.sgstTotal),
+      igst: acc.igst + parseFloat(sale.igstTotal),
       grandTotal: acc.grandTotal + parseFloat(sale.grandTotal),
     }),
-    { qty: 0, saleValue: 0, taxValue: 0, cgst: 0, sgst: 0, grandTotal: 0 }
-  ) || { qty: 0, saleValue: 0, taxValue: 0, cgst: 0, sgst: 0, grandTotal: 0 };
+    { qty: 0, saleValue: 0, taxValue: 0, cgst: 0, sgst: 0, igst: 0, grandTotal: 0 }
+  ) || { qty: 0, saleValue: 0, taxValue: 0, cgst: 0, sgst: 0, igst: 0, grandTotal: 0 };
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
@@ -115,6 +118,7 @@ export default function SalesReport() {
         { header: "Sale Value", key: "saleValue", width: 12, format: formatCurrency },
         { header: "CGST", key: "cgstTotal", width: 10, format: formatCurrency },
         { header: "SGST", key: "sgstTotal", width: 10, format: formatCurrency },
+        { header: "IGST", key: "igstTotal", width: 10, format: formatCurrency },
         { header: "Tax", key: "taxValue", width: 10, format: formatCurrency },
         { header: "Total", key: "grandTotal", width: 12, format: formatCurrency },
       ],
@@ -126,12 +130,13 @@ export default function SalesReport() {
         saleValue: sale.saleValue,
         cgstTotal: sale.cgstTotal,
         sgstTotal: sale.sgstTotal,
+        igstTotal: sale.igstTotal,
         taxValue: sale.taxValue,
         grandTotal: sale.grandTotal,
       })),
       summary: {
         label: "Total",
-        values: ["", "", "", totals.saleValue.toFixed(2), totals.cgst.toFixed(2), totals.sgst.toFixed(2), totals.taxValue.toFixed(2), totals.grandTotal.toFixed(2)],
+        values: ["", "", "", totals.saleValue.toFixed(2), totals.cgst.toFixed(2), totals.sgst.toFixed(2), totals.igst.toFixed(2), totals.taxValue.toFixed(2), totals.grandTotal.toFixed(2)],
       },
     });
   };
@@ -152,6 +157,7 @@ export default function SalesReport() {
         { header: "Sale Value", key: "saleValue", width: 12, format: formatCurrency },
         { header: "CGST", key: "cgstTotal", width: 10, format: formatCurrency },
         { header: "SGST", key: "sgstTotal", width: 10, format: formatCurrency },
+        { header: "IGST", key: "igstTotal", width: 10, format: formatCurrency },
         { header: "Tax", key: "taxValue", width: 10, format: formatCurrency },
         { header: "Total", key: "grandTotal", width: 12, format: formatCurrency },
       ],
@@ -163,12 +169,13 @@ export default function SalesReport() {
         saleValue: sale.saleValue,
         cgstTotal: sale.cgstTotal,
         sgstTotal: sale.sgstTotal,
+        igstTotal: sale.igstTotal,
         taxValue: sale.taxValue,
         grandTotal: sale.grandTotal,
       })),
       summary: {
         label: "Total",
-        values: ["", "", "", totals.saleValue.toFixed(2), totals.cgst.toFixed(2), totals.sgst.toFixed(2), totals.taxValue.toFixed(2), totals.grandTotal.toFixed(2)],
+        values: ["", "", "", totals.saleValue.toFixed(2), totals.cgst.toFixed(2), totals.sgst.toFixed(2), totals.igst.toFixed(2), totals.taxValue.toFixed(2), totals.grandTotal.toFixed(2)],
       },
     });
   };
@@ -462,6 +469,7 @@ export default function SalesReport() {
                       <TableHead className="text-right">Sale Value</TableHead>
                       <TableHead className="text-right">CGST</TableHead>
                       <TableHead className="text-right">SGST</TableHead>
+                      <TableHead className="text-right">IGST</TableHead>
                       <TableHead className="text-right">Tax</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
@@ -487,6 +495,9 @@ export default function SalesReport() {
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           ₹{parseFloat(sale.sgstTotal).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-mono">
+                          ₹{parseFloat(sale.igstTotal).toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           ₹{parseFloat(sale.taxValue).toFixed(2)}
