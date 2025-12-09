@@ -463,7 +463,11 @@ export default function BillSettings() {
   const [formData, setFormData] = useState(defaultFormData);
   const [activeTab, setActiveTab] = useState("standard");
   const { settings: printSettings } = usePrintSettingsHook();
-  const [tempPrintSettings, setTempPrintSettings] = useState<PrintSettings>(printSettings);
+  const [tempPrintSettings, setTempPrintSettings] = useState<PrintSettings>(() => printSettings);
+
+  useEffect(() => {
+    setTempPrintSettings(printSettings);
+  }, [printSettings]);
 
   const { data: templates, isLoading } = useQuery<BillTemplate[]>({
     queryKey: ["/api/bill-templates"],
