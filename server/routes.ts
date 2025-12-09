@@ -1072,7 +1072,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/bill-templates', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (currentUser?.role !== 'superadmin') {
         return res.status(403).json({ message: "Only super admin can create bill templates" });
       }
       const validated = insertBillTemplateSchema.parse(req.body);
@@ -1090,7 +1090,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/bill-templates/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (currentUser?.role !== 'superadmin') {
         return res.status(403).json({ message: "Only super admin can update bill templates" });
       }
       const validated = insertBillTemplateSchema.parse(req.body);
@@ -1108,7 +1108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/bill-templates/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'admin') {
+      if (currentUser?.role !== 'superadmin') {
         return res.status(403).json({ message: "Only super admin can delete bill templates" });
       }
       await storage.deleteBillTemplate(parseInt(req.params.id), req.companyId);
