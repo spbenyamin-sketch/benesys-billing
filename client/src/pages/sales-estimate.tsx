@@ -292,7 +292,8 @@ export default function SalesEstimate() {
         })),
       };
 
-      return apiRequest("POST", "/api/sales", saleData);
+      const response = await apiRequest("POST", "/api/sales", saleData);
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
