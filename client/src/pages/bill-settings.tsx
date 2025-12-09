@@ -628,36 +628,6 @@ export default function BillSettings() {
 
         <TabsContent value="standard" className="mt-6">
           <div className="space-y-6">
-            {/* Format Selector */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Select Printer Format</CardTitle>
-                <CardDescription>Choose format to create or manage templates</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {FORMAT_TYPES.map((fmt) => (
-                    <button
-                      key={fmt.value}
-                      onClick={() => {
-                        setSelectedFormat(fmt.value);
-                        setFormData({ ...formData, formatType: fmt.value });
-                      }}
-                      className={`p-3 rounded-lg border-2 transition ${
-                        selectedFormat === fmt.value
-                          ? "border-primary bg-primary/5"
-                          : "border-muted hover:border-primary/50"
-                      }`}
-                      data-testid={`button-format-${fmt.value}`}
-                    >
-                      <div className="font-medium text-sm">{fmt.label}</div>
-                      <div className="text-xs text-muted-foreground">{fmt.description}</div>
-                    </button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Template Creation & Management */}
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
