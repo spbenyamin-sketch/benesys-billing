@@ -139,6 +139,13 @@ export default function Invoice() {
     }
   }, [sale, template, templateLoading]);
 
+  // Force template ready if auto-print is requested and sale is loaded
+  useEffect(() => {
+    if (autoPrintRequested && sale && !saleLoading) {
+      setTemplateReady(true);
+    }
+  }, [autoPrintRequested, sale, saleLoading]);
+
   const getPageStyle = useCallback((format: string) => {
     if (format === "B4") {
       return `
@@ -176,16 +183,23 @@ export default function Invoice() {
     pageStyle: getPageStyle(currentFormat),
   });
 
-  const isLoading = saleLoading || itemsLoading || !templateReady;
+  // For auto-print, don't wait for items - just show and print
+  const isLoading = autoPrintRequested ? saleLoading : (saleLoading || itemsLoading || !templateReady);
 
   useEffect(() => {
-    if (sale && items && templateReady && !hasPrinted && !saleLoading && !itemsLoading) {
+    // For auto-print, trigger as soon as sale and template are ready (don't wait for items)
+    if (autoPrintRequested && sale && templateReady && !hasPrinted && !saleLoading) {
+      setHasPrinted(true);
+      setTimeout(() => {
+        handlePrint();
+      }, 800);
+    } else if (sale && items && templateReady && !hasPrinted && !saleLoading && !itemsLoading) {
       const billType = sale.billType === "EST" ? "EST" : 
                        sale.billType === "CN" ? "CN" : 
                        sale.saleType || "B2C";
       
       const isDirect = shouldDirectPrint(billType);
-      const shouldPrint = autoPrintRequested || shouldAutoPrint(billType) || isDirect;
+      const shouldPrint = shouldAutoPrint(billType) || isDirect;
       
       if (shouldPrint) {
         setHasPrinted(true);
