@@ -569,8 +569,13 @@ export default function BillSettings() {
     return format ? format.label : formatType;
   };
 
+  const [selectedFormat, setSelectedFormat] = useState<string>("A4");
+  
   const standardTemplates = templates?.filter(t => !t.formatType?.startsWith("thermal")) || [];
   const thermalTemplates = templates?.filter(t => t.formatType?.startsWith("thermal")) || [];
+  const filteredTemplates = selectedFormat.startsWith("thermal") 
+    ? thermalTemplates 
+    : standardTemplates;
 
   const isThermal = formData.formatType.startsWith("thermal");
 
@@ -579,36 +584,64 @@ export default function BillSettings() {
       <div>
         <h1 className="text-3xl font-semibold tracking-tight">Bill Settings</h1>
         <p className="text-muted-foreground mt-2">
-          Configure invoice formats for A4, B4, and thermal printers. Assign templates to B2B, B2C, or Estimate.
+          All printer formats, templates, and quick print settings in one place
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-xl grid-cols-3">
+        <TabsList className="grid w-full max-w-xl grid-cols-2">
           <TabsTrigger value="standard" data-testid="tab-standard">
             <FileText className="mr-2 h-4 w-4" />
-            A4 / B4 Format
-          </TabsTrigger>
-          <TabsTrigger value="thermal" data-testid="tab-thermal">
-            <Printer className="mr-2 h-4 w-4" />
-            Thermal Printer
+            Printer Formats & Templates
           </TabsTrigger>
           <TabsTrigger value="print-settings" data-testid="tab-print-settings">
             <Zap className="mr-2 h-4 w-4" />
-            Quick Print
+            Quick Print Settings
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="standard" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6">
+            {/* Format Selector */}
             <Card>
+              <CardHeader>
+                <CardTitle>Select Printer Format</CardTitle>
+                <CardDescription>Choose format to create or manage templates</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {FORMAT_TYPES.map((fmt) => (
+                    <button
+                      key={fmt.value}
+                      onClick={() => {
+                        setSelectedFormat(fmt.value);
+                        setFormData({ ...formData, formatType: fmt.value });
+                      }}
+                      className={`p-3 rounded-lg border-2 transition ${
+                        selectedFormat === fmt.value
+                          ? "border-primary bg-primary/5"
+                          : "border-muted hover:border-primary/50"
+                      }`}
+                      data-testid={`button-format-${fmt.value}`}
+                    >
+                      <div className="font-medium text-sm">{fmt.label}</div>
+                      <div className="text-xs text-muted-foreground">{fmt.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Template Creation & Management */}
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  {formData.id ? "Edit Template" : "Create A4/B4 Template"}
+                  {formData.id ? "Edit Template" : `Create ${selectedFormat} Template`}
                 </CardTitle>
                 <CardDescription>
-                  Standard paper formats like Tally for GST invoices
+                  Configure layout and display options
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -627,14 +660,20 @@ export default function BillSettings() {
                     <Label htmlFor="formatType">Paper Format</Label>
                     <Select
                       value={formData.formatType}
-                      onValueChange={(value) => setFormData({ ...formData, formatType: value })}
+                      onValueChange={(value) => {
+                        setFormData({ ...formData, formatType: value });
+                        setSelectedFormat(value);
+                      }}
                     >
                       <SelectTrigger id="formatType" data-testid="select-format-type">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="A4">A4 (210 × 297 mm)</SelectItem>
-                        <SelectItem value="B4">B4 (250 × 353 mm)</SelectItem>
+                        {FORMAT_TYPES.map((fmt) => (
+                          <SelectItem key={fmt.value} value={fmt.value}>
+                            {fmt.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -873,241 +912,14 @@ export default function BillSettings() {
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-8">
-                    No A4/B4 templates saved yet. Create one to get started.
+                    No templates saved yet. Create one to get started.
                   </p>
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
         </TabsContent>
-
-        <TabsContent value="thermal" className="mt-6">
-          <div className="grid gap-6 lg:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Printer className="h-5 w-5" />
-                  {formData.id ? "Edit Template" : "Create Thermal Template"}
-                </CardTitle>
-                <CardDescription>
-                  Configure for POS thermal printers (80mm or 112mm width)
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Template Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g., POS Receipt 3 inch"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      data-testid="input-thermal-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="thermalFormat">Printer Width</Label>
-                    <Select
-                      value={formData.formatType}
-                      onValueChange={(value) => setFormData({ ...formData, formatType: value })}
-                    >
-                      <SelectTrigger id="thermalFormat" data-testid="select-thermal-format">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="thermal_3inch">3 Inch (80mm)</SelectItem>
-                        <SelectItem value="thermal_4inch">4 Inch (112mm)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="assignedTo">Assign to Transaction Type</Label>
-                  <Select
-                    value={formData.assignedTo}
-                    onValueChange={(value) => setFormData({ ...formData, assignedTo: value })}
-                  >
-                    <SelectTrigger id="assignedTo" data-testid="select-thermal-assigned-to">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ASSIGNMENT_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <LogoUploader
-                  currentLogoUrl={formData.logoUrl}
-                  onLogoChange={(logoUrl) => setFormData({ ...formData, logoUrl })}
-                />
-
-                <div className="space-y-2">
-                  <Label htmlFor="headerText">Header Text (Shop Info)</Label>
-                  <Textarea
-                    id="headerText"
-                    placeholder="Shop Name&#10;Address&#10;Phone, GST No"
-                    value={formData.headerText}
-                    onChange={(e) => setFormData({ ...formData, headerText: e.target.value })}
-                    rows={3}
-                    data-testid="input-thermal-header"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="footerText">Footer Text</Label>
-                  <Textarea
-                    id="footerText"
-                    placeholder="Thank you! Visit Again"
-                    value={formData.footerText}
-                    onChange={(e) => setFormData({ ...formData, footerText: e.target.value })}
-                    rows={2}
-                    data-testid="input-thermal-footer"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="fontSize">Font Size</Label>
-                  <Select
-                    value={formData.fontSize.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, fontSize: parseInt(value) })}
-                  >
-                    <SelectTrigger id="fontSize" data-testid="select-thermal-font-size">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="8">Small (8pt)</SelectItem>
-                      <SelectItem value="10">Medium (10pt)</SelectItem>
-                      <SelectItem value="12">Large (12pt)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3 pt-2">
-                  <Label>Display Options</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="showTaxBreakup" className="font-normal">Tax Breakup (CGST/SGST)</Label>
-                      <Switch
-                        id="showTaxBreakup"
-                        checked={formData.showTaxBreakup}
-                        onCheckedChange={(checked) => setFormData({ ...formData, showTaxBreakup: checked })}
-                        data-testid="switch-thermal-tax"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="showHsnCode" className="font-normal">HSN Code</Label>
-                      <Switch
-                        id="showHsnCode"
-                        checked={formData.showHsnCode}
-                        onCheckedChange={(checked) => setFormData({ ...formData, showHsnCode: checked })}
-                        data-testid="switch-thermal-hsn"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="showCashReturn" className="font-normal">Cash Given/Return (B2C)</Label>
-                      <Switch
-                        id="showCashReturn"
-                        checked={formData.showCashReturn}
-                        onCheckedChange={(checked) => setFormData({ ...formData, showCashReturn: checked })}
-                        data-testid="switch-cash-return"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="enableTamilPrint" className="font-normal">தமிழ் Tamil Print</Label>
-                      <Switch
-                        id="enableTamilPrint"
-                        checked={formData.enableTamilPrint}
-                        onCheckedChange={(checked) => setFormData({ ...formData, enableTamilPrint: checked })}
-                        data-testid="switch-thermal-tamil-print"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button
-                    onClick={() => saveMutation.mutate()}
-                    disabled={saveMutation.isPending || !formData.name}
-                    data-testid="button-save-thermal"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    {saveMutation.isPending ? "Saving..." : formData.id ? "Update Template" : "Save Template"}
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowPreview(true)} data-testid="button-thermal-preview">
-                    <Eye className="mr-2 h-4 w-4" />
-                    Preview
-                  </Button>
-                  {formData.id && (
-                    <Button variant="ghost" onClick={resetForm}>
-                      Cancel Edit
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Printer className="h-5 w-5" />
-                  Saved Thermal Templates
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoading ? (
-                  <div className="text-center py-8 text-muted-foreground">Loading...</div>
-                ) : thermalTemplates.length > 0 ? (
-                  <div className="space-y-2">
-                    {thermalTemplates.map((template) => (
-                      <div
-                        key={template.id}
-                        className="flex items-center justify-between p-3 border rounded-md hover-elevate"
-                      >
-                        <div>
-                          <div className="font-medium flex items-center flex-wrap gap-1">
-                            {template.name}
-                            {getAssignmentBadge(template.assignedTo)}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {template.formatType === "thermal_3inch" ? "3 inch (80mm)" : "4 inch (112mm)"} • Font: {template.fontSize}pt
-                          </div>
-                        </div>
-                        <div className="flex gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => loadTemplate(template)}
-                            data-testid={`button-edit-thermal-${template.id}`}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => setDeleteConfirm(template.id)}
-                            data-testid={`button-delete-thermal-${template.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No thermal templates saved yet. Create one to get started.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
         <TabsContent value="print-settings" className="mt-6">
           <PrintSettingsTab templates={templates || []} />
         </TabsContent>
