@@ -589,14 +589,10 @@ export default function BillSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-xl grid-cols-2">
+        <TabsList className="grid w-full max-w-md grid-cols-1">
           <TabsTrigger value="standard" data-testid="tab-standard">
             <FileText className="mr-2 h-4 w-4" />
-            Printer Formats & Templates
-          </TabsTrigger>
-          <TabsTrigger value="print-settings" data-testid="tab-print-settings">
-            <Zap className="mr-2 h-4 w-4" />
-            Quick Print Settings
+            Bill Settings - Templates & Quick Print
           </TabsTrigger>
         </TabsList>
 
@@ -918,10 +914,10 @@ export default function BillSettings() {
               </CardContent>
             </Card>
             </div>
+
+            {/* Quick Print Settings - MERGED INTO SAME SCREEN */}
+            <PrintSettingsTab templates={templates || []} />
           </div>
-        </TabsContent>
-        <TabsContent value="print-settings" className="mt-6">
-          <PrintSettingsTab templates={templates || []} />
         </TabsContent>
       </Tabs>
 
