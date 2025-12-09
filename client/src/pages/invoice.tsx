@@ -98,7 +98,7 @@ export default function Invoice() {
   const [enableTamilPrint, setEnableTamilPrint] = useState(false);
   const [isDownloadingJSON, setIsDownloadingJSON] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint } = usePrintSettings();
   const { currentCompany } = useCompany();
   const { toast } = useToast();
   
@@ -184,16 +184,25 @@ export default function Invoice() {
                        sale.billType === "CN" ? "CN" : 
                        sale.saleType || "B2C";
       
-      const shouldPrint = autoPrintRequested || shouldAutoPrint(billType);
+      const isDirect = shouldDirectPrint(billType);
+      const shouldPrint = autoPrintRequested || shouldAutoPrint(billType) || isDirect;
       
       if (shouldPrint) {
         setHasPrinted(true);
-        setTimeout(() => {
-          handlePrint();
-        }, 800);
+        if (isDirect) {
+          // Direct print - trigger immediately without preview
+          setTimeout(() => {
+            handlePrint();
+          }, 500);
+        } else {
+          // Normal auto-print with preview
+          setTimeout(() => {
+            handlePrint();
+          }, 800);
+        }
       }
     }
-  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, autoPrintRequested, shouldAutoPrint]);
+  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint]);
 
   if (isLoading) {
     return (

@@ -130,6 +130,11 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
       printCopiesDebitNote: 2,
       showPrintConfirmation: true,
       defaultPrinterName: "",
+      directPrintB2B: false,
+      directPrintB2C: false,
+      directPrintEstimate: false,
+      directPrintCreditNote: false,
+      directPrintDebitNote: false,
     };
     setSettings(defaultSettings);
     savePrintSettings(defaultSettings);
@@ -255,6 +260,65 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 onCheckedChange={(checked) => setSettings({ ...settings, showPrintConfirmation: checked })}
                 data-testid="switch-print-confirmation"
               />
+            </div>
+          </div>
+
+          <div className="border-t pt-4 space-y-4">
+            <Label className="text-base font-medium">Direct Print Mode</Label>
+            <p className="text-sm text-muted-foreground">
+              Skip preview and send bills directly to printer with no preview modal
+            </p>
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="directPrintB2B" className="font-normal">B2B Credit Sale</Label>
+                <Switch
+                  id="directPrintB2B"
+                  checked={settings.directPrintB2B}
+                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintB2B: checked })}
+                  data-testid="switch-direct-print-b2b"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="directPrintB2C" className="font-normal">B2C Retail Sale</Label>
+                <Switch
+                  id="directPrintB2C"
+                  checked={settings.directPrintB2C}
+                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintB2C: checked })}
+                  data-testid="switch-direct-print-b2c"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="directPrintEstimate" className="font-normal">Estimate/Quotation</Label>
+                <Switch
+                  id="directPrintEstimate"
+                  checked={settings.directPrintEstimate}
+                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintEstimate: checked })}
+                  data-testid="switch-direct-print-estimate"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="directPrintCreditNote" className="font-normal">Credit Note</Label>
+                <Switch
+                  id="directPrintCreditNote"
+                  checked={settings.directPrintCreditNote}
+                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintCreditNote: checked })}
+                  data-testid="switch-direct-print-credit-note"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Label htmlFor="directPrintDebitNote" className="font-normal">Debit Note</Label>
+                <Switch
+                  id="directPrintDebitNote"
+                  checked={settings.directPrintDebitNote}
+                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintDebitNote: checked })}
+                  data-testid="switch-direct-print-debit-note"
+                />
+              </div>
             </div>
           </div>
 

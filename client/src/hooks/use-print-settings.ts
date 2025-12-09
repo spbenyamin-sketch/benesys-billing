@@ -14,6 +14,11 @@ export interface PrintSettings {
   showPrintConfirmation: boolean;
   defaultPrinterName: string;
   enableTamilPrint: boolean;
+  directPrintB2B: boolean;
+  directPrintB2C: boolean;
+  directPrintEstimate: boolean;
+  directPrintCreditNote: boolean;
+  directPrintDebitNote: boolean;
 }
 
 const DEFAULT_PRINT_SETTINGS: PrintSettings = {
@@ -30,6 +35,11 @@ const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   showPrintConfirmation: true,
   defaultPrinterName: "",
   enableTamilPrint: false,
+  directPrintB2B: false,
+  directPrintB2C: false,
+  directPrintEstimate: false,
+  directPrintCreditNote: false,
+  directPrintDebitNote: false,
 };
 
 const PRINT_SETTINGS_KEY = "printSettings";
@@ -105,10 +115,28 @@ export function usePrintSettings() {
     }
   }, [settings]);
 
+  const shouldDirectPrint = useCallback((billType: string): boolean => {
+    switch (billType) {
+      case "B2B":
+        return settings.directPrintB2B;
+      case "B2C":
+        return settings.directPrintB2C;
+      case "EST":
+        return settings.directPrintEstimate;
+      case "CN":
+        return settings.directPrintCreditNote;
+      case "DN":
+        return settings.directPrintDebitNote;
+      default:
+        return false;
+    }
+  }, [settings]);
+
   return {
     settings,
     shouldAutoPrint,
     getPrintCopies,
+    shouldDirectPrint,
     showConfirmation: settings.showPrintConfirmation,
     enableTamilPrint: settings.enableTamilPrint,
   };
