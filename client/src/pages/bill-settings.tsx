@@ -130,6 +130,7 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
       printCopiesDebitNote: 2,
       showPrintConfirmation: true,
       defaultPrinterName: "",
+      enableTamilPrint: false,
       directPrintB2B: false,
       directPrintB2C: false,
       directPrintEstimate: false,
