@@ -462,6 +462,8 @@ export default function BillSettings() {
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
   const [formData, setFormData] = useState(defaultFormData);
   const [activeTab, setActiveTab] = useState("standard");
+  const { settings: printSettings } = usePrintSettingsHook();
+  const [tempPrintSettings, setTempPrintSettings] = useState<PrintSettings>(printSettings);
 
   const { data: templates, isLoading } = useQuery<BillTemplate[]>({
     queryKey: ["/api/bill-templates"],
@@ -521,6 +523,29 @@ export default function BillSettings() {
 
   const resetForm = () => {
     setFormData(defaultFormData);
+  };
+
+  const getPrintSettingsKey = (assignedTo: string): keyof PrintSettings | null => {
+    if (!assignedTo || assignedTo === "none") return null;
+    const typeMap: Record<string, { autoPrint: keyof PrintSettings; directPrint: keyof PrintSettings; copies: keyof PrintSettings }> = {
+      b2b: { autoPrint: "autoPrintB2B", directPrint: "directPrintB2B", copies: "printCopiesB2B" },
+      b2c: { autoPrint: "autoPrintB2C", directPrint: "directPrintB2C", copies: "printCopiesB2C" },
+      estimate: { autoPrint: "autoPrintEstimate", directPrint: "directPrintEstimate", copies: "printCopiesEstimate" },
+      credit_note: { autoPrint: "autoPrintCreditNote", directPrint: "directPrintCreditNote", copies: "printCopiesCreditNote" },
+      debit_note: { autoPrint: "autoPrintDebitNote", directPrint: "directPrintDebitNote", copies: "printCopiesDebitNote" },
+    };
+    return typeMap[assignedTo]?.autoPrint || null;
+  };
+
+  const getPrintSettings = (assignedTo: string) => {
+    const typeMap: Record<string, { autoPrint: keyof PrintSettings; directPrint: keyof PrintSettings; copies: keyof PrintSettings }> = {
+      b2b: { autoPrint: "autoPrintB2B", directPrint: "directPrintB2B", copies: "printCopiesB2B" },
+      b2c: { autoPrint: "autoPrintB2C", directPrint: "directPrintB2C", copies: "printCopiesB2C" },
+      estimate: { autoPrint: "autoPrintEstimate", directPrint: "directPrintEstimate", copies: "printCopiesEstimate" },
+      credit_note: { autoPrint: "autoPrintCreditNote", directPrint: "directPrintCreditNote", copies: "printCopiesCreditNote" },
+      debit_note: { autoPrint: "autoPrintDebitNote", directPrint: "directPrintDebitNote", copies: "printCopiesDebitNote" },
+    };
+    return typeMap[assignedTo] || null;
   };
 
   const loadTemplate = (template: BillTemplate) => {
@@ -693,6 +718,77 @@ export default function BillSettings() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* QUICK PRINT SETTINGS - INTEGRATED INTO TEMPLATE FORM */}
+                {formData.assignedTo && formData.assignedTo !== "none" && getPrintSettings(formData.assignedTo) && (
+                  <div className="border-t pt-4 space-y-4 bg-primary/5 p-4 rounded-lg">
+                    <Label className="text-sm font-semibold flex items-center gap-2">
+                      <Zap className="h-4 w-4" />
+                      Quick Print Settings
+                    </Label>
+                    
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="font-normal text-sm">Auto-Print After Save</Label>
+                          <p className="text-xs text-muted-foreground">Opens print dialog automatically</p>
+                        </div>
+                        <Switch
+                          checked={(tempPrintSettings[getPrintSettings(formData.assignedTo)?.autoPrint as keyof PrintSettings] as boolean) || false}
+                          onCheckedChange={(checked) => {
+                            const settings = getPrintSettings(formData.assignedTo);
+                            if (settings) {
+                              setTempPrintSettings({ ...tempPrintSettings, [settings.autoPrint]: checked });
+                              savePrintSettings({ ...tempPrintSettings, [settings.autoPrint]: checked });
+                            }
+                          }}
+                          data-testid={`switch-auto-print-${formData.assignedTo}`}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="font-normal text-sm">Direct Print Mode</Label>
+                          <p className="text-xs text-muted-foreground">Skip preview, send directly to printer</p>
+                        </div>
+                        <Switch
+                          checked={(tempPrintSettings[getPrintSettings(formData.assignedTo)?.directPrint as keyof PrintSettings] as boolean) || false}
+                          onCheckedChange={(checked) => {
+                            const settings = getPrintSettings(formData.assignedTo);
+                            if (settings) {
+                              setTempPrintSettings({ ...tempPrintSettings, [settings.directPrint]: checked });
+                              savePrintSettings({ ...tempPrintSettings, [settings.directPrint]: checked });
+                            }
+                          }}
+                          data-testid={`switch-direct-print-${formData.assignedTo}`}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-sm font-normal">Print Copies (1-5)</Label>
+                        <Select
+                          value={((tempPrintSettings[getPrintSettings(formData.assignedTo)?.copies as keyof PrintSettings] as number) || 1).toString()}
+                          onValueChange={(value) => {
+                            const settings = getPrintSettings(formData.assignedTo);
+                            if (settings) {
+                              setTempPrintSettings({ ...tempPrintSettings, [settings.copies]: parseInt(value) });
+                              savePrintSettings({ ...tempPrintSettings, [settings.copies]: parseInt(value) });
+                            }
+                          }}
+                        >
+                          <SelectTrigger data-testid={`select-copies-${formData.assignedTo}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5].map(n => (
+                              <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <LogoUploader
                   currentLogoUrl={formData.logoUrl}
@@ -914,9 +1010,6 @@ export default function BillSettings() {
               </CardContent>
             </Card>
             </div>
-
-            {/* Quick Print Settings - BELOW TEMPLATES */}
-            <PrintSettingsTab templates={templates || []} />
           </div>
         </TabsContent>
       </Tabs>
