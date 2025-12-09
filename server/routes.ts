@@ -1072,8 +1072,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/bill-templates', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'superadmin') {
-        return res.status(403).json({ message: "Only super admin can create bill templates" });
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can create bill templates" });
       }
       const validated = insertBillTemplateSchema.parse(req.body);
       const template = await storage.createBillTemplate(validated, req.user.id, req.companyId);
@@ -1090,8 +1090,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put('/api/bill-templates/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'superadmin') {
-        return res.status(403).json({ message: "Only super admin can update bill templates" });
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can update bill templates" });
       }
       const validated = insertBillTemplateSchema.parse(req.body);
       const template = await storage.updateBillTemplate(parseInt(req.params.id), validated, req.companyId);
@@ -1108,8 +1108,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete('/api/bill-templates/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
-      if (currentUser?.role !== 'superadmin') {
-        return res.status(403).json({ message: "Only super admin can delete bill templates" });
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can delete bill templates" });
       }
       await storage.deleteBillTemplate(parseInt(req.params.id), req.companyId);
       res.json({ message: "Bill template deleted successfully" });
