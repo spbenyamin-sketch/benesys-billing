@@ -694,68 +694,6 @@ export default function BillSettings() {
                   </Select>
                 </div>
 
-                {/* Quick Print Settings - MERGED INTO TEMPLATE FORM */}
-                {formData.assignedTo && formData.assignedTo !== "none" && (
-                  <div className="border-t pt-4 space-y-4 bg-muted/30 p-3 rounded-lg">
-                    <Label className="text-sm font-semibold flex items-center gap-2">
-                      <Zap className="h-4 w-4" />
-                      Quick Print Settings for {ASSIGNMENT_OPTIONS.find(o => o.value === formData.assignedTo)?.label}
-                    </Label>
-                    
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="font-normal text-sm">Auto-Print After Save</Label>
-                          <p className="text-xs text-muted-foreground">Open print dialog automatically</p>
-                        </div>
-                        <Switch
-                          checked={settings[`autoPrint${formData.assignedTo.charAt(0).toUpperCase()}${formData.assignedTo.slice(1)}` as keyof PrintSettings] as boolean || false}
-                          onCheckedChange={(checked) => {
-                            const key = `autoPrint${formData.assignedTo.split('_').map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof PrintSettings;
-                            setSettings({ ...settings, [key]: checked });
-                          }}
-                          data-testid={`switch-auto-print-${formData.assignedTo}`}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="font-normal text-sm">Direct Print Mode</Label>
-                          <p className="text-xs text-muted-foreground">Skip preview, send straight to printer</p>
-                        </div>
-                        <Switch
-                          checked={settings[`directPrint${formData.assignedTo.charAt(0).toUpperCase()}${formData.assignedTo.slice(1)}` as keyof PrintSettings] as boolean || false}
-                          onCheckedChange={(checked) => {
-                            const key = `directPrint${formData.assignedTo.split('_').map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof PrintSettings;
-                            setSettings({ ...settings, [key]: checked });
-                          }}
-                          data-testid={`switch-direct-print-${formData.assignedTo}`}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label className="font-normal text-sm">Print Copies</Label>
-                        <Select
-                          value={(settings[`printCopies${formData.assignedTo.charAt(0).toUpperCase()}${formData.assignedTo.slice(1)}` as keyof PrintSettings] as number || 1).toString()}
-                          onValueChange={(value) => {
-                            const key = `printCopies${formData.assignedTo.split('_').map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w.charAt(0).toUpperCase() + w.slice(1)).join('')}` as keyof PrintSettings;
-                            setSettings({ ...settings, [key]: parseInt(value) });
-                          }}
-                        >
-                          <SelectTrigger data-testid={`select-copies-${formData.assignedTo}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5].map(n => (
-                              <SelectItem key={n} value={n.toString()}>{n} {n === 1 ? "Copy" : "Copies"}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <LogoUploader
                   currentLogoUrl={formData.logoUrl}
                   onLogoChange={(logoUrl) => setFormData({ ...formData, logoUrl })}
@@ -977,6 +915,8 @@ export default function BillSettings() {
             </Card>
             </div>
 
+            {/* Quick Print Settings - BELOW TEMPLATES */}
+            <PrintSettingsTab templates={templates || []} />
           </div>
         </TabsContent>
       </Tabs>
