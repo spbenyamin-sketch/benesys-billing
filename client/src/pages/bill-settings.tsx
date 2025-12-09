@@ -276,7 +276,11 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 <Switch
                   id="directPrintB2B"
                   checked={settings.directPrintB2B}
-                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintB2B: checked })}
+                  onCheckedChange={(checked) => {
+                    const newSettings = { ...settings, directPrintB2B: checked };
+                    setSettings(newSettings);
+                    savePrintSettings(newSettings);
+                  }}
                   data-testid="switch-direct-print-b2b"
                 />
               </div>
@@ -286,7 +290,11 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 <Switch
                   id="directPrintB2C"
                   checked={settings.directPrintB2C}
-                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintB2C: checked })}
+                  onCheckedChange={(checked) => {
+                    const newSettings = { ...settings, directPrintB2C: checked };
+                    setSettings(newSettings);
+                    savePrintSettings(newSettings);
+                  }}
                   data-testid="switch-direct-print-b2c"
                 />
               </div>
@@ -296,7 +304,11 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 <Switch
                   id="directPrintEstimate"
                   checked={settings.directPrintEstimate}
-                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintEstimate: checked })}
+                  onCheckedChange={(checked) => {
+                    const newSettings = { ...settings, directPrintEstimate: checked };
+                    setSettings(newSettings);
+                    savePrintSettings(newSettings);
+                  }}
                   data-testid="switch-direct-print-estimate"
                 />
               </div>
@@ -306,7 +318,11 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 <Switch
                   id="directPrintCreditNote"
                   checked={settings.directPrintCreditNote}
-                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintCreditNote: checked })}
+                  onCheckedChange={(checked) => {
+                    const newSettings = { ...settings, directPrintCreditNote: checked };
+                    setSettings(newSettings);
+                    savePrintSettings(newSettings);
+                  }}
                   data-testid="switch-direct-print-credit-note"
                 />
               </div>
@@ -316,7 +332,11 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
                 <Switch
                   id="directPrintDebitNote"
                   checked={settings.directPrintDebitNote}
-                  onCheckedChange={(checked) => setSettings({ ...settings, directPrintDebitNote: checked })}
+                  onCheckedChange={(checked) => {
+                    const newSettings = { ...settings, directPrintDebitNote: checked };
+                    setSettings(newSettings);
+                    savePrintSettings(newSettings);
+                  }}
                   data-testid="switch-direct-print-debit-note"
                 />
               </div>
