@@ -576,12 +576,6 @@ export default function BillSettings() {
       fontSize: template.fontSize,
       isDefault: template.isDefault,
     });
-    
-    if (template.formatType?.startsWith("thermal")) {
-      setActiveTab("thermal");
-    } else {
-      setActiveTab("standard");
-    }
   };
 
   const getAssignmentBadge = (assignedTo: string | null) => {
