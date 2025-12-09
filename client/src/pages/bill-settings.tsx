@@ -634,7 +634,7 @@ export default function BillSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="h-5 w-5" />
-                  {formData.id ? "Edit Template" : `Create ${selectedFormat} Template`}
+                  {formData.id ? "Edit Template" : `Create ${getFormatBadge(formData.formatType)} Template`}
                 </CardTitle>
                 <CardDescription>
                   Configure layout and display options
@@ -933,7 +933,7 @@ export default function BillSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Saved {formData.formatType.startsWith("thermal") ? "Thermal" : "A4/B4"} Templates
+                  Saved {getFormatBadge(formData.formatType)} Templates
                 </CardTitle>
               </CardHeader>
               <CardContent>
