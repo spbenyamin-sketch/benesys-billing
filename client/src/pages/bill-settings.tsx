@@ -933,15 +933,15 @@ export default function BillSettings() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <FileText className="h-5 w-5" />
-                  Saved {getFormatBadge(formData.formatType)} Templates
+                  Saved Templates
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {isLoading ? (
                   <div className="text-center py-8 text-muted-foreground">Loading...</div>
-                ) : filteredTemplates.length > 0 ? (
+                ) : templates && templates.length > 0 ? (
                   <div className="space-y-2">
-                    {filteredTemplates.map((template) => (
+                    {templates.map((template) => (
                       <div
                         key={template.id}
                         className="flex items-center justify-between p-3 border rounded-md hover-elevate"
