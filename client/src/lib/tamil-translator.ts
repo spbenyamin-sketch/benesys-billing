@@ -50,6 +50,10 @@ export const tamilLabels: { [key: string]: string } = {
   "Pin Code": "பின் குறியீடு",
   "Code": "குறியீடு",
   "Barcode": "பார்குறியீடு",
+  "Bill No": "பரிமாணம் எண்",
+  "Customer": "வாடிக்கையாளர்",
+  "Items": "பொருட்கள்",
+  "Return": "திரும்பம்",
 };
 
 export function translateToTamil(text: string, enableTamil: boolean): string {
