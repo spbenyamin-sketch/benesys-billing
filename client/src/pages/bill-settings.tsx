@@ -232,28 +232,48 @@ function DirectPrintServiceSection({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label>Step 1: Download Print Service</Label>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const link = document.createElement('a');
-                  link.href = '/attached_assets/benesys_print_service.py';
-                  link.download = 'benesys_print_service.py';
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
-                  toast({
-                    title: "Download Started",
-                    description: "benesys_print_service.py is downloading. Save it on your Windows computer.",
-                  });
-                }}
-                data-testid="button-download-print-service"
-              >
-                Download benesys_print_service.py
-              </Button>
+            <div className="space-y-2 space-y-3">
+              <Label>Step 1: Download Files</Label>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = '/attached_assets/install_dependencies.bat';
+                    link.download = 'install_dependencies.bat';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    toast({
+                      title: "Download Started",
+                      description: "install_dependencies.bat downloaded. Run this file first!",
+                    });
+                  }}
+                  data-testid="button-download-installer"
+                >
+                  📥 Download install_dependencies.bat
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    const link = document.createElement('a');
+                    link.href = '/attached_assets/benesys_print_service.py';
+                    link.download = 'benesys_print_service.py';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    toast({
+                      title: "Download Started",
+                      description: "benesys_print_service.py downloaded.",
+                    });
+                  }}
+                  data-testid="button-download-print-service"
+                >
+                  📥 Download benesys_print_service.py
+                </Button>
+              </div>
               <p className="text-xs text-muted-foreground">
-                Click to download the Python script needed for local printer integration
+                Download both files and save them in the same folder on your computer
               </p>
             </div>
 
@@ -310,17 +330,35 @@ function DirectPrintServiceSection({
             </div>
 
             <div className="p-3 rounded-md bg-blue-500/10 border border-blue-500/20 space-y-3">
-              <p className="text-sm font-medium">Windows Setup Instructions:</p>
+              <p className="text-sm font-medium">Quick Setup (3 Steps):</p>
               <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
-                <li><strong>Download:</strong> Click "Download benesys_print_service.py" button above</li>
-                <li><strong>Install Python:</strong> Download and install Python 3.8+ from python.org (add to PATH)</li>
-                <li><strong>Open Command Prompt:</strong> Search "cmd" in Windows and open it</li>
-                <li><strong>Install Dependencies:</strong> Run: <code className="bg-black/20 px-1 rounded">pip install websocket-client pywin32</code></li>
-                <li><strong>Generate Token:</strong> Click "Generate New Token" button above and copy the token</li>
-                <li><strong>Edit Script:</strong> Open downloaded file in Notepad, find "PRINT_TOKEN = " and paste your token</li>
-                <li><strong>Run Service:</strong> In Command Prompt, go to file location and run: <code className="bg-black/20 px-1 rounded">python benesys_print_service.py</code></li>
-                <li><strong>Check Status:</strong> The indicator above should turn green "Connected"</li>
-                <li><strong>Print:</strong> Now when you print an invoice, it will go directly to your printer!</li>
+                <li>
+                  <strong>Download & Install:</strong>
+                  <ul className="list-inside ml-4 mt-1 space-y-1">
+                    <li>• Download the two files from Step 1 above</li>
+                    <li>• Save both files in same folder (e.g., Downloads)</li>
+                    <li>• <strong>Double-click install_dependencies.bat</strong> (will install Python packages automatically)</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Generate & Configure Token:</strong>
+                  <ul className="list-inside ml-4 mt-1 space-y-1">
+                    <li>• Click "Generate New Token" button above</li>
+                    <li>• Click "Copy Token" button</li>
+                    <li>• Open benesys_print_service.py in Notepad</li>
+                    <li>• Find: <code className="bg-black/20 px-1 rounded">PRINT_TOKEN = "YOUR-TOKEN-HERE"</code></li>
+                    <li>• Paste your token between the quotes, save file</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Run & Connect:</strong>
+                  <ul className="list-inside ml-4 mt-1 space-y-1">
+                    <li>• Open Command Prompt in your file folder</li>
+                    <li>• Run: <code className="bg-black/20 px-1 rounded">python benesys_print_service.py</code></li>
+                    <li>• Click "Refresh Status" above - should show green "Connected"</li>
+                    <li>• Done! Invoices will now print directly to your printer</li>
+                  </ul>
+                </li>
               </ol>
             </div>
           </>
