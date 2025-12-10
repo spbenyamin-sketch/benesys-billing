@@ -303,22 +303,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async needsInitialSetup(): Promise<boolean> {
-    // Simple check: just see if any users exist at all
+    // Check if a superadmin user with a password exists
     try {
-      const allUsers = await db.select({ id: users.id }).from(users).limit(1);
-      // If no users exist, we need setup
-      if (allUsers.length === 0) {
-        return true;
-      }
-      // If users exist, check if any have password (for local auth)
-      const usersWithPassword = await db
+      const superadminUsers = await db
         .select({ id: users.id })
         .from(users)
-        .where(isNotNull(users.passwordHash))
+        .where(
+          and(
+            eq(users.role, 'superadmin'),
+            isNotNull(users.passwordHash)
+          )
+        )
         .limit(1);
       
-      // Setup needed only if users exist but none have passwords
-      return usersWithPassword.length === 0;
+      // Setup is needed if no superadmin with password exists
+      return superadminUsers.length === 0;
     } catch (error) {
       console.error("Error checking setup status:", error);
       // If database is unavailable, assume setup is needed
