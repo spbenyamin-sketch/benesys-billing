@@ -25,9 +25,10 @@ import time
 import sys
 import threading
 from datetime import datetime
+import ssl
 
 # Configuration - EDIT THESE VALUES
-SERVER_URL = "wss://YOUR-REPLIT-URL.replit.app/ws/print"  # Change this to your Replit URL!
+SERVER_URL = "wss://YOUR-REPLIT-URL.replit.dev/ws/print"  # Change this to your Replit URL! Example: wss://myapp-abc123.replit.dev/ws/print
 PRINT_TOKEN = "YOUR-TOKEN-HERE"  # Generate this token in Bill Settings > Quick Print tab
 RECONNECT_DELAY = 5  # Seconds between reconnection attempts
 
@@ -256,15 +257,21 @@ class PrintService:
         url = f"{self.server_url}?token={self.print_token}"
         self.log(f"Connecting to: {url}")
         
+        # Create SSL context that doesn't verify certificates (for self-signed Replit certs)
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
         self.ws = websocket.WebSocketApp(
             url,
             on_message=self.on_message,
             on_error=self.on_error,
             on_close=self.on_close,
-            on_open=self.on_open
+            on_open=self.on_open,
+            header={"User-Agent": "BeneSys-PrintService/1.0"}
         )
         
-        self.ws.run_forever()
+        self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
         
     def run(self):
         """Main run loop with auto-reconnect"""
