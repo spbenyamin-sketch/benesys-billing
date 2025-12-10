@@ -339,6 +339,8 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
       directPrintEstimate: false,
       directPrintCreditNote: false,
       directPrintDebitNote: false,
+      enableWebSocketPrint: false,
+      webSocketPrinterName: "",
     };
     setSettings(defaultSettings);
     savePrintSettings(defaultSettings);
@@ -838,10 +840,14 @@ export default function BillSettings() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full max-w-md grid-cols-1">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="standard" data-testid="tab-standard">
             <FileText className="mr-2 h-4 w-4" />
-            Bill Settings - Templates & Quick Print
+            Templates
+          </TabsTrigger>
+          <TabsTrigger value="quickprint" data-testid="tab-quickprint">
+            <Printer className="mr-2 h-4 w-4" />
+            Quick Print
           </TabsTrigger>
         </TabsList>
 
@@ -1205,6 +1211,10 @@ export default function BillSettings() {
             </Card>
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="quickprint" className="mt-6">
+          <PrintSettingsTab templates={templates || []} />
         </TabsContent>
       </Tabs>
 
