@@ -99,6 +99,209 @@ const defaultFormData = {
   isDefault: false,
 };
 
+function DirectPrintServiceSection({ 
+  settings, 
+  setSettings 
+}: { 
+  settings: PrintSettings; 
+  setSettings: (s: PrintSettings) => void;
+}) {
+  const { toast } = useToast();
+  const [printToken, setPrintToken] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<{
+    connected: boolean;
+    hasToken: boolean;
+    message: string;
+  } | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+
+  const checkConnectionStatus = async () => {
+    setIsCheckingStatus(true);
+    try {
+      const response = await apiRequest("GET", "/api/print/status");
+      const data = await response.json();
+      setConnectionStatus(data);
+    } catch (error) {
+      setConnectionStatus({
+        connected: false,
+        hasToken: false,
+        message: "Failed to check connection status"
+      });
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
+  const generateToken = async () => {
+    setIsGenerating(true);
+    try {
+      const response = await apiRequest("POST", "/api/print/generate-token");
+      const data = await response.json();
+      if (data.success) {
+        setPrintToken(data.token);
+        toast({
+          title: "Token Generated",
+          description: "Copy the token to your local print service configuration.",
+        });
+        checkConnectionStatus();
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to generate token",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate token",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyToken = () => {
+    if (printToken) {
+      navigator.clipboard.writeText(printToken);
+      toast({
+        title: "Copied",
+        description: "Token copied to clipboard",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (settings.enableWebSocketPrint) {
+      checkConnectionStatus();
+    }
+  }, [settings.enableWebSocketPrint]);
+
+  return (
+    <div className="border-t pt-4 space-y-4">
+      <Label className="text-base font-medium">Direct Print Service (Local Printer)</Label>
+      <p className="text-sm text-muted-foreground">
+        Connect to a local Windows print service for direct printing without browser dialogs.
+        Requires running the local print service on your computer.
+      </p>
+      
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="enableWebSocketPrint" className="font-normal">Enable Direct Print Service</Label>
+            <p className="text-xs text-muted-foreground">
+              Send prints directly to your local printer via WebSocket
+            </p>
+          </div>
+          <Switch
+            id="enableWebSocketPrint"
+            checked={settings.enableWebSocketPrint}
+            onCheckedChange={(checked) => {
+              const newSettings = { ...settings, enableWebSocketPrint: checked };
+              setSettings(newSettings);
+              savePrintSettings(newSettings);
+            }}
+            data-testid="switch-enable-websocket-print"
+          />
+        </div>
+
+        {settings.enableWebSocketPrint && (
+          <>
+            <div className="p-3 rounded-md bg-muted/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2 w-2 rounded-full ${connectionStatus?.connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                  <span className="text-sm font-medium">
+                    {connectionStatus?.connected ? 'Connected' : 'Not Connected'}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={checkConnectionStatus}
+                  disabled={isCheckingStatus}
+                  data-testid="button-check-connection"
+                >
+                  {isCheckingStatus ? "Checking..." : "Refresh Status"}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {connectionStatus?.message || "Click 'Refresh Status' to check connection"}
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Print Service Token</Label>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={generateToken}
+                  disabled={isGenerating}
+                  data-testid="button-generate-token"
+                >
+                  {isGenerating ? "Generating..." : "Generate New Token"}
+                </Button>
+                {printToken && (
+                  <Button
+                    variant="secondary"
+                    onClick={copyToken}
+                    data-testid="button-copy-token"
+                  >
+                    Copy Token
+                  </Button>
+                )}
+              </div>
+              {printToken && (
+                <div className="p-2 rounded bg-muted font-mono text-xs break-all">
+                  {printToken}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Generate a token and use it in your local print service Python script.
+                The token authenticates your local service to receive print commands.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="webSocketPrinterName">Printer Name (Optional)</Label>
+              <input
+                type="text"
+                id="webSocketPrinterName"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                placeholder="Leave empty for default printer"
+                value={settings.webSocketPrinterName}
+                onChange={(e) => {
+                  const newSettings = { ...settings, webSocketPrinterName: e.target.value };
+                  setSettings(newSettings);
+                  savePrintSettings(newSettings);
+                }}
+                data-testid="input-websocket-printer-name"
+              />
+              <p className="text-xs text-muted-foreground">
+                Enter the exact Windows printer name, or leave empty to use the default printer.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
+              <p className="text-sm font-medium mb-2">Setup Instructions:</p>
+              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                <li>Download the Python print service script from the Files panel (benesys_print_service.py)</li>
+                <li>Install Python 3.8+ and run: pip install websocket-client pywin32</li>
+                <li>Click "Generate New Token" above and copy the token</li>
+                <li>Edit the script: Set SERVER_URL to your app URL and paste the token</li>
+                <li>Run the script: python benesys_print_service.py</li>
+                <li>The status above should show "Connected" when the service is running</li>
+              </ol>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
   const { toast } = useToast();
   const { settings: hookSettings } = usePrintSettingsHook();
@@ -342,6 +545,8 @@ function PrintSettingsTab({ templates }: { templates: BillTemplate[] }) {
               </div>
             </div>
           </div>
+
+          <DirectPrintServiceSection settings={settings} setSettings={setSettings} />
 
           <div className="flex gap-2 pt-4">
             <Button onClick={handleSave} data-testid="button-save-print-settings">

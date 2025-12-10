@@ -20,6 +20,7 @@ import { useReactToPrint } from "react-to-print";
 import { InvoiceA4Print, InvoiceThermalPrint } from "@/components/InvoicePrint";
 import { TallyB2BInvoice } from "@/components/TallyB2BInvoice";
 import { usePrintSettings } from "@/hooks/use-print-settings";
+import { useWebSocketPrint } from "@/hooks/use-websocket-print";
 import { useCompany } from "@/contexts/CompanyContext";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -98,7 +99,8 @@ export default function Invoice() {
   const [enableTamilPrint, setEnableTamilPrint] = useState(false);
   const [isDownloadingJSON, setIsDownloadingJSON] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
-  const { shouldAutoPrint, shouldDirectPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint, settings } = usePrintSettings();
+  const { sendPrint, isEnabled: isWebSocketPrintEnabled, isSending } = useWebSocketPrint();
   const { currentCompany } = useCompany();
   const { toast } = useToast();
   
@@ -183,6 +185,36 @@ export default function Invoice() {
     pageStyle: getPageStyle(currentFormat),
   });
 
+  // Handle WebSocket direct print (sends to local printer service)
+  const handleWebSocketPrint = useCallback(async () => {
+    if (!printRef.current) {
+      toast({
+        title: "Error",
+        description: "Print content not ready",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const printContent = printRef.current.innerHTML;
+    const result = await sendPrint(printContent, "html");
+    
+    if (result.success) {
+      toast({
+        title: "Print Sent",
+        description: "Invoice sent to local printer",
+      });
+    } else {
+      toast({
+        title: "Print Failed",
+        description: result.message,
+        variant: "destructive",
+      });
+      // Fallback to browser print if WebSocket fails
+      handlePrint();
+    }
+  }, [sendPrint, handlePrint, toast]);
+
   // For auto-print, don't wait for items - just show and print
   const isLoading = autoPrintRequested ? saleLoading : (saleLoading || itemsLoading || !templateReady);
 
@@ -191,7 +223,12 @@ export default function Invoice() {
     if (autoPrintRequested && sale && templateReady && !hasPrinted && !saleLoading) {
       setHasPrinted(true);
       setTimeout(() => {
-        handlePrint();
+        // Use WebSocket print if enabled, otherwise use browser print
+        if (isWebSocketPrintEnabled) {
+          handleWebSocketPrint();
+        } else {
+          handlePrint();
+        }
       }, 800);
     } else if (sale && items && templateReady && !hasPrinted && !saleLoading && !itemsLoading) {
       const billType = sale.billType === "EST" ? "EST" : 
@@ -203,8 +240,13 @@ export default function Invoice() {
       
       if (shouldPrint) {
         setHasPrinted(true);
-        if (isDirect) {
-          // Direct print - trigger immediately without preview
+        if (isDirect && isWebSocketPrintEnabled) {
+          // Use WebSocket print for direct printing
+          setTimeout(() => {
+            handleWebSocketPrint();
+          }, 500);
+        } else if (isDirect) {
+          // Direct print via browser - trigger immediately without preview
           setTimeout(() => {
             handlePrint();
           }, 500);
@@ -216,7 +258,7 @@ export default function Invoice() {
         }
       }
     }
-  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint]);
+  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled]);
 
   if (isLoading) {
     return (

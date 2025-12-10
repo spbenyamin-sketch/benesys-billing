@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./localAuth";
 import { validateCompanyAccess } from "./companyMiddleware";
@@ -19,6 +20,9 @@ import {
   updateStockInwardItemSchema,
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
+
+// Store connected print clients
+const printClients: Map<string, WebSocket> = new Map();
 
 // Helper function to check if user has admin privileges
 function isAdminRole(role: string | undefined | null): boolean {
@@ -1465,6 +1469,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== DIRECT PRINT WEBSOCKET ROUTES ====================
+  
+  // Store print tokens for authentication (in-memory, per-company)
+  const printTokens = new Map<string, { companyId: number, createdAt: Date }>();
+  
+  // Generate a unique print token for a company
+  app.post("/api/print/generate-token", isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = parseInt(req.headers['x-company-id'] as string) || req.user?.companyId;
+      if (!companyId) {
+        return res.status(400).json({ success: false, message: "Company ID required" });
+      }
+      
+      // Generate a random token
+      const token = Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      // Store token mapped to company
+      printTokens.set(token, { companyId, createdAt: new Date() });
+      
+      // Remove old tokens for this company and disconnect old clients (keep only the latest)
+      for (const [existingToken, data] of printTokens.entries()) {
+        if (data.companyId === companyId && existingToken !== token) {
+          // Disconnect any client connected with the old token
+          const oldClient = printClients.get(existingToken);
+          if (oldClient && oldClient.readyState === WebSocket.OPEN) {
+            oldClient.close(1000, "Token rotated");
+          }
+          printClients.delete(existingToken);
+          printTokens.delete(existingToken);
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        token,
+        message: "Token generated. Use this in your local print service configuration."
+      });
+    } catch (error) {
+      res.status(500).json({ success: false, message: "Failed to generate token" });
+    }
+  });
+  
+  // Validate a print token
+  app.get("/api/print/validate-token", isAuthenticated, (req: any, res) => {
+    const token = req.query.token as string;
+    const companyId = parseInt(req.headers['x-company-id'] as string) || req.user?.companyId;
+    
+    if (!token || !printTokens.has(token)) {
+      return res.json({ valid: false });
+    }
+    
+    const tokenData = printTokens.get(token);
+    res.json({ 
+      valid: tokenData?.companyId === companyId,
+      createdAt: tokenData?.createdAt
+    });
+  });
+  
+  // Get print client status - authenticated by company token
+  app.get("/api/print/status", isAuthenticated, (req: any, res) => {
+    const companyId = parseInt(req.headers['x-company-id'] as string) || req.user?.companyId;
+    
+    // Find the token for this company
+    let companyToken: string | null = null;
+    for (const [token, data] of printTokens.entries()) {
+      if (data.companyId === companyId) {
+        companyToken = token;
+        break;
+      }
+    }
+    
+    // Check if a client is connected with this company's token
+    const client = companyToken ? printClients.get(companyToken) : null;
+    const isConnected = client && client.readyState === WebSocket.OPEN;
+    
+    res.json({ 
+      connected: isConnected,
+      hasToken: !!companyToken,
+      message: isConnected 
+        ? "Local print service connected" 
+        : companyToken 
+          ? "Token exists but service not connected. Run the Python script on your Windows PC."
+          : "No token generated. Generate a token first."
+    });
+  });
+  
+  // Send print command to connected client
+  app.post("/api/print/send", isAuthenticated, async (req: any, res) => {
+    try {
+      const { content, format, printerName } = req.body;
+      const companyId = parseInt(req.headers['x-company-id'] as string) || req.user?.companyId;
+      
+      // Find the token for this company
+      let companyToken: string | null = null;
+      for (const [token, data] of printTokens.entries()) {
+        if (data.companyId === companyId) {
+          companyToken = token;
+          break;
+        }
+      }
+      
+      // Get the client connected with this company's token
+      const client = companyToken ? printClients.get(companyToken) : null;
+      
+      if (!client || client.readyState !== WebSocket.OPEN) {
+        return res.status(503).json({ 
+          success: false, 
+          message: "Print service not connected. Please start the local print service." 
+        });
+      }
+      
+      const printData = {
+        type: "print",
+        content,
+        format: format || "text",
+        printerName: printerName || null,
+        timestamp: new Date().toISOString()
+      };
+      
+      client.send(JSON.stringify(printData));
+      res.json({ success: true, message: "Print command sent" });
+    } catch (error) {
+      console.error("Error sending print command:", error);
+      res.status(500).json({ success: false, message: "Failed to send print command" });
+    }
+  });
+
   const httpServer = createServer(app);
+  
+  // ==================== WEBSOCKET SERVER FOR DIRECT PRINTING ====================
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws/print" });
+  
+  wss.on("connection", (ws, req) => {
+    const url = new URL(req.url || "", `http://${req.headers.host}`);
+    const token = url.searchParams.get("token") || "";
+    
+    // Validate the token exists in our token store
+    if (!token || !printTokens.has(token)) {
+      console.log("Print client rejected: invalid or missing token");
+      ws.close(4001, "Invalid or missing authentication token");
+      return;
+    }
+    
+    const tokenData = printTokens.get(token);
+    console.log(`Print client connected for company: ${tokenData?.companyId}`);
+    
+    // Close any existing connection for this token (replace old connection)
+    const existingClient = printClients.get(token);
+    if (existingClient && existingClient.readyState === WebSocket.OPEN) {
+      existingClient.close(1000, "Replaced by new connection");
+    }
+    
+    // Store the connection by token
+    printClients.set(token, ws);
+    
+    // Send connection confirmation
+    ws.send(JSON.stringify({ 
+      type: "connected", 
+      message: "Connected to print server",
+      companyId: tokenData?.companyId
+    }));
+    
+    ws.on("message", (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        console.log(`Message from print client (company ${tokenData?.companyId}):`, message);
+        
+        if (message.type === "ping") {
+          ws.send(JSON.stringify({ type: "pong" }));
+        } else if (message.type === "print_result") {
+          console.log(`Print result for company ${tokenData?.companyId}:`, message.success ? "Success" : "Failed");
+        }
+      } catch (error) {
+        console.error("Error parsing WebSocket message:", error);
+      }
+    });
+    
+    ws.on("close", () => {
+      console.log(`Print client disconnected for company: ${tokenData?.companyId}`);
+      printClients.delete(token);
+    });
+    
+    ws.on("error", (error) => {
+      console.error(`WebSocket error for company ${tokenData?.companyId}:`, error);
+      printClients.delete(token);
+    });
+  });
+  
+  console.log("WebSocket print server initialized on /ws/print");
+  
   return httpServer;
 }

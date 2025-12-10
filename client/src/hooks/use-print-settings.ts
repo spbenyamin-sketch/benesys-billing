@@ -19,6 +19,8 @@ export interface PrintSettings {
   directPrintEstimate: boolean;
   directPrintCreditNote: boolean;
   directPrintDebitNote: boolean;
+  enableWebSocketPrint: boolean;
+  webSocketPrinterName: string;
 }
 
 const DEFAULT_PRINT_SETTINGS: PrintSettings = {
@@ -40,6 +42,8 @@ const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   directPrintEstimate: false,
   directPrintCreditNote: false,
   directPrintDebitNote: false,
+  enableWebSocketPrint: false,
+  webSocketPrinterName: "",
 };
 
 const PRINT_SETTINGS_KEY = "printSettings";

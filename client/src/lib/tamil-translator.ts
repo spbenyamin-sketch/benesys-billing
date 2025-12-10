@@ -41,8 +41,6 @@ export const tamilLabels: { [key: string]: string } = {
   "Tax Rate": "வரி விகிதம்",
   "Tax Amount": "வரி தொகை",
   "Amount Chargeable (in words)": "வசூல் செய்ய வேண்டிய தொகை (சொற்களில்)",
-  "Subtotal": "கூட்டுத்தொகை",
-  "Round Off": "சுற்றுப்புறம்",
   "TOTAL": "மொத்தம்",
   "Declaration": "நிரூபணம்",
   "Terms & Conditions": "விதிமுறைகள் மற்றும் நிபந்தனைகள்",
