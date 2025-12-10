@@ -1,11 +1,9 @@
 # Store Management & Billing System
 
 ## Overview
-
-A comprehensive store management and billing system designed for retail businesses. Its primary purpose is to provide GST-compliant invoicing, robust inventory tracking, and detailed financial reporting. The application facilitates the management of customers (parties), products (items), sales, purchases, payments, and stock levels, offering valuable business insights through various reports. The business vision is to empower retail businesses with an efficient, scalable, and compliant platform for their day-to-day operations, positioning the project for significant market potential in the retail technology sector.
+A comprehensive store management and billing system designed for retail businesses, providing GST-compliant invoicing, robust inventory tracking, and detailed financial reporting. The system manages customers, products, sales, purchases, payments, and stock levels, offering valuable business insights. The vision is to empower retail businesses with an efficient, scalable, and compliant platform, positioning the project for significant market potential in the retail technology sector.
 
 ## User Preferences
-
 - **Communication Style:** Simple, everyday language
 - **Deployment:** App will run on localhost (local development)
 - **Database Changes:** All database schema changes must be documented in `shared/schema.ts` before implementation
@@ -13,59 +11,51 @@ A comprehensive store management and billing system designed for retail business
 ## System Architecture
 
 ### Technology Stack
-
-**Frontend:**
-- **Framework:** React 18+ with TypeScript
-- **UI Library:** Shadcn/ui (built on Radix UI)
-- **Styling:** Tailwind CSS (Material Design-inspired, "New York" variant)
-- **State Management:** TanStack Query
-- **Routing:** Wouter
-- **Forms:** React Hook Form with Zod validation
-- **Design System:** Prioritizes information density, uses Inter font for UI and JetBrains Mono for numeric data.
-
-**Backend:**
-- **Runtime:** Node.js with Express.js
-- **Language:** TypeScript (ES modules)
-- **Database ORM:** Drizzle ORM
-- **Database:** PostgreSQL (via Neon serverless)
-- **Session Management:** Express sessions with PostgreSQL store
-- **Build Tool:** Vite (frontend), esbuild (backend)
+**Frontend:** React 18+ with TypeScript, Shadcn/ui (Radix UI), Tailwind CSS (Material Design, "New York" variant), TanStack Query for state management, Wouter for routing, React Hook Form with Zod for forms. Design system prioritizes information density using Inter font for UI and JetBrains Mono for numeric data.
+**Backend:** Node.js with Express.js, TypeScript (ES modules), Drizzle ORM, PostgreSQL (via Neon serverless), Express sessions with PostgreSQL store. Build tools include Vite (frontend) and esbuild (backend).
 
 ### Authentication & Authorization
-
-- **Replit Auth Integration:** OpenID Connect (OIDC) via Passport.js strategy.
-- **Session Management:** PostgreSQL-backed sessions (`sessions` table) with a 7-day TTL, secure HTTP-only cookies.
-- **User Roles:** Three-tier hierarchy - 'superadmin' (creates companies with expiry dates), 'admin' (customer role, manages users and all pages), 'user' (normal user with restricted access).
-- **Multi-Company Implementation:** Enterprise-grade data isolation using `companyId` on all transactional tables, `user_companies` junction table for user-company relationships, `X-Company-Id` headers for API requests, and `validateCompanyAccess` middleware for security. All queries are filtered by `companyId` with defensive joins.
+- **Replit Auth Integration:** OpenID Connect (OIDC) via Passport.js.
+- **Session Management:** PostgreSQL-backed sessions with 7-day TTL and secure HTTP-only cookies.
+- **User Roles:** 'superadmin' (creates companies, manages expiry), 'admin' (manages company, users, all pages), 'user' (restricted access).
+- **Multi-Company Implementation:** Enterprise-grade data isolation using `companyId` on all transactional tables, `user_companies` for relationships, `X-Company-Id` headers for API requests, and `validateCompanyAccess` middleware. All queries are filtered by `companyId`.
 
 ### Database Schema & Design
-
-**Core Entities:**
-- **Users:** Authentication and profile data (UUID PK, email, name, role: superadmin/admin/user).
-- **Companies:** Business entities with software license control (expiryDate field for software license expiry).
-- **Parties:** Customer/vendor records (code-based ID, address, GSTIN, agent assignment, opening balance).
-- **Items:** Product catalog (code, name, HSN, category, pack type, cost, tax rates, active status).
-- **Sales:** Transaction headers (auto-incrementing invoice, party reference, GST type, comprehensive totals).
-- **Sale Items:** Line items for sales (links to sales and items, quantity, rate, tax breakdown).
-- **Purchases:** Purchase transactions (party reference, amount, details).
-- **Payments:** Financial transactions (type, party, amount).
-- **Stock:** Inventory levels (item reference, quantity).
-
+**Core Entities:** Users, Companies (with `expiryDate` for licensing), Parties (customers/vendors), Items (products), Sales, Sale Items, Purchases, Payments, and Stock.
 **Design Decisions:** Decimal types for precision, generated columns for tax calculations, nullable party references for cash transactions, code-based identification, and user foreign keys for multi-tenancy.
 
 ### API Architecture
-
-- **RESTful Endpoints:** Protected by `isAuthenticated` middleware.
-- **Modules:** Dedicated endpoints for Authentication, Party Management, Item Management, Sales, Purchases, Payments, Stock, and Reporting.
-- **Data Validation:** Zod schemas are used across frontend and backend, ensuring type safety and robust validation.
+RESTful Endpoints protected by `isAuthenticated` middleware for modules like Authentication, Party, Item, Sales, Purchases, Payments, Stock, and Reporting. Zod schemas ensure data validation across frontend and backend.
 
 ### Frontend Architecture
+Organized components (`pages/`, `components/`, `hooks/`, `lib/`), TanStack Query for server state and caching, React Hook Form with Zod for type-safe validation, Wouter for client-side routing. Features a sidebar navigation, responsive layouts, and forms.
 
-- **Component Organization:** `pages/` for routes, `components/ui/` for Shadcn/ui, `components/` for app-specific components, `hooks/` for custom hooks, `lib/` for utilities.
-- **State Management:** TanStack Query for all server state with aggressive caching; mutations invalidate related queries for UI updates.
-- **Form Handling:** React Hook Form with Zod resolvers for type-safe validation.
-- **Routing:** Wouter for client-side routing, with authentication status determining access.
-- **Layout:** Sidebar navigation with a mobile drawer, main content area, forms with optimal readability, and responsive tables/dashboard grids.
+### Bill Template System
+Supports A4, B4, Thermal 3-inch, and Thermal 4-inch formats. Templates are assignable to B2B Credit Sale, B2C Retail Sale, and Estimate/Quotation. Features include customizable header/footer, logo, tax breakup toggle, HSN/item codes, party balance, bank details, terms, configurable font size, and Tamil language support via `enableTamilPrint` flag.
+
+### Tamil Language Support
+Toggleable support for Tamil labels on invoices via the `enableTamilPrint` field in bill templates. Uses `client/src/lib/tamil-translator.ts` for translations of key invoice elements.
+
+### Invoice Management
+- **Invoice Numbering:** Separate auto-incrementing counters for B2B, B2C, and ESTIMATE sale types (e.g., `{TYPE}-{YYYY}-{SEQUENCE}`).
+- **Invoice Editing:** Allows modification of existing sales with validation for items, quantity, and rate.
+- **e-Invoice JSON Generation:** For B2B sales, generates India GST e-Invoice JSON v1.1 for upload to GST portal.
+
+### Payment Management
+Thermal format payment receipt printing with company details, number-to-words conversion for amounts, and `useReactToPrint` integration.
+
+### Reports & Printing
+**Available Reports:** Sales Report (date, type filter), Sales Total Report (daily, payment method, CSV), Outstanding Report, Purchase Report, Party Ledger (transaction history). All reports include print functionality.
+**GST Filing Export:** Generates GSTR1.xlsx, HSN-B2B.xlsx, and HSN-B2C.xlsx from sales data, accessible via Sales Report.
+**Quick Print Settings:** Configurable auto-print after save, default print copies per sale type (stored in localStorage), and `?print=auto` URL parameter for automatic print dialog.
+**Direct Print Service (WebSocket):** Bypasses browser print dialogs by sending print commands to local Windows printers via a WebSocket connection to an authenticated Python service. Tokens are generated per-company for security.
+
+### Software Licensing & Role-Based Access Control
+- **Three-Tier Role Hierarchy:** Super Admin, Admin (customer role), Normal User.
+- **Company Expiry Date:** `expiryDate` field in the companies table, managed by Super Admin. Expired companies are locked, preventing access.
+
+### Stock Management
+- **Item Movement History:** API `GET /api/items/:id/history` provides consolidated item details, stock levels, purchases, sales, and movement summary.
 
 ## External Dependencies
 
@@ -78,12 +68,14 @@ A comprehensive store management and billing system designed for retail business
 **UI Component Libraries:**
 - **Radix UI:** Unstyled accessible component primitives.
 - **Lucide React:** Icon library.
+- **Shadcn/ui:** UI component library built on Radix UI.
 
 **Date Handling:**
 - **date-fns:** Lightweight date formatting and manipulation library.
 
 **Form Validation:**
 - **Zod:** TypeScript-first schema validation.
+- **React Hook Form:** Form management library.
 
 **Session Storage:**
 - **connect-pg-simple:** PostgreSQL session store for Express.
@@ -94,196 +86,5 @@ A comprehensive store management and billing system designed for retail business
 **Printing:**
 - **react-to-print:** Print library for thermal and document printing.
 
-## Bill Template System
-
-### Template Types
-- **A4 Format:** Standard A4 paper (210 × 297 mm) for traditional invoices
-- **B4 Format:** B4 paper (250 × 353 mm) for Tally-style invoices
-- **Thermal 3 Inch:** 80mm thermal paper for POS receipts
-- **Thermal 4 Inch:** 112mm thermal paper for wider POS receipts
-
-### Template Assignment
-Templates can be assigned to specific transaction types:
-- **B2B Credit Sale:** For business-to-business transactions
-- **B2C Retail Sale:** For retail/consumer transactions
-- **Estimate/Quotation:** For quotes and estimates
-
-### Template Features
-- Customizable header text and logo
-- Customizable footer text
-- Toggle for tax breakup display
-- Toggle for HSN codes
-- Toggle for item codes
-- Party balance display option
-- Bank details section
-- Terms and conditions
-- Configurable font size
-- **Tamil Language Support:** Toggle to enable Tamil language labels on invoices (database field: `enableTamilPrint` boolean, default: false)
-
-### API Endpoints
-- `GET /api/bill-templates` - List all templates
-- `GET /api/bill-templates/assigned/:type` - Get template by assignment (b2b, b2c, estimate)
-- `POST /api/bill-templates` - Create new template
-- `PUT /api/bill-templates/:id` - Update template
-- `DELETE /api/bill-templates/:id` - Delete template
-
-## Tamil Language Support
-
-### Database Schema
-- **Table:** `bill_templates`
-- **Field:** `enableTamilPrint` (boolean, default: false)
-- **Migration:** Already synced via `npm run db:push --force`
-
-### Implementation
-- **Translator Library:** `client/src/lib/tamil-translator.ts`
-- **Supported Labels:** Invoice headers, date, GST, bill-to, item details, amounts, totals, and more
-- **Components Updated:** InvoiceA4Print, InvoiceThermalPrint, TallyB2BInvoice
-
-### How It Works
-1. **Create Template with Tamil Enabled:** Go to Bill Settings → Create template → Toggle "தமிழ் Tamil Print" → Save
-2. **Automatic Application:** When printing invoices with that template, all labels appear in Tamil
-3. **Manual Override:** Checkbox on invoice page allows temporary Tamil toggle
-4. **Template Assignment:** Assign template to B2B/B2C/Estimate for consistent Tamil printing
-
-### Tamil Translations (Partial List)
-- INVOICE → இன்வாய்ஸ்
-- Date → தேதி:
-- Bill To → பரிமாணம்:
-- GST → GST
-- Item Name → பொருளின் பெயர்
-- Quantity → அ.க
-- Rate → விகிதம்
-- Amount → தொகை
-- Grand Total → பொதுத் தொகை
-
-## Invoice Management
-
-### Invoice Numbering
-- Separate counters for B2B, B2C, and ESTIMATE sale types
-- Format: `{TYPE}-{YYYY}-{SEQUENCE}` (e.g., B2B-2025-001)
-- Auto-increments within each sale type independently
-
-### Invoice Editing
-- Route: `/sales/edit/:id`
-- API: `PUT /api/sales/:id` with validation for:
-  - Items array must have at least one item
-  - Each item requires itemName, quantity (positive), and rate (non-negative)
-- Updates merge with existing sale data to prevent field loss
-
-### e-Invoice JSON Generation (B2B Only)
-- **Location:** Invoice page → "e-Invoice JSON" button (visible only for B2B sales)
-- **API:** `GET /api/sales/:id/einvoice-json`
-- **Format:** India GST e-Invoice JSON v1.1 schema
-- **Sections:** TranDtls, DocDtls, SellerDtls, BuyerDtls, ItemList, ValDtls
-- **Usage:** Download JSON file and upload to GST portal for IRN generation
-
-## Payment Management
-
-### Payment Receipt Printing
-- Thermal format receipt with 80mm width
-- Includes company name from current company context
-- Number-to-words conversion for amount display
-- useReactToPrint with proper useEffect trigger pattern
-
-## Reports & Printing
-
-### Available Reports (all with print functionality)
-- **Sales Report:** Filter by date range and sale type (B2B/B2C/Estimate)
-- **Sales Total Report:** Daily sales aggregation by payment method with CSV download
-- **Outstanding Report:** Party-wise outstanding balances
-- **Purchase Report:** Purchase history with item details
-- **Party Ledger:** Transaction history with opening balance calculation for filtered date range
-
-### GST Filing Export
-Location: Reports > Sales Report > "Generate GST Files" button
-
-**Generated Files:**
-1. **GSTR1.xlsx** - Invoice-level data with:
-   - GSTIN, Party Name, Invoice No, Date
-   - Invoice Value, Place of Supply, Reverse Charge
-   - Invoice Type, Taxable Value, Tax Rate
-   - CGST, SGST, IGST, Cess
-
-2. **HSN-B2B.xlsx** - HSN summary for B2B transactions (parties with 15-character GSTIN):
-   - HSN Code, Description, UQC, Total Qty
-   - Total Value, Tax Rate, Taxable Value
-   - IGST, CGST, SGST, Cess
-
-3. **HSN-B2C.xlsx** - HSN summary for B2C transactions (parties without GSTIN):
-   - Same structure as HSN-B2B
-
-**API Endpoints:**
-- `GET /api/reports/gstr1` - GSTR1 invoice data
-- `GET /api/reports/hsn-summary` - HSN summary with B2B/B2C split
-
-**Usage:**
-1. Select date range in Sales Report
-2. Optionally filter by sale type (B2B/B2C/Estimate)
-3. Click "Generate GST Files" button
-4. Three Excel files are automatically downloaded
-
-### Printing Implementation
-- Uses react-to-print v3.x with contentRef pattern
-- Print components use useReactToPrint hook with contentRef
-- Hidden print containers positioned off-screen for rendering
-
-### Quick Print Settings
-Location: Bill Settings > Quick Print tab
-
-**Auto-Print After Save:**
-- Configure automatic print dialog for each sale type (B2B, B2C, Estimate, Credit Note)
-- When enabled, saving a sale opens print dialog automatically
-- Settings stored in localStorage (`printSettings` key)
-
-**Print Copies Configuration:**
-- Set default number of copies (1-5) per sale type
-- B2B defaults to 2 copies, others default to 1
-
-**URL Parameter:**
-- `?print=auto` triggers auto-print when navigating to invoice page
-- Invoice page uses `usePrintSettings` hook to check print preferences
-- Auto-print respects per-sale-type settings
-
-**Hook Usage:**
-```typescript
-import { usePrintSettings } from "@/hooks/use-print-settings";
-const { shouldAutoPrint, getPrintCopies, showConfirmation } = usePrintSettings();
-```
-
-**Browser Limitations:**
-- Browser security requires print dialog (cannot bypass)
-- Users should set browser to "remember my choice" for faster printing
-
-## Software Licensing & Role-Based Access Control
-
-### Three-Tier Role Hierarchy
-1. **Super Admin**
-   - Creates new companies
-   - Sets and manages software license expiry dates per company
-   - Creates admin users (customer role)
-   - Can view and manage all admin users
-
-2. **Admin (Customer Role)**
-   - Manages their company's operations
-   - Creates and manages normal users
-   - Access to all pages within their company: Sales, Purchases, Parties, Items, Stock, Reports, Bill Settings
-   - Can use all features but cannot create new companies
-
-3. **Normal User**
-   - Limited access based on assigned page permissions
-   - Cannot create users or manage company settings
-   - View-only or restricted access to assigned pages
-
-### Company Expiry Date
-- Field: `expiryDate` in companies table (timestamp)
-- Only Super Admin can set/edit company expiry dates
-- Once expired: Company is locked - users cannot access any features
-- UI shows warning when expiry date is approaching or expired
-
-## Stock Management
-
-### Item Movement History
-- API: `GET /api/items/:id/history`
-- Returns consolidated data: item details, stock level, purchases, sales, movement summary
-- Shows total purchased/sold quantities and current balance
-- Accessible from Stock page grid/list view via history button
+**Python Service:**
+- **benesys_print_service.py:** Local Windows print service for direct printing.
