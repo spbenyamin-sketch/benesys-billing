@@ -56,8 +56,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/setup', async (req: any, res) => {
     try {
+      console.log('[SETUP] Setup POST request initiated');
+      
       // Check if setup is already complete
       const needsSetup = await storage.needsInitialSetup();
+      console.log('[SETUP] Needs setup check:', needsSetup);
+      
       if (!needsSetup) {
         return res.status(400).json({ message: "System is already set up" });
       }
@@ -86,7 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userRole = 'superadmin';
       const userFirstName = 'Super';
       const userLastName = 'Admin';
-      console.log('=== SETUP V3 === Creating superadmin with role:', userRole);
+      console.log('[SETUP] Creating superadmin with role:', userRole, 'username:', username);
       
       const user = await storage.createUser({
         username,
@@ -95,19 +99,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         firstName: userFirstName,
         lastName: userLastName,
       });
-      console.log('[SETUP] User created with role:', user.role);
+      console.log('[SETUP] User created:', { id: user.id, username: user.username, role: user.role });
 
       // Login the user by creating a session
-      req.logIn(user, (err: any) => {
+      req.logIn(user, async (err: any) => {
         if (err) {
-          console.error("Error logging in user:", err);
-          return res.status(500).json({ message: "User created but login failed" });
+          console.error("[SETUP] Error logging in user:", err);
+          return res.status(500).json({ message: "User created but login failed: " + err.message });
         }
 
-        // Assign to default company
-        storage.assignUserToDefaultCompany(user.id).catch((err: any) => {
-          console.error("Error assigning company:", err);
-        });
+        try {
+          // Assign to default company
+          await storage.assignUserToDefaultCompany(user.id);
+          console.log('[SETUP] User assigned to default company');
+        } catch (companyErr) {
+          console.error("[SETUP] Error assigning company:", companyErr);
+        }
 
         res.json({
           message: "Setup complete! Super admin account created successfully.",
@@ -119,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
     } catch (error) {
-      console.error("Error during setup:", error);
+      console.error("[SETUP] Error during setup:", error);
       res.status(500).json({ message: "Failed to complete setup: " + (error instanceof Error ? error.message : "Unknown error") });
     }
   });
