@@ -233,7 +233,32 @@ function DirectPrintServiceSection({
             </div>
 
             <div className="space-y-2">
-              <Label>Print Service Token</Label>
+              <Label>Step 1: Download Print Service</Label>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = '/attached_assets/benesys_print_service.py';
+                  link.download = 'benesys_print_service.py';
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                  toast({
+                    title: "Download Started",
+                    description: "benesys_print_service.py is downloading. Save it on your Windows computer.",
+                  });
+                }}
+                data-testid="button-download-print-service"
+              >
+                Download benesys_print_service.py
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Click to download the Python script needed for local printer integration
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Step 2: Generate Authentication Token</Label>
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -284,15 +309,18 @@ function DirectPrintServiceSection({
               </p>
             </div>
 
-            <div className="p-3 rounded-md bg-blue-500/10 border border-blue-500/20">
-              <p className="text-sm font-medium mb-2">Setup Instructions:</p>
-              <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-                <li>Download the Python print service script from the Files panel (benesys_print_service.py)</li>
-                <li>Install Python 3.8+ and run: pip install websocket-client pywin32</li>
-                <li>Click "Generate New Token" above and copy the token</li>
-                <li>Edit the script: Set SERVER_URL to your app URL and paste the token</li>
-                <li>Run the script: python benesys_print_service.py</li>
-                <li>The status above should show "Connected" when the service is running</li>
+            <div className="p-3 rounded-md bg-blue-500/10 border border-blue-500/20 space-y-3">
+              <p className="text-sm font-medium">Windows Setup Instructions:</p>
+              <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
+                <li><strong>Download:</strong> Click "Download benesys_print_service.py" button above</li>
+                <li><strong>Install Python:</strong> Download and install Python 3.8+ from python.org (add to PATH)</li>
+                <li><strong>Open Command Prompt:</strong> Search "cmd" in Windows and open it</li>
+                <li><strong>Install Dependencies:</strong> Run: <code className="bg-black/20 px-1 rounded">pip install websocket-client pywin32</code></li>
+                <li><strong>Generate Token:</strong> Click "Generate New Token" button above and copy the token</li>
+                <li><strong>Edit Script:</strong> Open downloaded file in Notepad, find "PRINT_TOKEN = " and paste your token</li>
+                <li><strong>Run Service:</strong> In Command Prompt, go to file location and run: <code className="bg-black/20 px-1 rounded">python benesys_print_service.py</code></li>
+                <li><strong>Check Status:</strong> The indicator above should turn green "Connected"</li>
+                <li><strong>Print:</strong> Now when you print an invoice, it will go directly to your printer!</li>
               </ol>
             </div>
           </>
