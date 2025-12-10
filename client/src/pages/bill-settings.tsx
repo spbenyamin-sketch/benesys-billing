@@ -134,6 +134,16 @@ function DirectPrintServiceSection({
   };
 
   const generateToken = async () => {
+    const companyId = localStorage.getItem("currentCompanyId");
+    if (!companyId) {
+      toast({
+        title: "Company Required",
+        description: "Please select a company from the dropdown first",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const response = await apiRequest("POST", "/api/print/generate-token");
@@ -153,9 +163,10 @@ function DirectPrintServiceSection({
         });
       }
     } catch (error) {
+      console.error("Token generation error:", error);
       toast({
         title: "Error",
-        description: "Failed to generate token",
+        description: error instanceof Error ? error.message : "Failed to generate token",
         variant: "destructive",
       });
     } finally {
