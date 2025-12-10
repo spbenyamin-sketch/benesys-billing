@@ -238,15 +238,10 @@ function DirectPrintServiceSection({
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = '/attached_assets/install_dependencies.bat';
-                    link.download = 'install_dependencies.bat';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    window.location.href = '/api/download/install_dependencies.bat';
                     toast({
                       title: "Download Started",
-                      description: "install_dependencies.bat downloaded. Run this file first!",
+                      description: "install_dependencies.bat downloading. Run this file first!",
                     });
                   }}
                   data-testid="button-download-installer"
@@ -256,15 +251,10 @@ function DirectPrintServiceSection({
                 <Button
                   variant="outline"
                   onClick={() => {
-                    const link = document.createElement('a');
-                    link.href = '/attached_assets/benesys_print_service.py';
-                    link.download = 'benesys_print_service.py';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    window.location.href = '/api/download/benesys_print_service.py';
                     toast({
                       title: "Download Started",
-                      description: "benesys_print_service.py downloaded.",
+                      description: "benesys_print_service.py downloading.",
                     });
                   }}
                   data-testid="button-download-print-service"

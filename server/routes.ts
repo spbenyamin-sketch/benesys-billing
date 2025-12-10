@@ -7,6 +7,8 @@ import { validateCompanyAccess } from "./companyMiddleware";
 import { runMigrations } from "./db";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { readFileSync } from "fs";
+import { join } from "path";
 import {
   insertPartySchema,
   insertItemSchema,
@@ -1660,6 +1662,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   console.log("WebSocket print server initialized on /ws/print");
+  
+  // ==================== FILE DOWNLOADS ====================
+  app.get('/api/download/benesys_print_service.py', (req, res) => {
+    try {
+      const filePath = join(process.cwd(), 'attached_assets', 'benesys_print_service.py');
+      const fileContent = readFileSync(filePath, 'utf-8');
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', 'attachment; filename="benesys_print_service.py"');
+      res.send(fileContent);
+    } catch (error) {
+      console.error('Error downloading print service:', error);
+      res.status(404).json({ message: 'File not found' });
+    }
+  });
+
+  app.get('/api/download/install_dependencies.bat', (req, res) => {
+    try {
+      const filePath = join(process.cwd(), 'attached_assets', 'install_dependencies.bat');
+      const fileContent = readFileSync(filePath, 'utf-8');
+      res.setHeader('Content-Type', 'text/plain');
+      res.setHeader('Content-Disposition', 'attachment; filename="install_dependencies.bat"');
+      res.send(fileContent);
+    } catch (error) {
+      console.error('Error downloading installer:', error);
+      res.status(404).json({ message: 'File not found' });
+    }
+  });
   
   return httpServer;
 }
