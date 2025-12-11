@@ -622,6 +622,7 @@ export const billTemplates = pgTable("bill_templates", {
   isDefault: boolean("is_default").default(false).notNull(),
   autoPrintThisTemplate: boolean("auto_print_this_template").default(false).notNull(), // Quick print - auto print when saved
   directPrintThisTemplate: boolean("direct_print_this_template").default(false).notNull(), // Quick print - skip preview, print directly
+  printCopiesThisTemplate: integer("print_copies_this_template").default(1).notNull(), // Quick print - number of copies for this template
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),

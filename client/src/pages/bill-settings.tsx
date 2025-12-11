@@ -59,6 +59,7 @@ interface BillTemplate {
   isDefault: boolean;
   autoPrintThisTemplate?: boolean;
   directPrintThisTemplate?: boolean;
+  printCopiesThisTemplate?: number;
 }
 
 const FORMAT_TYPES = [
@@ -100,6 +101,7 @@ const defaultFormData = {
   isDefault: false,
   autoPrintThisTemplate: false,
   directPrintThisTemplate: false,
+  printCopiesThisTemplate: 1,
 };
 
 export default function BillSettings() {
@@ -290,34 +292,6 @@ export default function BillSettings() {
               />
             </div>
 
-            {/* Print Copies Selector */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Print Copies</Label>
-              <Select
-                value={settings.printCopiesB2C.toString()}
-                onValueChange={(value) => {
-                  const copies = parseInt(value);
-                  const newSettings = {
-                    ...settings,
-                    printCopiesB2B: copies,
-                    printCopiesB2C: copies,
-                    printCopiesEstimate: copies,
-                    printCopiesCreditNote: copies,
-                    printCopiesDebitNote: copies,
-                  };
-                  setSettings(newSettings);
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
 
           <Button onClick={handleQuickPrintSave} className="w-full">
@@ -502,6 +476,19 @@ export default function BillSettings() {
                     checked={formData.directPrintThisTemplate || false}
                     onCheckedChange={(checked) => setFormData({ ...formData, directPrintThisTemplate: checked })}
                   />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="font-normal text-sm">Print Copies</Label>
+                  <Select value={(formData.printCopiesThisTemplate || 1).toString()} onValueChange={(value) => setFormData({ ...formData, printCopiesThisTemplate: parseInt(value) })}>
+                    <SelectTrigger className="w-[100px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5].map(n => (
+                        <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground">When this template is used, it will use these print settings</p>
