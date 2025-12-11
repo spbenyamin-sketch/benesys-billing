@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Settings, Save, Eye, FileText, Trash2, Edit2, Zap } from "lucide-react";
+import { Settings, Save, Eye, FileText, Trash2, Edit2, Zap, Download, Copy, CheckCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -107,6 +107,10 @@ export default function BillSettings() {
   const [templateToDelete, setTemplateToDelete] = useState<number | null>(null);
   const { settings: hookSettings } = usePrintSettingsHook();
   const [settings, setSettings] = useState<PrintSettings>(hookSettings);
+  const [printToken, setPrintToken] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
 
   useEffect(() => {
     setSettings(hookSettings);
@@ -157,7 +161,12 @@ export default function BillSettings() {
   const handleEdit = (template: BillTemplate) => {
     setFormData({
       ...template,
-      assignedTo: template.assignedTo || "none"
+      assignedTo: template.assignedTo || "none",
+      logoUrl: template.logoUrl || "",
+      headerText: template.headerText || "",
+      footerText: template.footerText || "",
+      bankDetails: template.bankDetails || "",
+      termsAndConditions: template.termsAndConditions || "",
     });
     setSelectedFormat(template.formatType);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -166,6 +175,50 @@ export default function BillSettings() {
   const handleQuickPrintSave = () => {
     savePrintSettings(settings);
     toast({ title: "Saved", description: "Quick print settings saved" });
+  };
+
+  const checkConnectionStatus = async () => {
+    setIsCheckingStatus(true);
+    try {
+      const response = await apiRequest("GET", "/api/print/status");
+      const data = await response.json();
+      setConnectionStatus(data);
+    } catch (error) {
+      setConnectionStatus({ connected: false, hasToken: false, message: "Failed to check" });
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
+
+  const generateToken = async () => {
+    const companyId = localStorage.getItem("currentCompanyId");
+    if (!companyId) {
+      toast({ title: "Company Required", description: "Select a company first", variant: "destructive" });
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const response = await apiRequest("POST", "/api/print/generate-token");
+      const data = await response.json();
+      if (data.success) {
+        setPrintToken(data.token);
+        toast({ title: "Token Generated", description: "Copy to your Python script" });
+        checkConnectionStatus();
+      } else {
+        toast({ title: "Error", description: data.message, variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to generate token", variant: "destructive" });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const copyToken = () => {
+    if (printToken) {
+      navigator.clipboard.writeText(printToken);
+      toast({ title: "Copied", description: "Token copied to clipboard" });
+    }
   };
 
   const standardTemplates = templates?.filter(t => !t.formatType?.startsWith("thermal")) || [];
@@ -267,6 +320,109 @@ export default function BillSettings() {
             <Save className="mr-2 h-4 w-4" />
             Save Quick Print Settings
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* DIRECT PRINT SERVICE SECTION - Windows Python Service */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Direct Print Service (Windows Python)
+          </CardTitle>
+          <CardDescription>Connect to local Windows printer via Python service</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Enable Toggle */}
+          <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="space-y-1">
+              <Label className="font-medium text-sm">Enable WebSocket Direct Print</Label>
+              <p className="text-xs text-muted-foreground">Send invoices directly to Windows printer</p>
+            </div>
+            <Switch
+              checked={settings.enableWebSocketPrint}
+              onCheckedChange={(checked) => {
+                const newSettings = { ...settings, enableWebSocketPrint: checked };
+                setSettings(newSettings);
+                savePrintSettings(newSettings);
+              }}
+            />
+          </div>
+
+          {settings.enableWebSocketPrint && (
+            <>
+              {/* Connection Status */}
+              <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-3 w-3 rounded-full ${connectionStatus?.connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                    <span className="text-sm font-medium">{connectionStatus?.connected ? 'Connected' : 'Not Connected'}</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={checkConnectionStatus} disabled={isCheckingStatus}>
+                    {isCheckingStatus ? "Checking..." : "Check Status"}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">{connectionStatus?.message || "Click 'Check Status' to verify connection"}</p>
+              </div>
+
+              {/* Download Files */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Step 1: Download Files</Label>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      window.location.href = '/api/download/install_dependencies.bat';
+                      toast({ title: "Downloading", description: "install_dependencies.bat" });
+                    }}
+                    size="sm"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download install_dependencies.bat
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      window.location.href = '/api/download/benesys_print_service.py';
+                      toast({ title: "Downloading", description: "benesys_print_service.py" });
+                    }}
+                    size="sm"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download benesys_print_service.py
+                  </Button>
+                </div>
+              </div>
+
+              {/* Token Generation */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Step 2: Generate Token</Label>
+                <Button onClick={generateToken} disabled={isGenerating} variant="default" className="w-full">
+                  {isGenerating ? "Generating..." : "Generate New Token"}
+                </Button>
+                {printToken && (
+                  <div className="p-3 rounded-lg bg-muted font-mono text-xs break-all space-y-2">
+                    <p className="text-muted-foreground">Your Token:</p>
+                    <p>{printToken}</p>
+                    <Button onClick={copyToken} variant="secondary" size="sm" className="w-full">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copy Token
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Setup Guide */}
+              <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm space-y-2">
+                <p className="font-medium">Quick Setup (3 Steps):</p>
+                <ol className="text-xs space-y-2 list-decimal list-inside">
+                  <li><strong>Download & Install:</strong> Run install_dependencies.bat</li>
+                  <li><strong>Generate Token:</strong> Click button above, copy token to Python script</li>
+                  <li><strong>Run Service:</strong> Run: python benesys_print_service.py</li>
+                </ol>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
