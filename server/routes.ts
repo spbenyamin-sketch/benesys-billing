@@ -7,8 +7,9 @@ import { validateCompanyAccess } from "./companyMiddleware";
 import { runMigrations } from "./db";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { readFileSync } from "fs";
+import { readFileSync, existsSync } from "fs";
 import { join } from "path";
+import archiver from "archiver";
 import {
   insertPartySchema,
   insertItemSchema,
@@ -1749,6 +1750,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error downloading installer:', error);
       res.status(404).json({ message: 'File not found' });
+    }
+  });
+
+  app.get('/api/download/benesys-setup-complete.zip', (req, res) => {
+    try {
+      const assetsDir = join(process.cwd(), 'attached_assets');
+      const files = [
+        'install_dependencies.bat',
+        'setup_autostart.bat',
+        'benesys_print_service.py',
+        'SETUP_GUIDE.txt'
+      ];
+
+      // Check if all files exist
+      for (const file of files) {
+        if (!existsSync(join(assetsDir, file))) {
+          console.warn(`Warning: ${file} not found, will skip in ZIP`);
+        }
+      }
+
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename="BeneSys-Print-Service-Setup.zip"');
+
+      const archive = archiver('zip', { zlib: { level: 9 } });
+      archive.pipe(res);
+
+      // Add files to ZIP
+      files.forEach((file) => {
+        const filePath = join(assetsDir, file);
+        if (existsSync(filePath)) {
+          archive.file(filePath, { name: file });
+        }
+      });
+
+      archive.finalize();
+    } catch (error) {
+      console.error('Error creating ZIP:', error);
+      res.status(500).json({ message: 'Failed to create ZIP file' });
     }
   });
   

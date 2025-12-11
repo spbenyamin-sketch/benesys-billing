@@ -360,7 +360,22 @@ export default function BillSettings() {
               {/* Download Files */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Step 1: Download Files</Label>
-                <div className="flex flex-col gap-2">
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/30 space-y-3">
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      window.location.href = '/api/download/benesys-setup-complete.zip';
+                      toast({ title: "Downloading", description: "BeneSys-Print-Service-Setup.zip (includes all files)" });
+                    }}
+                    className="w-full"
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download All Files as ZIP (Recommended)
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Includes: installer, setup guide, and Python service</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Or download individually:</p>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -368,9 +383,10 @@ export default function BillSettings() {
                       toast({ title: "Downloading", description: "install_dependencies.bat" });
                     }}
                     size="sm"
+                    className="w-full"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Download install_dependencies.bat
+                    install_dependencies.bat
                   </Button>
                   <Button
                     variant="outline"
@@ -379,9 +395,10 @@ export default function BillSettings() {
                       toast({ title: "Downloading", description: "benesys_print_service.py" });
                     }}
                     size="sm"
+                    className="w-full"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Download benesys_print_service.py
+                    benesys_print_service.py
                   </Button>
                 </div>
               </div>
