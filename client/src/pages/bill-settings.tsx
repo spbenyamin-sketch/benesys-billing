@@ -57,6 +57,8 @@ interface BillTemplate {
   paperSize: string;
   fontSize: number;
   isDefault: boolean;
+  autoPrintThisTemplate?: boolean;
+  directPrintThisTemplate?: boolean;
 }
 
 const FORMAT_TYPES = [
@@ -96,6 +98,8 @@ const defaultFormData = {
   paperSize: "A4",
   fontSize: 10,
   isDefault: false,
+  autoPrintThisTemplate: false,
+  directPrintThisTemplate: false,
 };
 
 export default function BillSettings() {
@@ -479,6 +483,28 @@ export default function BillSettings() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* QUICK PRINT SETTINGS FOR THIS TEMPLATE */}
+            <div className="border-t pt-4 space-y-3 bg-blue-50 dark:bg-blue-950/20 p-3 rounded-lg">
+              <Label className="font-medium text-sm">Quick Print Settings</Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="font-normal text-sm">Auto Print After Save</Label>
+                  <Switch
+                    checked={formData.autoPrintThisTemplate || false}
+                    onCheckedChange={(checked) => setFormData({ ...formData, autoPrintThisTemplate: checked })}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label className="font-normal text-sm">Direct Print Mode</Label>
+                  <Switch
+                    checked={formData.directPrintThisTemplate || false}
+                    onCheckedChange={(checked) => setFormData({ ...formData, directPrintThisTemplate: checked })}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">When this template is used, it will use these print settings</p>
             </div>
 
             <LogoUploader

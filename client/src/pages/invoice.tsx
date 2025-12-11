@@ -219,12 +219,17 @@ export default function Invoice() {
   const isLoading = autoPrintRequested ? saleLoading : (saleLoading || itemsLoading || !templateReady);
 
   useEffect(() => {
+    // Check template-specific print settings first, then fall back to global settings
+    const templateHasAutoPrint = template?.autoPrintThisTemplate;
+    const templateHasDirectPrint = template?.directPrintThisTemplate;
+    
     // For auto-print, trigger as soon as sale and template are ready (don't wait for items)
     if (autoPrintRequested && sale && templateReady && !hasPrinted && !saleLoading) {
       setHasPrinted(true);
       setTimeout(() => {
-        // Use WebSocket print if enabled, otherwise use browser print
-        if (isWebSocketPrintEnabled) {
+        // Use template's direct print setting, or fall back to global WebSocket setting
+        const useDirectPrint = templateHasDirectPrint || isWebSocketPrintEnabled;
+        if (useDirectPrint) {
           handleWebSocketPrint();
         } else {
           handlePrint();
@@ -235,30 +240,28 @@ export default function Invoice() {
                        sale.billType === "CN" ? "CN" : 
                        sale.saleType || "B2C";
       
-      const isDirect = shouldDirectPrint(billType);
-      const shouldPrint = shouldAutoPrint(billType) || isDirect;
+      // Check template-specific settings first
+      const autoPrintEnabled = templateHasAutoPrint !== undefined ? templateHasAutoPrint : shouldAutoPrint(billType);
+      const directPrintEnabled = templateHasDirectPrint !== undefined ? templateHasDirectPrint : shouldDirectPrint(billType);
       
-      if (shouldPrint) {
+      if (autoPrintEnabled || directPrintEnabled) {
         setHasPrinted(true);
-        if (isDirect && isWebSocketPrintEnabled) {
-          // Use WebSocket print for direct printing
+        if (directPrintEnabled && isWebSocketPrintEnabled) {
           setTimeout(() => {
             handleWebSocketPrint();
           }, 500);
-        } else if (isDirect) {
-          // Direct print via browser - trigger immediately without preview
+        } else if (directPrintEnabled) {
           setTimeout(() => {
             handlePrint();
           }, 500);
         } else {
-          // Normal auto-print with preview
           setTimeout(() => {
             handlePrint();
           }, 800);
         }
       }
     }
-  }, [sale, items, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled]);
+  }, [sale, items, template, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled]);
 
   if (isLoading) {
     return (
