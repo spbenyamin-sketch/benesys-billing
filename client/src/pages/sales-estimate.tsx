@@ -66,7 +66,7 @@ interface SaleLineItem {
 export default function SalesEstimate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint } = usePrintSettings();
   const { user } = useAuth();
   const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -304,8 +304,9 @@ export default function SalesEstimate() {
         description: "Estimate saved successfully",
       });
 
-      // Always open the invoice window - it will handle printing based on settings
-      const printParam = shouldAutoPrint("EST") ? "?print=auto" : "";
+      // If direct print enabled, use silent print mode (tab closes after printing)
+      // Otherwise use auto-print mode if enabled
+      const printParam = shouldDirectPrint("EST") ? "?silent-print=true" : shouldAutoPrint("EST") ? "?print=auto" : "";
       window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);

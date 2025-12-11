@@ -87,7 +87,7 @@ interface SaleLineItem {
 export default function SalesB2B() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
@@ -457,8 +457,9 @@ export default function SalesB2B() {
         description: "B2B Credit Invoice saved successfully",
       });
 
-      // Always open the invoice window - it will handle printing based on settings
-      const printParam = shouldAutoPrint("B2B") ? "?print=auto" : "";
+      // If direct print enabled, use silent print mode (tab closes after printing)
+      // Otherwise use auto-print mode if enabled
+      const printParam = shouldDirectPrint("B2B") ? "?silent-print=true" : shouldAutoPrint("B2B") ? "?print=auto" : "";
       window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);

@@ -81,7 +81,7 @@ interface SaleLineItem {
 export default function SalesB2C() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint } = usePrintSettings();
   const { user } = useAuth();
   const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
   const barcodeInputRef = useRef<HTMLInputElement>(null);
@@ -452,8 +452,9 @@ export default function SalesB2C() {
         description: "Retail sale saved successfully",
       });
 
-      // Always open the invoice window - it will handle printing based on settings
-      const printParam = shouldAutoPrint("B2C") ? "?print=auto" : "";
+      // If direct print enabled, use silent print mode (tab closes after printing)
+      // Otherwise use auto-print mode if enabled
+      const printParam = shouldDirectPrint("B2C") ? "?silent-print=true" : shouldAutoPrint("B2C") ? "?print=auto" : "";
       window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);

@@ -107,6 +107,7 @@ export default function Invoice() {
   const searchParams = new URLSearchParams(searchString);
   const autoPrintRequested = searchParams.get("print") === "auto";
   const skipDirectPrint = searchParams.get("no-direct-print") === "true";
+  const silentPrint = searchParams.get("silent-print") === "true";
 
   const { data: sale, isLoading: saleLoading } = useQuery<Sale>({
     queryKey: ["/api/sales", saleId],
@@ -187,7 +188,7 @@ export default function Invoice() {
   });
 
   // Handle WebSocket direct print (sends to local printer service)
-  const handleWebSocketPrint = useCallback(async () => {
+  const handleWebSocketPrint = useCallback(async (shouldClose = false) => {
     if (!printRef.current) {
       toast({
         title: "Error",
@@ -205,6 +206,10 @@ export default function Invoice() {
         title: "Print Sent",
         description: "Invoice sent to local printer",
       });
+      // Close window after successful silent print
+      if (shouldClose) {
+        setTimeout(() => window.close(), 1000);
+      }
     } else {
       toast({
         title: "Print Failed",
@@ -212,7 +217,12 @@ export default function Invoice() {
         variant: "destructive",
       });
       // Fallback to browser print if WebSocket fails
-      handlePrint();
+      if (!shouldClose) {
+        handlePrint();
+      } else {
+        // For silent print, close window anyway after showing error
+        setTimeout(() => window.close(), 2000);
+      }
     }
   }, [sendPrint, handlePrint, toast]);
 
@@ -224,19 +234,24 @@ export default function Invoice() {
     const templateHasAutoPrint = template?.autoPrintThisTemplate;
     const templateHasDirectPrint = template?.directPrintThisTemplate;
     
-    // For auto-print, trigger as soon as sale and template are ready (don't wait for items)
-    if (autoPrintRequested && sale && templateReady && !hasPrinted && !saleLoading) {
+    // For silent print or auto-print, trigger as soon as sale and template are ready (don't wait for items)
+    if ((silentPrint || autoPrintRequested) && sale && templateReady && !hasPrinted && !saleLoading) {
       setHasPrinted(true);
       setTimeout(() => {
-        // Use template's direct print setting, or fall back to global WebSocket setting
-        // But skip if the no-direct-print flag is set (e.g., when printing from sales list)
-        const useDirectPrint = !skipDirectPrint && (templateHasDirectPrint || isWebSocketPrintEnabled);
-        if (useDirectPrint) {
-          handleWebSocketPrint();
+        // For silent print, always try WebSocket direct print first
+        if (silentPrint && isWebSocketPrintEnabled) {
+          handleWebSocketPrint(true); // true = close window after print
         } else {
-          handlePrint();
+          // Use template's direct print setting, or fall back to global WebSocket setting
+          // But skip if the no-direct-print flag is set (e.g., when printing from sales list)
+          const useDirectPrint = !skipDirectPrint && (templateHasDirectPrint || isWebSocketPrintEnabled);
+          if (useDirectPrint) {
+            handleWebSocketPrint();
+          } else {
+            handlePrint();
+          }
         }
-      }, 800);
+      }, 500);
     } else if (sale && items && templateReady && !hasPrinted && !saleLoading && !itemsLoading) {
       const billType = sale.billType === "EST" ? "EST" : 
                        sale.billType === "CN" ? "CN" : 
@@ -263,7 +278,7 @@ export default function Invoice() {
         }
       }
     }
-  }, [sale, items, template, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled, skipDirectPrint]);
+  }, [sale, items, template, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled, skipDirectPrint, silentPrint]);
 
   if (isLoading) {
     return (

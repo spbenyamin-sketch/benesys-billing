@@ -83,7 +83,7 @@ interface CreditNoteLineItem {
 
 export default function CreditNote() {
   const { toast } = useToast();
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
@@ -395,8 +395,9 @@ export default function CreditNote() {
         description: "Credit Note saved successfully",
       });
 
-      // Always open the invoice window - it will handle printing based on settings
-      const printParam = shouldAutoPrint("CN") ? "?print=auto" : "";
+      // If direct print enabled, use silent print mode (tab closes after printing)
+      // Otherwise use auto-print mode if enabled
+      const printParam = shouldDirectPrint("CN") ? "?silent-print=true" : shouldAutoPrint("CN") ? "?print=auto" : "";
       window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);
