@@ -28,9 +28,41 @@ from datetime import datetime
 import ssl
 
 # Configuration - EDIT THESE VALUES
-SERVER_URL = "wss://YOUR-REPLIT-URL.replit.dev/ws/print"  # Change this to your Replit URL! Example: wss://myapp-abc123.replit.dev/ws/print
+# OPTION 1: Enter your full Replit URL (it will auto-convert to WebSocket format)
+# Examples: 
+#   https://myapp-abc123.replit.app (will become wss://myapp-abc123.replit.app/ws/print)
+#   https://benesys.replit.app/ws/print (will become wss://benesys.replit.app/ws/print)
+SERVER_URL = "https://YOUR-REPLIT-URL.replit.app"  # Change this to your actual Replit app URL
 PRINT_TOKEN = "YOUR-TOKEN-HERE"  # Generate this token in Bill Settings > Quick Print tab
 RECONNECT_DELAY = 5  # Seconds between reconnection attempts
+
+def normalize_server_url(url):
+    """Convert HTTP/HTTPS URLs to WebSocket format"""
+    if not url:
+        return None
+    
+    url = url.strip()
+    
+    # Remove trailing slash
+    if url.endswith('/'):
+        url = url[:-1]
+    
+    # Convert HTTPS to WSS
+    if url.startswith('https://'):
+        url = 'wss://' + url[8:]
+    # Convert HTTP to WS
+    elif url.startswith('http://'):
+        url = 'ws://' + url[7:]
+    # If already WSS/WS, use as-is
+    elif not (url.startswith('wss://') or url.startswith('ws://')):
+        # Add wss:// if no protocol specified
+        url = 'wss://' + url
+    
+    # Add /ws/print endpoint if not already there
+    if not url.endswith('/ws/print'):
+        url = url + '/ws/print'
+    
+    return url
 
 # Try to import required libraries
 try:
@@ -289,15 +321,21 @@ class PrintService:
     def run(self):
         """Main run loop with auto-reconnect"""
         self.log("BeneSys Print Service starting...")
-        self.log(f"Server URL: {self.server_url}")
+        self.log(f"Original URL: {self.server_url}")
+        self.log(f"WebSocket URL: {self.server_url}")
         
         if PRINT_AVAILABLE:
-            self.log(f"Default printer: {win32print.GetDefaultPrinter()}")
-            self.log("Available printers:")
-            for printer in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL):
-                self.log(f"  - {printer[2]}")
+            try:
+                default_printer = win32print.GetDefaultPrinter()
+                self.log(f"Default printer: {default_printer}")
+                self.log("Available printers:")
+                for printer in win32print.EnumPrinters(win32print.PRINTER_ENUM_LOCAL):
+                    self.log(f"  - {printer[2]}")
+            except Exception as e:
+                self.log(f"Could not enumerate printers: {e}")
         else:
             self.log("Running in console mode (no actual printing)")
+            self.log("To enable actual printing, run: pip install pywin32 Pillow")
             
         self.log("")
         self.log("Press Ctrl+C to stop the service")
@@ -324,36 +362,44 @@ def main():
     print("=" * 50)
     print()
     
+    url = SERVER_URL.strip()
+    token = PRINT_TOKEN.strip()
+    
     # Check if URL has been configured
-    if "YOUR-REPLIT-URL" in SERVER_URL:
-        print("ERROR: Please edit this file and set your SERVER_URL!")
+    if "YOUR-REPLIT-URL" in url:
+        print("Enter your Replit app URL (you can copy from browser address bar):")
+        print("Examples:")
+        print("  https://benesys.replit.app")
+        print("  https://myapp-abc123.replit.app")
+        print("  https://benesys.username.replit.dev")
         print()
-        print("Find this line near the top of the file:")
-        print('  SERVER_URL = "wss://YOUR-REPLIT-URL.replit.app/ws/print"')
-        print()
-        print("Change it to your actual Replit URL, for example:")
-        print('  SERVER_URL = "wss://benesys.username.replit.app/ws/print"')
-        print()
-        input("Press Enter to exit...")
-        sys.exit(1)
+        url = input("Enter URL: ").strip()
+        if not url:
+            print("URL is required!")
+            sys.exit(1)
         
     # Check if token has been configured
-    if "YOUR-TOKEN-HERE" in PRINT_TOKEN or not PRINT_TOKEN:
-        print("ERROR: Please edit this file and set your PRINT_TOKEN!")
+    if "YOUR-TOKEN-HERE" in token:
         print()
         print("To get your token:")
         print("1. Open your BeneSys app in the browser")
-        print("2. Go to Settings > Bill Settings")
-        print("3. Click the 'Quick Print' tab")
-        print("4. Enable 'Direct Print Service'")
-        print("5. Click 'Generate New Token' and copy the token")
-        print("6. Paste the token in this file:")
-        print('   PRINT_TOKEN = "your-token-here"')
+        print("2. Go to Settings > Bill Settings > Quick Print Configuration tab")
+        print("3. In 'Direct Print Service' section, click 'Generate New Token'")
+        print("4. Copy the token that appears")
         print()
-        input("Press Enter to exit...")
-        sys.exit(1)
-        
-    service = PrintService(SERVER_URL, PRINT_TOKEN)
+        token = input("Enter your token: ").strip()
+        if not token:
+            print("Token is required!")
+            sys.exit(1)
+    
+    # Normalize URL to WebSocket format
+    normalized_url = normalize_server_url(url)
+    print()
+    print(f"Converting URL: {url}")
+    print(f"WebSocket URL: {normalized_url}")
+    print()
+    
+    service = PrintService(normalized_url, token)
     
     try:
         service.run()
