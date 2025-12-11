@@ -620,6 +620,8 @@ export const billTemplates = pgTable("bill_templates", {
   paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(), // A4, B4, 3inch, 4inch
   fontSize: integer("font_size").default(10).notNull(),
   isDefault: boolean("is_default").default(false).notNull(),
+  autoPrintThisTemplate: boolean("auto_print_this_template").default(false).notNull(), // Quick print - auto print when saved
+  directPrintThisTemplate: boolean("direct_print_this_template").default(false).notNull(), // Quick print - skip preview, print directly
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
@@ -634,7 +636,33 @@ export const insertBillTemplateSchema = createInsertSchema(billTemplates).omit({
 });
 
 export type InsertBillTemplate = z.infer<typeof insertBillTemplateSchema>;
+export const billTemplatesAutoPrintSchema = createInsertSchema(billTemplates).pick({
+  autoPrintThisTemplate: true,
+  directPrintThisTemplate: true,
+});
+
 export type BillTemplate = typeof billTemplates.$inferSelect;
+
+// ============================================================================
+// PRINT TOKENS TABLE (for Direct Print Service)
+// ============================================================================
+
+export const printTokens = pgTable("print_tokens", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  token: varchar("token", { length: 255 }).notNull().unique(), // Unique token for authentication
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertPrintTokenSchema = createInsertSchema(printTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPrintToken = z.infer<typeof insertPrintTokenSchema>;
+export type PrintToken = typeof printTokens.$inferSelect;
 
 // ============================================================================
 // BARCODE LABEL TEMPLATES

@@ -15,6 +15,7 @@ import {
   companies,
   userCompanies,
   agents,
+  printTokens,
   type User,
   type UpsertUser,
   type Party,
@@ -43,6 +44,8 @@ import {
   type InsertCompany,
   type Agent,
   type InsertAgent,
+  type PrintToken,
+  type InsertPrintToken,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, lt, sql, or, isNotNull } from "drizzle-orm";
@@ -110,6 +113,11 @@ export interface IStorage {
   updateStock(itemId: number, quantityChange: number, companyId: number): Promise<void>;
   getInventoryByBarcode(barcode: string, companyId: number): Promise<any | undefined>;
   getPartyOutstanding(partyId: number, companyId: number): Promise<number>;
+
+  // Print token operations (for Direct Print Service)
+  getPrintToken(companyId: number): Promise<PrintToken | undefined>;
+  createOrUpdatePrintToken(companyId: number, token: string): Promise<PrintToken>;
+  deletePrintToken(companyId: number): Promise<void>;
 
   // Report operations
   getDashboardMetrics(companyId: number): Promise<any>;
@@ -2956,6 +2964,31 @@ export class DatabaseStorage implements IStorage {
     }
 
     return result;
+  }
+
+  // ==================== PRINT TOKEN OPERATIONS ====================
+  async getPrintToken(companyId: number): Promise<PrintToken | undefined> {
+    const [token] = await db
+      .select()
+      .from(printTokens)
+      .where(eq(printTokens.companyId, companyId));
+    return token;
+  }
+
+  async createOrUpdatePrintToken(companyId: number, token: string): Promise<PrintToken> {
+    // Delete old tokens for this company
+    await db.delete(printTokens).where(eq(printTokens.companyId, companyId));
+    
+    // Create new token
+    const [newToken] = await db
+      .insert(printTokens)
+      .values({ companyId, token })
+      .returning();
+    return newToken;
+  }
+
+  async deletePrintToken(companyId: number): Promise<void> {
+    await db.delete(printTokens).where(eq(printTokens.companyId, companyId));
   }
 }
 
