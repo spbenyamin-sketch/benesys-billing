@@ -20,6 +20,7 @@ import {
   insertAgentSchema,
   insertBarcodeLabelTemplateSchema,
   updateStockInwardItemSchema,
+  type PrintSettings,
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
 
@@ -1536,6 +1537,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ==================== PRINT SETTINGS ROUTES ====================
+  
+  // Get print settings for company
+  app.get("/api/print-settings", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const settings = await storage.getPrintSettings(req.companyId);
+      if (!settings) {
+        return res.json({
+          autoPrintB2B: false,
+          autoPrintB2C: true,
+          autoPrintEstimate: false,
+          autoPrintCreditNote: false,
+          autoPrintDebitNote: false,
+          printCopiesB2B: 2,
+          printCopiesB2C: 1,
+          printCopiesEstimate: 1,
+          printCopiesCreditNote: 2,
+          printCopiesDebitNote: 2,
+          showPrintConfirmation: true,
+          defaultPrinterName: "",
+          enableTamilPrint: false,
+          directPrintB2B: false,
+          directPrintB2C: false,
+          directPrintEstimate: false,
+          directPrintCreditNote: false,
+          directPrintDebitNote: false,
+          enableWebSocketPrint: false,
+          webSocketPrinterName: "",
+        });
+      }
+      res.json(settings);
+    } catch (error) {
+      console.error("Error getting print settings:", error);
+      res.status(500).json({ message: "Failed to get print settings" });
+    }
+  });
+
+  // Save print settings for company
+  app.post("/api/print-settings", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const settings = await storage.upsertPrintSettings(req.companyId, req.body);
+      res.json(settings);
+    } catch (error) {
+      console.error("Error saving print settings:", error);
+      res.status(500).json({ message: "Failed to save print settings" });
+    }
+  });
+
   // Get print client status - authenticated by company token
   app.get("/api/print/status", isAuthenticated, async (req: any, res) => {
     try {

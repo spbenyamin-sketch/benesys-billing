@@ -69,6 +69,40 @@ export const companies = pgTable("companies", {
   createdBy: varchar("created_by").references(() => users.id),
 });
 
+// ============================================================================
+// PRINT SETTINGS TABLE (Quick Print Configuration)
+// ============================================================================
+
+export const printSettings = pgTable("print_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id),
+  autoPrintB2B: boolean("auto_print_b2b").default(false).notNull(),
+  autoPrintB2C: boolean("auto_print_b2c").default(true).notNull(),
+  autoPrintEstimate: boolean("auto_print_estimate").default(false).notNull(),
+  autoPrintCreditNote: boolean("auto_print_credit_note").default(false).notNull(),
+  autoPrintDebitNote: boolean("auto_print_debit_note").default(false).notNull(),
+  printCopiesB2B: integer("print_copies_b2b").default(2).notNull(),
+  printCopiesB2C: integer("print_copies_b2c").default(1).notNull(),
+  printCopiesEstimate: integer("print_copies_estimate").default(1).notNull(),
+  printCopiesCreditNote: integer("print_copies_credit_note").default(2).notNull(),
+  printCopiesDebitNote: integer("print_copies_debit_note").default(2).notNull(),
+  showPrintConfirmation: boolean("show_print_confirmation").default(true).notNull(),
+  defaultPrinterName: varchar("default_printer_name", { length: 255 }).default("").notNull(),
+  enableTamilPrint: boolean("enable_tamil_print").default(false).notNull(),
+  directPrintB2B: boolean("direct_print_b2b").default(false).notNull(),
+  directPrintB2C: boolean("direct_print_b2c").default(false).notNull(),
+  directPrintEstimate: boolean("direct_print_estimate").default(false).notNull(),
+  directPrintCreditNote: boolean("direct_print_credit_note").default(false).notNull(),
+  directPrintDebitNote: boolean("direct_print_debit_note").default(false).notNull(),
+  enableWebSocketPrint: boolean("enable_web_socket_print").default(false).notNull(),
+  webSocketPrinterName: varchar("web_socket_printer_name", { length: 255 }).default("").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PrintSettings = typeof printSettings.$inferSelect;
+export type InsertPrintSettings = typeof printSettings.$inferInsert;
+
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
   createdAt: true,

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useSyncExternalStore } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { apiRequest } from "@/lib/queryClient";
 
 export interface PrintSettings {
   autoPrintB2B: boolean;
@@ -46,43 +47,25 @@ const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   webSocketPrinterName: "",
 };
 
-const PRINT_SETTINGS_KEY = "printSettings";
-const PRINT_SETTINGS_EVENT = "printSettingsChanged";
-
-function getPrintSettingsFromStorage(): PrintSettings {
-  try {
-    const saved = localStorage.getItem(PRINT_SETTINGS_KEY);
-    if (!saved) return DEFAULT_PRINT_SETTINGS;
-    const parsed = JSON.parse(saved);
-    if (typeof parsed !== "object" || parsed === null) {
-      return DEFAULT_PRINT_SETTINGS;
-    }
-    return { ...DEFAULT_PRINT_SETTINGS, ...parsed };
-  } catch {
-    return DEFAULT_PRINT_SETTINGS;
-  }
-}
-
-export function savePrintSettings(settings: PrintSettings): void {
-  localStorage.setItem(PRINT_SETTINGS_KEY, JSON.stringify(settings));
-  window.dispatchEvent(new CustomEvent(PRINT_SETTINGS_EVENT));
-}
-
 export function usePrintSettings() {
-  const [settings, setSettings] = useState<PrintSettings>(getPrintSettingsFromStorage);
+  const [settings, setSettings] = useState<PrintSettings>(DEFAULT_PRINT_SETTINGS);
+  const [loading, setLoading] = useState(true);
 
+  // Load settings from server on mount
   useEffect(() => {
-    const handleChange = () => {
-      setSettings(getPrintSettingsFromStorage());
+    const loadSettings = async () => {
+      try {
+        const response = await apiRequest("GET", "/api/print-settings");
+        const data = await response.json();
+        setSettings({ ...DEFAULT_PRINT_SETTINGS, ...data });
+      } catch (error) {
+        console.error("Failed to load print settings:", error);
+        setSettings(DEFAULT_PRINT_SETTINGS);
+      } finally {
+        setLoading(false);
+      }
     };
-
-    window.addEventListener("storage", handleChange);
-    window.addEventListener(PRINT_SETTINGS_EVENT, handleChange);
-    
-    return () => {
-      window.removeEventListener("storage", handleChange);
-      window.removeEventListener(PRINT_SETTINGS_EVENT, handleChange);
-    };
+    loadSettings();
   }, []);
 
   const shouldAutoPrint = useCallback((billType: string): boolean => {
@@ -138,10 +121,21 @@ export function usePrintSettings() {
 
   return {
     settings,
+    setSettings,
+    loading,
     shouldAutoPrint,
     getPrintCopies,
     shouldDirectPrint,
     showConfirmation: settings.showPrintConfirmation,
     enableTamilPrint: settings.enableTamilPrint,
   };
+}
+
+export async function savePrintSettings(settings: PrintSettings): Promise<void> {
+  try {
+    await apiRequest("POST", "/api/print-settings", settings);
+  } catch (error) {
+    console.error("Failed to save print settings:", error);
+    throw error;
+  }
 }

@@ -16,6 +16,7 @@ import {
   userCompanies,
   agents,
   printTokens,
+  printSettings,
   type User,
   type UpsertUser,
   type Party,
@@ -46,6 +47,8 @@ import {
   type InsertAgent,
   type PrintToken,
   type InsertPrintToken,
+  type PrintSettings,
+  type InsertPrintSettings,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, lt, sql, or, isNotNull } from "drizzle-orm";
@@ -118,6 +121,10 @@ export interface IStorage {
   getPrintToken(companyId: number): Promise<PrintToken | undefined>;
   createOrUpdatePrintToken(companyId: number, token: string): Promise<PrintToken>;
   deletePrintToken(companyId: number): Promise<void>;
+
+  // Print settings operations (Quick Print Configuration)
+  getPrintSettings(companyId: number): Promise<PrintSettings | undefined>;
+  upsertPrintSettings(companyId: number, settings: Partial<InsertPrintSettings>): Promise<PrintSettings>;
 
   // Report operations
   getDashboardMetrics(companyId: number): Promise<any>;
@@ -2989,6 +2996,36 @@ export class DatabaseStorage implements IStorage {
 
   async deletePrintToken(companyId: number): Promise<void> {
     await db.delete(printTokens).where(eq(printTokens.companyId, companyId));
+  }
+
+  // ==================== PRINT SETTINGS OPERATIONS ====================
+  async getPrintSettings(companyId: number): Promise<PrintSettings | undefined> {
+    const [settings] = await db
+      .select()
+      .from(printSettings)
+      .where(eq(printSettings.companyId, companyId));
+    return settings;
+  }
+
+  async upsertPrintSettings(companyId: number, settings: Partial<InsertPrintSettings>): Promise<PrintSettings> {
+    const existing = await this.getPrintSettings(companyId);
+    
+    if (existing) {
+      // Update existing
+      const [updated] = await db
+        .update(printSettings)
+        .set({ ...settings, updatedAt: new Date() })
+        .where(eq(printSettings.companyId, companyId))
+        .returning();
+      return updated;
+    } else {
+      // Create new
+      const [created] = await db
+        .insert(printSettings)
+        .values({ companyId, ...settings })
+        .returning();
+      return created;
+    }
   }
 }
 

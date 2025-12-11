@@ -186,9 +186,13 @@ export default function BillSettings() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleQuickPrintSave = () => {
-    savePrintSettings(settings);
-    toast({ title: "Saved", description: "Quick print settings saved" });
+  const handleQuickPrintSave = async () => {
+    try {
+      await savePrintSettings(settings);
+      toast({ title: "Saved", description: "Quick print settings saved" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to save settings", variant: "destructive" });
+    }
   };
 
   const checkConnectionStatus = async () => {
