@@ -387,6 +387,9 @@ export default function SalesB2C() {
       if (lineItems.length === 0) {
         throw new Error("Please add at least one item");
       }
+      if (totals.grandTotal <= 0) {
+        throw new Error("Total amount must be greater than zero");
+      }
 
       const saleData = {
         billType: "GST",
@@ -484,7 +487,7 @@ export default function SalesB2C() {
         <div className="flex gap-2">
           <Button
             onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || lineItems.length === 0}
+            disabled={saveMutation.isPending || lineItems.length === 0 || totals.grandTotal <= 0}
             data-testid="button-save-b2c-sale"
           >
             <Save className="mr-2 h-4 w-4" />

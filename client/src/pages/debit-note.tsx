@@ -361,6 +361,9 @@ export default function DebitNote() {
       if (lineItems.length === 0) {
         throw new Error("Please add at least one item");
       }
+      if (finalTotal <= 0) {
+        throw new Error("Total amount must be greater than zero");
+      }
 
       const debitNoteData = {
         billType: "DN",
@@ -454,7 +457,7 @@ export default function DebitNote() {
         <div className="flex gap-2">
           <Button
             onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId}
+            disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId || finalTotal <= 0}
             data-testid="button-save-debit-note"
           >
             <Save className="mr-2 h-4 w-4" />
