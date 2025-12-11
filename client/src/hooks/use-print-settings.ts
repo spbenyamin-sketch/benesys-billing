@@ -119,56 +119,11 @@ export function usePrintSettings() {
     }
   }, [settings]);
 
+  // Deprecated: Direct WebSocket print is now handled server-side via /api/print/send
   const sendDirectPrint = useCallback(async (saleId: number): Promise<boolean> => {
-    if (!settings.enableWebSocketPrint) {
-      console.log("WebSocket print not enabled");
-      return false;
-    }
-
-    try {
-      const response = await apiRequest("GET", "/api/print-token");
-      const { token } = await response.json();
-      
-      // Construct WebSocket URL - use window.location.host which already includes port
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws/print?token=${token}`;
-      
-      console.log("Connecting to WebSocket:", wsUrl);
-      const ws = new WebSocket(wsUrl);
-
-      return new Promise((resolve) => {
-        const timeout = setTimeout(() => {
-          console.log("WebSocket timeout");
-          ws.close();
-          resolve(false);
-        }, 5000);
-
-        ws.onopen = () => {
-          clearTimeout(timeout);
-          console.log("WebSocket connected, sending print request");
-          ws.send(JSON.stringify({ type: "print", saleId }));
-          setTimeout(() => {
-            ws.close();
-            resolve(true);
-          }, 500);
-        };
-
-        ws.onerror = (error) => {
-          clearTimeout(timeout);
-          console.error("WebSocket error:", error);
-          resolve(false);
-        };
-
-        ws.onclose = () => {
-          clearTimeout(timeout);
-          console.log("WebSocket closed");
-        };
-      });
-    } catch (error) {
-      console.error("Direct print error:", error);
-      return false;
-    }
-  }, [settings.enableWebSocketPrint]);
+    console.log("sendDirectPrint is deprecated - use invoice page's handleWebSocketPrint instead");
+    return false;
+  }, []);
 
   return {
     settings,
