@@ -457,8 +457,15 @@ export default function SalesB2B() {
         description: "B2B Credit Invoice saved successfully",
       });
 
-      const printParam = shouldAutoPrint("B2B") ? "?print=auto" : "";
-      window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      if (shouldDirectPrint("B2B")) {
+        sendDirectPrint(data.id).catch((error) => {
+          console.error("Direct print failed:", error);
+          window.open(`/invoice/${data.id}`, '_blank');
+        });
+      } else {
+        const printParam = shouldAutoPrint("B2B") ? "?print=auto" : "";
+        window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      }
       
       setLineItems([]);
       setSelectedPartyId(null);

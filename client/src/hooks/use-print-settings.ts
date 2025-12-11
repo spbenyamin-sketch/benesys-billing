@@ -119,6 +119,34 @@ export function usePrintSettings() {
     }
   }, [settings]);
 
+  const sendDirectPrint = useCallback(async (saleId: number): Promise<boolean> => {
+    if (!settings.enableWebSocketPrint) {
+      return false;
+    }
+
+    try {
+      const response = await apiRequest("GET", "/api/print-token");
+      const { token } = await response.json();
+      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/print?token=${token}`;
+      const ws = new WebSocket(wsUrl);
+
+      return new Promise((resolve) => {
+        ws.onopen = () => {
+          ws.send(JSON.stringify({ type: "print", saleId }));
+          setTimeout(() => ws.close(), 1000);
+          resolve(true);
+        };
+        ws.onerror = () => resolve(false);
+        setTimeout(() => {
+          if (ws.readyState === WebSocket.OPEN) ws.close();
+        }, 5000);
+      });
+    } catch {
+      return false;
+    }
+  }, [settings.enableWebSocketPrint]);
+
   return {
     settings,
     setSettings,
@@ -126,6 +154,7 @@ export function usePrintSettings() {
     shouldAutoPrint,
     getPrintCopies,
     shouldDirectPrint,
+    sendDirectPrint,
     showConfirmation: settings.showPrintConfirmation,
     enableTamilPrint: settings.enableTamilPrint,
   };

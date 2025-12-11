@@ -304,8 +304,15 @@ export default function SalesEstimate() {
         description: "Estimate saved successfully",
       });
 
-      const printParam = shouldAutoPrint("EST") ? "?print=auto" : "";
-      window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      if (shouldDirectPrint("EST")) {
+        sendDirectPrint(data.id).catch((error) => {
+          console.error("Direct print failed:", error);
+          window.open(`/invoice/${data.id}`, '_blank');
+        });
+      } else {
+        const printParam = shouldAutoPrint("EST") ? "?print=auto" : "";
+        window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      }
       
       setLineItems([]);
       setSelectedPartyId(null);

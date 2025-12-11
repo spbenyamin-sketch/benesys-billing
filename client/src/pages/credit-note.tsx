@@ -395,8 +395,15 @@ export default function CreditNote() {
         description: "Credit Note saved successfully",
       });
 
-      const printParam = shouldAutoPrint("CN") ? "?print=auto" : "";
-      window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      if (shouldDirectPrint("CN")) {
+        sendDirectPrint(data.id).catch((error) => {
+          console.error("Direct print failed:", error);
+          window.open(`/invoice/${data.id}`, '_blank');
+        });
+      } else {
+        const printParam = shouldAutoPrint("CN") ? "?print=auto" : "";
+        window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      }
       
       setLineItems([]);
       setSelectedPartyId(null);

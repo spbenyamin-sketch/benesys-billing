@@ -421,8 +421,15 @@ export default function DebitNote() {
         description: "Debit Note saved successfully - stock reduced",
       });
 
-      const printParam = shouldAutoPrint("DN") ? "?print=auto" : "";
-      window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      if (shouldDirectPrint("DN")) {
+        sendDirectPrint(data.id).catch((error) => {
+          console.error("Direct print failed:", error);
+          window.open(`/invoice/${data.id}`, '_blank');
+        });
+      } else {
+        const printParam = shouldAutoPrint("DN") ? "?print=auto" : "";
+        window.open(`/invoice/${data.id}${printParam}`, '_blank');
+      }
       
       setLineItems([]);
       setSelectedPartyId(null);
