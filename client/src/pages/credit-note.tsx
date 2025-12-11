@@ -83,7 +83,7 @@ interface CreditNoteLineItem {
 
 export default function CreditNote() {
   const { toast } = useToast();
-  const { shouldAutoPrint, shouldDirectPrint, sendDirectPrint } = usePrintSettings();
+  const { shouldAutoPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);

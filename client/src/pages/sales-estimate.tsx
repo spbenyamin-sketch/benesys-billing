@@ -66,7 +66,7 @@ interface SaleLineItem {
 export default function SalesEstimate() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { shouldAutoPrint, shouldDirectPrint, sendDirectPrint } = usePrintSettings();
+  const { shouldAutoPrint } = usePrintSettings();
   const { user } = useAuth();
   const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
   const barcodeInputRef = useRef<HTMLInputElement>(null);
