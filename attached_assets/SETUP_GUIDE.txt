@@ -1,0 +1,129 @@
+================================================================
+BeneSys Direct Print Service - Windows Setup Guide
+================================================================
+
+QUICK START (3 Easy Steps):
+
+1. ONE-CLICK INSTALL ALL DEPENDENCIES
+   - Right-click: install_dependencies.bat
+   - Click: "Run as Administrator"
+   - Wait for installation to complete
+   - Press any key when finished
+
+2. CONFIGURE THE PRINT SERVICE
+   - Open Bill Settings in BeneSys app
+   - Go to: Settings > Bill Settings > Quick Print Configuration tab
+   - Click "Generate New Token"
+   - Copy the token shown
+   
+   - Open benesys_print_service.py with Notepad
+   - Find: SERVER_URL = "https://YOUR-REPLIT-URL.replit.app"
+   - Replace "YOUR-REPLIT-URL" with your actual app URL
+     Example: https://vfp-next-converter-spbenyamin.replit.app
+   
+   - Find: PRINT_TOKEN = "YOUR-TOKEN-HERE"
+   - Replace "YOUR-TOKEN-HERE" with your actual token from Step 2
+   
+   - Save the file (Ctrl+S)
+
+3. TEST PRINTING
+   - Open Command Prompt
+   - Run: python benesys_print_service.py
+   - You should see: "Connected to server: Print service ready!"
+   - Go to BeneSys app
+   - Create a sale and click "Print Invoice"
+   - Your invoice should print! ✓
+
+================================================================
+OPTIONAL: Auto-Start on System Boot
+================================================================
+
+To run the service automatically when Windows starts:
+
+1. Right-click: setup_autostart.bat
+2. Click: "Run as Administrator"
+3. Follow the prompts
+4. Restart your computer
+5. Service will run automatically in background
+
+Your print service will now:
+✓ Start automatically when Windows boots
+✓ Run silently in the background
+✓ No console window needed
+✓ Just works!
+
+================================================================
+TROUBLESHOOTING
+================================================================
+
+PROBLEM: "Python not recognized"
+SOLUTION: Use full path to Python or reinstall with "Add to PATH" option
+
+PROBLEM: Installation fails
+SOLUTION: Run Command Prompt as Administrator first
+
+PROBLEM: Print not working even after setup
+SOLUTION: 
+  1. Check SERVER_URL and PRINT_TOKEN are correct
+  2. Make sure BeneSys app is showing "Direct Print Mode: ON"
+  3. Verify local printer is set as default printer
+  4. Restart the Python script
+
+PROBLEM: Want to disable auto-start
+SOLUTION:
+  1. Open Task Scheduler
+  2. Find "BeneSys Print Service"
+  3. Right-click and select "Disable" or "Delete"
+
+================================================================
+FILE DESCRIPTIONS
+================================================================
+
+install_dependencies.bat
+  → One-click installation of all Python packages
+  → Run this first if you haven't installed dependencies yet
+  → Must run as Administrator
+
+benesys_print_service.py
+  → Main print service program
+  → Download from BeneSys app > Bill Settings
+  → Edit SERVER_URL and PRINT_TOKEN before running
+
+setup_autostart.bat
+  → Sets up automatic startup in Windows Task Scheduler
+  → Optional - only run if you want auto-start
+  → Must run as Administrator
+
+run_benesys_print_service.vbs
+  → Created automatically by setup_autostart.bat
+  → Runs Python silently in background
+  → No console window appears
+
+================================================================
+PRINTER REQUIREMENTS
+================================================================
+
+Your printer must:
+✓ Be connected to Windows via USB or Network
+✓ Be installed in Windows Devices & Printers
+✓ Be set as the default printer (recommended)
+✓ Support thermal printing (usually automatic)
+
+BeneSys supports:
+✓ Thermal 3-inch printers (80mm)
+✓ Thermal 4-inch printers (112mm)
+✓ A4 laser/inkjet printers
+✓ Custom paper sizes
+
+================================================================
+HELP & SUPPORT
+================================================================
+
+For issues:
+1. Check if Python is installed: python --version
+2. Check if packages installed: python -m pip list
+3. Verify printer is connected and set as default
+4. Check Task Scheduler shows the task (if auto-start enabled)
+5. Review Python console output for error messages
+
+================================================================
