@@ -81,7 +81,7 @@ interface SaleLineItem {
 export default function SalesB2C() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint, sendDirectPrint } = usePrintSettings();
   const { user } = useAuth();
   const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
   const barcodeInputRef = useRef<HTMLInputElement>(null);

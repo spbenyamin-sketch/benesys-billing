@@ -83,7 +83,7 @@ interface DebitNoteLineItem {
 
 export default function DebitNote() {
   const { toast } = useToast();
-  const { shouldAutoPrint } = usePrintSettings();
+  const { shouldAutoPrint, shouldDirectPrint, sendDirectPrint } = usePrintSettings();
   const barcodeInputRef = useRef<HTMLInputElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
   useKeyboardNavigation(formContainerRef);
