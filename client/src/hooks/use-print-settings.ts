@@ -121,28 +121,52 @@ export function usePrintSettings() {
 
   const sendDirectPrint = useCallback(async (saleId: number): Promise<boolean> => {
     if (!settings.enableWebSocketPrint) {
+      console.log("WebSocket print not enabled");
       return false;
     }
 
     try {
       const response = await apiRequest("GET", "/api/print-token");
       const { token } = await response.json();
-      const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/print?token=${token}`;
+      
+      // Construct WebSocket URL - handle both cases
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.host || `${window.location.hostname}:${window.location.port || (window.location.protocol === "https:" ? 443 : 80)}`;
+      const wsUrl = `${protocol}//${host}/ws/print?token=${token}`;
+      
+      console.log("Connecting to WebSocket:", wsUrl);
       const ws = new WebSocket(wsUrl);
 
       return new Promise((resolve) => {
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: "print", saleId }));
-          setTimeout(() => ws.close(), 1000);
-          resolve(true);
-        };
-        ws.onerror = () => resolve(false);
-        setTimeout(() => {
-          if (ws.readyState === WebSocket.OPEN) ws.close();
+        const timeout = setTimeout(() => {
+          console.log("WebSocket timeout");
+          ws.close();
+          resolve(false);
         }, 5000);
+
+        ws.onopen = () => {
+          clearTimeout(timeout);
+          console.log("WebSocket connected, sending print request");
+          ws.send(JSON.stringify({ type: "print", saleId }));
+          setTimeout(() => {
+            ws.close();
+            resolve(true);
+          }, 500);
+        };
+
+        ws.onerror = (error) => {
+          clearTimeout(timeout);
+          console.error("WebSocket error:", error);
+          resolve(false);
+        };
+
+        ws.onclose = () => {
+          clearTimeout(timeout);
+          console.log("WebSocket closed");
+        };
       });
-    } catch {
+    } catch (error) {
+      console.error("Direct print error:", error);
       return false;
     }
   }, [settings.enableWebSocketPrint]);
