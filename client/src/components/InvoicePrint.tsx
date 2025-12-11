@@ -443,11 +443,15 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
     return (
       <div
         ref={ref}
-        className="bg-white text-black p-2"
+        className="bg-white text-black"
         style={{
           width,
           fontSize: `${template.fontSize}px`,
           fontFamily: "monospace",
+          padding: "4px",
+          margin: "0",
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
       >
         <style>
@@ -482,18 +486,18 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
         <div className="border-t border-dashed border-black my-2" />
 
         <div className="text-xs space-y-0.5">
-          <div className="flex justify-between">
-            <span>{translateToTamil("Bill No", enableTamilPrint)}:</span>
-            <span className="font-bold">{invoice.invoiceNo}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "4px", wordBreak: "break-word" }}>
+            <span style={{ flex: "0 0 auto" }}>{translateToTamil("Bill No", enableTamilPrint)}:</span>
+            <span className="font-bold" style={{ flex: "1 1 auto", textAlign: "right" }}>{invoice.invoiceNo}</span>
           </div>
-          <div className="flex justify-between">
-            <span>{translateToTamil("Date", enableTamilPrint)}:</span>
-            <span>{format(new Date(invoice.date), "dd/MM/yyyy HH:mm")}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "4px", wordBreak: "break-word" }}>
+            <span style={{ flex: "0 0 auto" }}>{translateToTamil("Date", enableTamilPrint)}:</span>
+            <span style={{ flex: "1 1 auto", textAlign: "right" }}>{format(new Date(invoice.date), "dd/MM/yyyy")}</span>
           </div>
           {invoice.partyName && invoice.partyName !== "Cash" && (
-            <div className="flex justify-between">
-              <span>{translateToTamil("Customer", enableTamilPrint)}:</span>
-              <span className="text-right max-w-[60%] truncate">{invoice.partyName}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "4px", wordBreak: "break-word" }}>
+              <span style={{ flex: "0 0 auto" }}>{translateToTamil("Customer", enableTamilPrint)}:</span>
+              <span style={{ flex: "1 1 auto", textAlign: "right", wordWrap: "break-word" }}>{invoice.partyName}</span>
             </div>
           )}
         </div>
@@ -501,24 +505,24 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
         <div className="border-t border-dashed border-black my-2" />
 
         <div className="text-xs">
-          <div className="flex justify-between font-bold mb-1">
-            <span>{translateToTamil("Item Name", enableTamilPrint)}</span>
-            <span>{translateToTamil("Amount", enableTamilPrint)}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", marginBottom: "4px" }}>
+            <span style={{ flex: "1 1 auto" }}>{translateToTamil("Item Name", enableTamilPrint)}</span>
+            <span style={{ flex: "0 0 auto", marginLeft: "4px" }}>{translateToTamil("Amount", enableTamilPrint)}</span>
           </div>
           {invoice.items.map((item, index) => (
-            <div key={item.id || index} className="mb-1">
-              <div className="flex justify-between">
-                <span className="max-w-[65%] truncate">{item.itemName}</span>
-                <span className="font-medium">₹{item.amount.toFixed(2)}</span>
+            <div key={item.id || index} style={{ marginBottom: "4px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
+                <span style={{ flex: "1 1 auto", wordBreak: "break-word" }}>{item.itemName}</span>
+                <span className="font-medium" style={{ flex: "0 0 auto", textAlign: "right" }}>₹{item.amount.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-xs opacity-75">
-                <span>{item.quantity} x ₹{item.rate.toFixed(2)}</span>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "4px", opacity: 0.75, fontSize: "0.75rem" }}>
+                <span style={{ flex: "0 0 auto" }}>{item.quantity}x₹{item.rate.toFixed(2)}</span>
                 {item.discountPercent && item.discountPercent > 0 && (
-                  <span>Disc: {item.discountPercent}%</span>
+                  <span style={{ flex: "0 0 auto" }}>D:{item.discountPercent}%</span>
                 )}
               </div>
               {template.showHsnCode && item.hsnCode && (
-                <div className="text-xs opacity-60">HSN: {item.hsnCode}</div>
+                <div style={{ opacity: 0.6, fontSize: "0.7rem" }}>H:{item.hsnCode}</div>
               )}
             </div>
           ))}
@@ -527,48 +531,48 @@ export const InvoiceThermalPrint = forwardRef<HTMLDivElement, InvoicePrintProps>
         <div className="border-t border-dashed border-black my-2" />
 
         <div className="text-xs space-y-0.5">
-          <div className="flex justify-between">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "4px", fontSize: "0.75rem" }}>
             <span>{translateToTamil("Items", enableTamilPrint)}: {invoice.items.length}</span>
-            <span>{translateToTamil("Qty", enableTamilPrint)}: {invoice.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
+            <span>Q: {invoice.items.reduce((sum, i) => sum + i.quantity, 0)}</span>
           </div>
-          <div className="flex justify-between">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
             <span>{translateToTamil("Subtotal", enableTamilPrint)}:</span>
-            <span>₹{invoice.subtotal.toFixed(2)}</span>
+            <span style={{ textAlign: "right" }}>₹{invoice.subtotal.toFixed(2)}</span>
           </div>
           {invoice.totalDiscount > 0 && (
-            <div className="flex justify-between">
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
               <span>{translateToTamil("Discount", enableTamilPrint)}:</span>
-              <span>- ₹{invoice.totalDiscount.toFixed(2)}</span>
+              <span style={{ textAlign: "right" }}>-₹{invoice.totalDiscount.toFixed(2)}</span>
             </div>
           )}
           {template.showTaxBreakup && (
             invoice.isInterState ? (
-              <div className="flex justify-between">
+              <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
                 <span>{translateToTamil("IGST", enableTamilPrint)}:</span>
-                <span>₹{invoice.totalIgst.toFixed(2)}</span>
+                <span style={{ textAlign: "right" }}>₹{invoice.totalIgst.toFixed(2)}</span>
               </div>
             ) : (
               <>
-                <div className="flex justify-between">
-                  <span>{translateToTamil("CGST", enableTamilPrint)}:</span>
-                  <span>₹{invoice.totalCgst.toFixed(2)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
+                  <span>CGST:</span>
+                  <span style={{ textAlign: "right" }}>₹{invoice.totalCgst.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>{translateToTamil("SGST", enableTamilPrint)}:</span>
-                  <span>₹{invoice.totalSgst.toFixed(2)}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
+                  <span>SGST:</span>
+                  <span style={{ textAlign: "right" }}>₹{invoice.totalSgst.toFixed(2)}</span>
                 </div>
               </>
             )
           )}
           {invoice.roundOff !== 0 && (
-            <div className="flex justify-between">
-              <span>{translateToTamil("Round Off", enableTamilPrint)}:</span>
-              <span>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "4px" }}>
+              <span>RO:</span>
+              <span style={{ textAlign: "right" }}>{invoice.roundOff >= 0 ? "+" : ""}₹{invoice.roundOff.toFixed(2)}</span>
             </div>
           )}
-          <div className="flex justify-between font-bold text-base border-t border-black pt-1">
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "4px", fontWeight: "bold", fontSize: "1rem", borderTop: "1px solid black", paddingTop: "4px" }}>
             <span>{translateToTamil("TOTAL", enableTamilPrint)}:</span>
-            <span>₹{invoice.grandTotal.toFixed(2)}</span>
+            <span style={{ textAlign: "right" }}>₹{invoice.grandTotal.toFixed(2)}</span>
           </div>
         </div>
 
