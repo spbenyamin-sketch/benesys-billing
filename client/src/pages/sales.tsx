@@ -110,8 +110,9 @@ export default function Sales() {
     documentTitle: `Sales-List-${format(new Date(), "yyyy-MM-dd")}`,
   });
 
-  const openInvoice = (saleId: number) => {
-    window.open(`/invoice/${saleId}`, '_blank');
+  const openInvoice = (saleId: number, skipDirectPrint: boolean = true) => {
+    const params = skipDirectPrint ? '?no-direct-print=true' : '';
+    window.open(`/invoice/${saleId}${params}`, '_blank');
   };
 
   return (

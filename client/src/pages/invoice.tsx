@@ -106,6 +106,7 @@ export default function Invoice() {
   
   const searchParams = new URLSearchParams(searchString);
   const autoPrintRequested = searchParams.get("print") === "auto";
+  const skipDirectPrint = searchParams.get("no-direct-print") === "true";
 
   const { data: sale, isLoading: saleLoading } = useQuery<Sale>({
     queryKey: ["/api/sales", saleId],
@@ -228,7 +229,8 @@ export default function Invoice() {
       setHasPrinted(true);
       setTimeout(() => {
         // Use template's direct print setting, or fall back to global WebSocket setting
-        const useDirectPrint = templateHasDirectPrint || isWebSocketPrintEnabled;
+        // But skip if the no-direct-print flag is set (e.g., when printing from sales list)
+        const useDirectPrint = !skipDirectPrint && (templateHasDirectPrint || isWebSocketPrintEnabled);
         if (useDirectPrint) {
           handleWebSocketPrint();
         } else {
@@ -242,7 +244,7 @@ export default function Invoice() {
       
       // Check template-specific settings first
       const autoPrintEnabled = templateHasAutoPrint !== undefined ? templateHasAutoPrint : shouldAutoPrint(billType);
-      const directPrintEnabled = templateHasDirectPrint !== undefined ? templateHasDirectPrint : shouldDirectPrint(billType);
+      const directPrintEnabled = !skipDirectPrint && (templateHasDirectPrint !== undefined ? templateHasDirectPrint : shouldDirectPrint(billType));
       
       if (autoPrintEnabled || directPrintEnabled) {
         setHasPrinted(true);
@@ -261,7 +263,7 @@ export default function Invoice() {
         }
       }
     }
-  }, [sale, items, template, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled]);
+  }, [sale, items, template, templateReady, hasPrinted, saleLoading, itemsLoading, handlePrint, handleWebSocketPrint, autoPrintRequested, shouldAutoPrint, shouldDirectPrint, isWebSocketPrintEnabled, skipDirectPrint]);
 
   if (isLoading) {
     return (
