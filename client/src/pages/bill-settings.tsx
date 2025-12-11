@@ -122,6 +122,14 @@ export default function BillSettings() {
     setSettings(hookSettings);
   }, [hookSettings]);
 
+  // Load token from localStorage on page load
+  useEffect(() => {
+    const savedToken = localStorage.getItem('printToken');
+    if (savedToken) {
+      setPrintToken(savedToken);
+    }
+  }, []);
+
   const { data: templates, isLoading } = useQuery<BillTemplate[]>({
     queryKey: ["/api/bill-templates"],
   });
@@ -208,6 +216,8 @@ export default function BillSettings() {
       const data = await response.json();
       if (data.success) {
         setPrintToken(data.token);
+        // Save token to localStorage so it persists across page navigations
+        localStorage.setItem('printToken', data.token);
         toast({ title: "Token Generated", description: "Copy to your Python script" });
         checkConnectionStatus();
       } else {
