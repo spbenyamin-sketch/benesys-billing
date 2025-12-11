@@ -129,10 +129,9 @@ export function usePrintSettings() {
       const response = await apiRequest("GET", "/api/print-token");
       const { token } = await response.json();
       
-      // Construct WebSocket URL - handle both cases
+      // Construct WebSocket URL - use window.location.host which already includes port
       const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const host = window.location.host || `${window.location.hostname}:${window.location.port || (window.location.protocol === "https:" ? 443 : 80)}`;
-      const wsUrl = `${protocol}//${host}/ws/print?token=${token}`;
+      const wsUrl = `${protocol}//${window.location.host}/ws/print?token=${token}`;
       
       console.log("Connecting to WebSocket:", wsUrl);
       const ws = new WebSocket(wsUrl);
