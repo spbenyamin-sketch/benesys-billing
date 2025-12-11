@@ -258,9 +258,13 @@ class PrintService:
         self.log(f"Connecting to: {url}")
         
         # Create SSL context that doesn't verify certificates (for self-signed Replit certs)
-        ssl_context = ssl.create_default_context()
-        ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
+        try:
+            import ssl
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        except:
+            ssl_context = None
         
         self.ws = websocket.WebSocketApp(
             url,
@@ -271,7 +275,16 @@ class PrintService:
             header={"User-Agent": "BeneSys-PrintService/1.0"}
         )
         
-        self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE})
+        # Run with proper SSL options
+        try:
+            if ssl_context:
+                self.ws.run_forever(sslopt={"cert_reqs": ssl.CERT_NONE, "ssl_version": ssl.PROTOCOL_TLS})
+            else:
+                self.ws.run_forever()
+        except Exception as e:
+            # Fallback: try without SSL options
+            self.log(f"SSL connection attempt failed, retrying: {e}")
+            self.ws.run_forever()
         
     def run(self):
         """Main run loop with auto-reconnect"""
