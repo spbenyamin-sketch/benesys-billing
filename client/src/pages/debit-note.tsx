@@ -421,15 +421,9 @@ export default function DebitNote() {
         description: "Debit Note saved successfully - stock reduced",
       });
 
-      if (shouldDirectPrint("DN")) {
-        sendDirectPrint(data.id).catch((error) => {
-          console.error("Direct print failed:", error);
-          window.open(`/invoice/${data.id}`, '_blank');
-        });
-      } else {
-        const printParam = shouldAutoPrint("DN") ? "?print=auto" : "";
-        window.open(`/invoice/${data.id}${printParam}`, '_blank');
-      }
+      // Always open the invoice window - it will handle printing based on settings
+      const printParam = shouldAutoPrint("DN") ? "?print=auto" : "";
+      window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);
       setSelectedPartyId(null);

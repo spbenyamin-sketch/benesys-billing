@@ -452,18 +452,9 @@ export default function SalesB2C() {
         description: "Retail sale saved successfully",
       });
 
-      // If direct print is enabled, send to printer silently
-      if (shouldDirectPrint("B2C")) {
-        sendDirectPrint(data.id).catch((error) => {
-          console.error("Direct print failed:", error);
-          // Fallback to opening invoice
-          window.open(`/invoice/${data.id}`, '_blank');
-        });
-      } else {
-        // Otherwise open invoice with auto-print if enabled
-        const printParam = shouldAutoPrint("B2C") ? "?print=auto" : "";
-        window.open(`/invoice/${data.id}${printParam}`, '_blank');
-      }
+      // Always open the invoice window - it will handle printing based on settings
+      const printParam = shouldAutoPrint("B2C") ? "?print=auto" : "";
+      window.open(`/invoice/${data.id}${printParam}`, '_blank');
       
       setLineItems([]);
       setSelectedPartyId(null);
