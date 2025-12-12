@@ -401,9 +401,19 @@ CREATE TABLE IF NOT EXISTS bill_templates (
 CREATE TABLE IF NOT EXISTS barcode_label_templates (
   id serial PRIMARY KEY,
   company_id integer REFERENCES companies(id) NOT NULL,
-  name varchar(200) NOT NULL,
+  name varchar(100) NOT NULL,
+  label_width decimal(6,2) DEFAULT '50' NOT NULL,
+  label_height decimal(6,2) DEFAULT '25' NOT NULL,
+  config text NOT NULL,
+  prn_program text,
+  paper_size varchar(20) DEFAULT 'A4' NOT NULL,
+  labels_per_row integer DEFAULT 4 NOT NULL,
+  labels_per_column integer DEFAULT 10 NOT NULL,
+  margin_top decimal(6,2) DEFAULT '10' NOT NULL,
+  margin_left decimal(6,2) DEFAULT '5' NOT NULL,
+  gap_horizontal decimal(6,2) DEFAULT '2' NOT NULL,
+  gap_vertical decimal(6,2) DEFAULT '2' NOT NULL,
   is_default boolean DEFAULT false NOT NULL,
-  template_data jsonb NOT NULL,
   created_at timestamp DEFAULT now() NOT NULL,
   updated_at timestamp DEFAULT now() NOT NULL,
   created_by varchar REFERENCES users(id)
@@ -500,3 +510,17 @@ CREATE TABLE IF NOT EXISTS print_settings (
 CREATE INDEX IF NOT EXISTS idx_stock_inward_barcode ON stock_inward_items(barcode);
 CREATE INDEX IF NOT EXISTS idx_stock_inward_status ON stock_inward_items(status);
 CREATE INDEX IF NOT EXISTS idx_stock_inward_company ON stock_inward_items(company_id);
+
+-- Add prn_program column to barcode_label_templates for storing EPL2/ZPL printer programs
+-- Supports placeholders: {barcode}, {itemName}, {mrp}, {sellingPrice}, {hsnCode}, {size}, {sizeCode}
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS prn_program text;
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS label_width decimal(6,2) DEFAULT '50';
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS label_height decimal(6,2) DEFAULT '25';
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS config text;
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS paper_size varchar(20) DEFAULT 'A4';
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS labels_per_row integer DEFAULT 4;
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS labels_per_column integer DEFAULT 10;
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS margin_top decimal(6,2) DEFAULT '10';
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS margin_left decimal(6,2) DEFAULT '5';
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS gap_horizontal decimal(6,2) DEFAULT '2';
+ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS gap_vertical decimal(6,2) DEFAULT '2';

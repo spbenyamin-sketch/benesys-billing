@@ -1804,12 +1804,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Generate PRN file for Zebra barcode printers
   app.post("/api/barcodes/generate-prn", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const { barcodeIds } = req.body;
+      const { barcodeIds, templateId } = req.body;
       if (!barcodeIds || !Array.isArray(barcodeIds) || barcodeIds.length === 0) {
         return res.status(400).json({ message: "No barcodes selected" });
       }
 
       const barcodes = await storage.getBarcodesByIds(barcodeIds);
+      
+      // Get the label template if templateId provided, or get default template
+      let prnProgram: string | null = null;
+      if (templateId) {
+        const template = await storage.getBarcodeLabelTemplate(templateId);
+        if (template && template.prnProgram) {
+          prnProgram = template.prnProgram;
+        }
+      } else {
+        // Try to get default template
+        const defaultTemplate = await storage.getDefaultBarcodeLabelTemplate(req.companyId);
+        if (defaultTemplate && defaultTemplate.prnProgram) {
+          prnProgram = defaultTemplate.prnProgram;
+        }
+      }
       
       let prnContent = '';
       barcodes.forEach((barcode: any) => {
@@ -1818,18 +1833,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sellingPrice = barcode.sellingPrice || '0';
         const barcodeNum = barcode.barcode || '';
         const hsnCode = barcode.hsnCode || '';
+        const size = barcode.size || '';
+        const sizeCode = barcode.sizeCode || '';
 
-        // Zebra EPL2 commands for each label
-        prnContent += '\nN\n';
-        prnContent += 'q400\n';
-        prnContent += 'Q200,24\n';
-        prnContent += `B50,20,0,1,2,7,80,B,"${barcodeNum}"\n`;
-        prnContent += `A50,110,0,2,1,1,N,"${itemName}"\n`;
-        prnContent += `A50,135,0,2,1,1,N,"MRP: ${mrp}  Rate: ${sellingPrice}"\n`;
-        if (hsnCode) {
-          prnContent += `A50,160,0,1,1,1,N,"HSN: ${hsnCode}"\n`;
+        if (prnProgram) {
+          // Use the stored program template with placeholder replacement
+          let labelContent = prnProgram
+            .replace(/\{barcode\}/g, barcodeNum)
+            .replace(/\{itemName\}/g, itemName)
+            .replace(/\{mrp\}/g, mrp)
+            .replace(/\{sellingPrice\}/g, sellingPrice)
+            .replace(/\{hsnCode\}/g, hsnCode)
+            .replace(/\{size\}/g, size)
+            .replace(/\{sizeCode\}/g, sizeCode);
+          prnContent += labelContent + '\n';
+        } else {
+          // Default Zebra EPL2 commands for each label
+          prnContent += '\nN\n';
+          prnContent += 'q400\n';
+          prnContent += 'Q200,24\n';
+          prnContent += `B50,20,0,1,2,7,80,B,"${barcodeNum}"\n`;
+          prnContent += `A50,110,0,2,1,1,N,"${itemName}"\n`;
+          prnContent += `A50,135,0,2,1,1,N,"MRP: ${mrp}  Rate: ${sellingPrice}"\n`;
+          if (hsnCode) {
+            prnContent += `A50,160,0,1,1,1,N,"HSN: ${hsnCode}"\n`;
+          }
+          prnContent += 'P1\n';
         }
-        prnContent += 'P1\n';
       });
 
       res.setHeader('Content-Type', 'text/plain');

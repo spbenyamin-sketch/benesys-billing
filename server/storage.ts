@@ -181,6 +181,7 @@ export interface IStorage {
   
   // Barcode Label Template operations
   getBarcodeLabelTemplates(companyId: number): Promise<any[]>;
+  getBarcodeLabelTemplate(id: number): Promise<any | undefined>;
   getDefaultBarcodeLabelTemplate(companyId: number): Promise<any | undefined>;
   createBarcodeLabelTemplate(template: any, userId: string, companyId: number): Promise<any>;
   updateBarcodeLabelTemplate(id: number, template: any, companyId: number): Promise<any>;
@@ -2809,6 +2810,14 @@ export class DatabaseStorage implements IStorage {
       .from(barcodeLabelTemplates)
       .where(eq(barcodeLabelTemplates.companyId, companyId))
       .orderBy(desc(barcodeLabelTemplates.createdAt));
+  }
+
+  async getBarcodeLabelTemplate(id: number): Promise<BarcodeLabelTemplate | undefined> {
+    const [template] = await db
+      .select()
+      .from(barcodeLabelTemplates)
+      .where(eq(barcodeLabelTemplates.id, id));
+    return template;
   }
 
   async getDefaultBarcodeLabelTemplate(companyId: number): Promise<BarcodeLabelTemplate | undefined> {

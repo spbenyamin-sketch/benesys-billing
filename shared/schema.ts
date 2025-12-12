@@ -712,6 +712,9 @@ export const barcodeLabelTemplates = pgTable("barcode_label_templates", {
   labelHeight: decimal("label_height", { precision: 6, scale: 2 }).default("25").notNull(),
   // Layout configuration stored as JSON
   config: text("config").notNull(), // JSON: { elements: [{ type, x, y, width, height, fontSize, field }] }
+  // PRN Program template for Zebra printers (EPL2/ZPL format)
+  // Supports placeholders: {barcode}, {itemName}, {mrp}, {sellingPrice}, {hsnCode}, {size}, {sizeCode}
+  prnProgram: text("prn_program"),
   // Print settings
   paperSize: varchar("paper_size", { length: 20 }).default("A4").notNull(),
   labelsPerRow: integer("labels_per_row").default(4).notNull(),
@@ -742,6 +745,7 @@ export const insertBarcodeLabelTemplateSchema = createInsertSchema(barcodeLabelT
   gapHorizontal: z.coerce.number().or(z.string()).optional(),
   gapVertical: z.coerce.number().or(z.string()).optional(),
   config: z.string(),
+  prnProgram: z.string().optional().nullable(),
   isDefault: z.boolean().optional(),
   paperSize: z.string().optional(),
   name: z.string(),
