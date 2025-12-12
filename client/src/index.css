@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile responsive utilities */
+@layer utilities {
+  .table-mobile-hide {
+    @apply hidden sm:table-cell;
+  }
+  
+  .touch-target {
+    @apply min-h-10 min-w-10;
+  }
+}
+
 /* LIGHT MODE */
 :root {
   --button-outline: rgba(0,0,0, .10);

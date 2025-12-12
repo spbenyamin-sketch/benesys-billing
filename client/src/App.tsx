@@ -123,8 +123,8 @@ function AppContent() {
   const { currentCompany, isLoading: companyLoading, needsCompanySelection } = useCompany();
 
   const sidebarStyle = {
-    "--sidebar-width": "16rem",
-    "--sidebar-width-icon": "3rem",
+    "--sidebar-width": "14rem",
+    "--sidebar-width-icon": "3.5rem",
   } as React.CSSProperties;
 
   const isSuperAdmin = (user as any)?.role === "admin" || (user as any)?.role === "superadmin";

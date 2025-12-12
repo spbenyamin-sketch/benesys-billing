@@ -134,7 +134,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
       <div>
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Dashboard</h1>
         <p className="text-sm sm:text-base text-muted-foreground mt-1 sm:mt-2">
@@ -142,7 +142,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today's Sales</CardTitle>
