@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS companies (
   phone varchar(50),
   email varchar(100),
   logo_url text,
+  expiry_date timestamp,  -- Software license expiry date
   created_at timestamp DEFAULT now() NOT NULL,
   updated_at timestamp DEFAULT now() NOT NULL,
   created_by varchar REFERENCES users(id)
@@ -215,15 +216,38 @@ CREATE TABLE IF NOT EXISTS purchase_items (
 
 CREATE TABLE IF NOT EXISTS stock_inward_items (
   id serial PRIMARY KEY,
-  purchase_item_id integer REFERENCES purchase_items(id),
+  purchase_item_id integer REFERENCES purchase_items(id) NOT NULL,
+  purchase_id integer REFERENCES purchases(id) NOT NULL,
   company_id integer REFERENCES companies(id) NOT NULL,
-  item_id integer REFERENCES items(id) NOT NULL,
-  quantity_total decimal(12,3) NOT NULL,
-  quantity_received decimal(12,3) DEFAULT 0 NOT NULL,
-  barcode varchar(100),
-  mrp decimal(12,2) DEFAULT 0 NOT NULL,
+  item_id integer REFERENCES items(id),
+  serial integer NOT NULL,
+  barcode varchar(100) NOT NULL,
+  itname varchar(300) NOT NULL,
+  brandname varchar(200),
+  quality varchar(100),
+  dno1 varchar(50),
+  pattern varchar(100),
+  sleeve varchar(100),
+  size varchar(10),
+  size_code integer,
+  cost decimal(12,2) NOT NULL,
+  ncost decimal(12,2) NOT NULL,
+  lcost decimal(12,2) NOT NULL,
+  rate decimal(12,2) NOT NULL,
+  mrp decimal(12,2) NOT NULL,
+  tax decimal(5,2) DEFAULT 0 NOT NULL,
+  qty decimal(12,2) DEFAULT 1 NOT NULL,
+  status varchar(20) DEFAULT 'available' NOT NULL,
+  sold_at timestamp,
+  sale_id integer REFERENCES sales(id),
+  sale_item_id integer REFERENCES sale_items(id),
+  expdate date,
   created_at timestamp DEFAULT now() NOT NULL
 );
+
+CREATE INDEX IF NOT EXISTS idx_stock_inward_barcode ON stock_inward_items(barcode);
+CREATE INDEX IF NOT EXISTS idx_stock_inward_status ON stock_inward_items(status);
+CREATE INDEX IF NOT EXISTS idx_stock_inward_company ON stock_inward_items(company_id);
 
 -- ============================================================================
 -- SALES TABLES
@@ -385,6 +409,23 @@ CREATE TABLE IF NOT EXISTS barcode_label_templates (
   created_by varchar REFERENCES users(id)
 );
 
+CREATE TABLE IF NOT EXISTS print_settings (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  auto_print_b2b boolean DEFAULT false NOT NULL,
+  auto_print_b2c boolean DEFAULT true NOT NULL,
+  auto_print_estimate boolean DEFAULT false NOT NULL,
+  auto_print_credit_note boolean DEFAULT false NOT NULL,
+  auto_print_debit_note boolean DEFAULT false NOT NULL,
+  print_copies_b2b integer DEFAULT 2 NOT NULL,
+  print_copies_b2c integer DEFAULT 1 NOT NULL,
+  print_copies_estimate integer DEFAULT 1 NOT NULL,
+  print_copies_credit_note integer DEFAULT 1 NOT NULL,
+  print_copies_debit_note integer DEFAULT 1 NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL
+);
+
 -- ============================================================================
 -- INDEXES
 -- ============================================================================
@@ -401,3 +442,61 @@ CREATE INDEX IF NOT EXISTS idx_payments_company_id ON payments(company_id);
 -- ============================================================================
 -- SETUP COMPLETE - 17 TABLES CREATED
 -- ============================================================================
+
+-- ============================================================================
+-- MIGRATION SCRIPTS FOR EXISTING INSTALLATIONS
+-- Run these if upgrading from an older version
+-- ============================================================================
+
+-- Add expiry_date to companies if not exists
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS expiry_date timestamp;
+
+-- Add missing columns to payments table
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS debit decimal(12,2) DEFAULT 0 NOT NULL;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit decimal(12,2) DEFAULT 0 NOT NULL;
+
+-- Add missing columns to stock_inward_items
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS purchase_id integer REFERENCES purchases(id);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS serial integer;
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS itname varchar(300);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS brandname varchar(200);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS quality varchar(100);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS dno1 varchar(50);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS pattern varchar(100);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sleeve varchar(100);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS size varchar(10);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS size_code integer;
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS cost decimal(12,2);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS ncost decimal(12,2);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS lcost decimal(12,2);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS rate decimal(12,2);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS tax decimal(5,2) DEFAULT 0;
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS qty decimal(12,2) DEFAULT 1;
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS status varchar(20) DEFAULT 'available';
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sold_at timestamp;
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sale_id integer REFERENCES sales(id);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sale_item_id integer REFERENCES sale_items(id);
+ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS expdate date;
+
+-- Create print_settings table if not exists
+CREATE TABLE IF NOT EXISTS print_settings (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  auto_print_b2b boolean DEFAULT false NOT NULL,
+  auto_print_b2c boolean DEFAULT true NOT NULL,
+  auto_print_estimate boolean DEFAULT false NOT NULL,
+  auto_print_credit_note boolean DEFAULT false NOT NULL,
+  auto_print_debit_note boolean DEFAULT false NOT NULL,
+  print_copies_b2b integer DEFAULT 2 NOT NULL,
+  print_copies_b2c integer DEFAULT 1 NOT NULL,
+  print_copies_estimate integer DEFAULT 1 NOT NULL,
+  print_copies_credit_note integer DEFAULT 1 NOT NULL,
+  print_copies_debit_note integer DEFAULT 1 NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL
+);
+
+-- Create indexes if not exist
+CREATE INDEX IF NOT EXISTS idx_stock_inward_barcode ON stock_inward_items(barcode);
+CREATE INDEX IF NOT EXISTS idx_stock_inward_status ON stock_inward_items(status);
+CREATE INDEX IF NOT EXISTS idx_stock_inward_company ON stock_inward_items(company_id);

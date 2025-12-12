@@ -36,7 +36,7 @@ if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
     echo SETUP ALREADY COMPLETE!
     echo ========================================
     echo.
-    echo Skipping database setup...
+    echo Skipping full database setup...
     echo.
     
     REM Ensure .env has production settings
@@ -48,6 +48,13 @@ if "%SETUP_STATUS%"=="SETUP_COMPLETE" (
         echo SESSION_SECRET=billing-system-production-secret-key-2024
     ) > .env
     echo .env updated for Production Mode
+    echo.
+    
+    REM Apply schema migrations for existing database
+    echo Applying schema migrations for any updates...
+    call npm run db:push -- --force >nul 2>&1
+    psql -U postgres -d billing_system -f database-schema.sql >nul 2>&1
+    echo Schema updates applied.
     echo.
     
     REM ALWAYS rebuild for production to ensure latest code
@@ -144,6 +151,13 @@ if errorlevel 1 (
     exit /b 1
 )
 echo Database schema ready.
+echo.
+
+REM Apply migrations for existing databases
+echo [4.5/7] Applying schema migrations...
+echo Running migration scripts for any missing columns...
+psql -U postgres -d billing_system -f database-schema.sql >nul 2>&1
+echo Schema migrations complete.
 echo.
 
 REM Install PM2 globally
