@@ -24,6 +24,24 @@ A comprehensive store management and billing system designed for retail business
 **Core Entities:** Users, Companies (with `expiryDate` for licensing), Parties (customers/vendors), Items (products), Sales, Sale Items, Purchases, Payments, and Stock.
 **Design Decisions:** Decimal types for precision, generated columns for tax calculations, nullable party references for cash transactions, code-based identification, and user foreign keys for multi-tenancy.
 
+#### Sales Table - E-Invoice Fields (Added Dec 2024)
+- `einvoiceStatus` - Status of e-invoice (pending, generated, cancelled, failed)
+- `irn` - Invoice Reference Number from GST portal
+- `ackNumber` - Acknowledgement number from GST portal
+- `ackDate` - Acknowledgement timestamp
+- `qrCode` - QR code data (base64 encoded or text)
+- `signedInvoice` - Complete signed invoice JSON from GST portal
+
+#### Offline Installation - Schema Sync
+For offline Windows installation, use `database-schema.sql` to initialize the database. After each release, the schema is automatically updated via:
+1. `npm run db:push` - Applies Drizzle schema changes to PostgreSQL
+2. `psql -f database-schema.sql` - Runs any manual migrations (called by PRODUCTION-START.bat)
+
+To manually initialize offline database:
+```bash
+psql -U username -d database_name -f database-schema.sql
+```
+
 ### API Architecture
 RESTful Endpoints protected by `isAuthenticated` middleware for modules like Authentication, Party, Item, Sales, Purchases, Payments, Stock, and Reporting. Zod schemas ensure data validation across frontend and backend.
 
