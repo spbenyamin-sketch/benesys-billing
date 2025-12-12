@@ -45,6 +45,11 @@ export function AppSidebar() {
   const salesMenuItems = [
     {
       title: "B2B Credit Sale",
+    },
+    {
+      title: "Proforma Invoice",
+      url: "/sales/proforma",
+      icon: Briefcase,
       url: "/sales/b2b",
       icon: Briefcase,
     },

@@ -24,6 +24,7 @@ import Agents from "@/pages/agents";
 import SalesBilling from "@/pages/sales-billing";
 import BillEntry from "@/pages/bill-entry";
 import SalesB2B from "@/pages/sales-b2b";
+import SalesProforma from "@/pages/sales-proforma";
 import SalesB2C from "@/pages/sales-b2c";
 import SalesEstimate from "@/pages/sales-estimate";
 import CreditNote from "@/pages/credit-note";
@@ -79,6 +80,7 @@ function Router() {
       <ProtectedRoute path="/items" component={Items} />
       <ProtectedRoute path="/agents" component={Agents} />
       <ProtectedRoute path="/sales/b2b" component={SalesB2B} />
+      <ProtectedRoute path="/sales/proforma" component={SalesProforma} />
       <ProtectedRoute path="/sales/b2c" component={SalesB2C} />
       <ProtectedRoute path="/sales/estimate" component={SalesEstimate} />
       <ProtectedRoute path="/sales/credit-note" component={CreditNote} />
