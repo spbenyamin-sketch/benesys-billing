@@ -53,7 +53,8 @@ Thermal format payment receipt printing with company details, number-to-words co
 
 ### Software Licensing & Role-Based Access Control
 - **Three-Tier Role Hierarchy:** Super Admin, Admin (customer role), Normal User.
-- **Company Expiry Date:** `expiryDate` field in the companies table, managed by Super Admin. Expired companies are locked, preventing access.
+- **Company Expiry Date:** `expiryDate` field in the companies table, managed by Super Admin.
+- **Expiry Enforcement:** When a company expires, admin and user roles are blocked with "Company license has expired" message. **Superadmin can always login** to expired companies to manage and extend the expiry date.
 
 ### Stock Management
 - **Item Movement History:** API `GET /api/items/:id/history` provides consolidated item details, stock levels, purchases, sales, and movement summary.
