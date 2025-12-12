@@ -412,6 +412,8 @@ export default function PurchaseEntry() {
                         {...form.register("amount")}
                         placeholder="0.00"
                         data-testid="input-amount"
+                        inputMode="decimal"
+                        onFocus={(e) => setTimeout(() => (e.target as HTMLInputElement).setSelectionRange(0, (e.target as HTMLInputElement).value.length), 0)}
                       />
                     </div>
                     <div>
@@ -423,6 +425,8 @@ export default function PurchaseEntry() {
                         {...form.register("totalQty")}
                         placeholder="0"
                         data-testid="input-qty"
+                        inputMode="decimal"
+                        onFocus={(e) => setTimeout(() => (e.target as HTMLInputElement).setSelectionRange(0, (e.target as HTMLInputElement).value.length), 0)}
                       />
                     </div>
                     <div>
@@ -463,6 +467,8 @@ export default function PurchaseEntry() {
                         {...form.register("cess")}
                         placeholder="0.00"
                         data-testid="input-cess"
+                        inputMode="decimal"
+                        onFocus={(e) => setTimeout(() => (e.target as HTMLInputElement).setSelectionRange(0, (e.target as HTMLInputElement).value.length), 0)}
                       />
                     </div>
                   </div>
@@ -478,6 +484,8 @@ export default function PurchaseEntry() {
                           {...form.register("cgst")}
                           placeholder="0.00"
                           data-testid="input-cgst"
+                          inputMode="decimal"
+                          onFocus={(e) => setTimeout(() => (e.target as HTMLInputElement).setSelectionRange(0, (e.target as HTMLInputElement).value.length), 0)}
                         />
                       </div>
                       <div>
@@ -489,6 +497,8 @@ export default function PurchaseEntry() {
                           {...form.register("sgst")}
                           placeholder="0.00"
                           data-testid="input-sgst"
+                          inputMode="decimal"
+                          onFocus={(e) => setTimeout(() => (e.target as HTMLInputElement).setSelectionRange(0, (e.target as HTMLInputElement).value.length), 0)}
                         />
                       </div>
                     </div>
@@ -505,6 +515,8 @@ export default function PurchaseEntry() {
                           {...form.register("igst")}
                           placeholder="0.00"
                           data-testid="input-igst"
+                          inputMode="decimal"
+                          onFocus={(e) => setTimeout(() => (e.target as HTMLInputElement).setSelectionRange(0, (e.target as HTMLInputElement).value.length), 0)}
                         />
                       </div>
                     </div>

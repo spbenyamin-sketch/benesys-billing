@@ -347,10 +347,11 @@ export default function BillEntry() {
                   onChange={(e) => setCurrentRowQty(e.target.value)}
                   onFocus={(e) => {
                     setFocusedField("qty");
-                    e.currentTarget.select();
+                    setTimeout(() => e.currentTarget.setSelectionRange(0, e.currentTarget.value.length), 0);
                   }}
                   data-testid="input-qty"
                   placeholder="0"
+                  inputMode="decimal"
                 />
               </div>
               <div>
@@ -362,10 +363,11 @@ export default function BillEntry() {
                   onChange={(e) => setCurrentRowRate(e.target.value)}
                   onFocus={(e) => {
                     setFocusedField("rate");
-                    e.currentTarget.select();
+                    setTimeout(() => e.currentTarget.setSelectionRange(0, e.currentTarget.value.length), 0);
                   }}
                   data-testid="input-rate"
                   placeholder="0"
+                  inputMode="decimal"
                 />
               </div>
             </div>
