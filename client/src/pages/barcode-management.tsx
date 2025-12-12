@@ -598,6 +598,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
   const [gapVertical, setGapVertical] = useState(2);
   const [zoomLevel, setZoomLevel] = useState(100);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [prnProgram, setPrnProgram] = useState("");
+  const [showPrnEditor, setShowPrnEditor] = useState(false);
   const scale = (6 * zoomLevel) / 100;
   
   const elementTemplates: TemplateElement[] = [
@@ -722,6 +724,7 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
       gapHorizontal,
       gapVertical,
       config,
+      prnProgram: prnProgram || null,
       isDefault,
     });
   };
@@ -1064,6 +1067,43 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* PRN Program Editor */}
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <div className="flex items-center justify-between mb-2">
+            <Label className="font-semibold">PRN Program (EPL2/ZPL for Zebra Printers)</Label>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowPrnEditor(!showPrnEditor)}
+              data-testid="button-toggle-prn-editor"
+            >
+              {showPrnEditor ? "Hide" : "Show"} PRN Editor
+            </Button>
+          </div>
+          {showPrnEditor && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Enter your EPL2/ZPL program. Use placeholders: {"{barcode}"}, {"{itemName}"}, {"{mrp}"}, {"{sellingPrice}"}, {"{hsnCode}"}, {"{size}"}, {"{sizeCode}"}
+              </p>
+              <textarea
+                className="w-full h-40 p-2 border rounded font-mono text-xs"
+                placeholder={`Example EPL2 Program:
+N
+q400
+Q200,24
+B50,20,0,1,2,7,80,B,"{barcode}"
+A50,110,0,2,1,1,N,"{itemName}"
+A50,135,0,2,1,1,N,"MRP: {mrp}  Rate: {sellingPrice}"
+A50,160,0,1,1,1,N,"HSN: {hsnCode}"
+P1`}
+                value={prnProgram}
+                onChange={(e) => setPrnProgram(e.target.value)}
+                data-testid="textarea-prn-program"
+              />
+            </div>
+          )}
         </div>
 
         <DialogFooter>
