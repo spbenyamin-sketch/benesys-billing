@@ -1260,15 +1260,14 @@ export class DatabaseStorage implements IStorage {
 
     if (!party) return 0;
 
-    // Get total sales to party (excluding PROFORMA/ESTIMATE - they are dummy bills)
+    // Get total sales to party (excluding PROFORMA - it's a dummy bill for quotations only)
     const [salesTotal] = await db
       .select({ total: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)` })
       .from(sales)
       .where(and(
         eq(sales.partyId, partyId), 
         eq(sales.companyId, companyId),
-        ne(sales.saleType, "PROFORMA"),
-        ne(sales.saleType, "ESTIMATE")
+        ne(sales.saleType, "PROFORMA")
       ));
 
     // Get total purchases from party
@@ -1302,15 +1301,14 @@ export class DatabaseStorage implements IStorage {
     const today = new Date().toISOString().split('T')[0];
     const todayDate = new Date();
 
-    // Today's sales (excluding PROFORMA/ESTIMATE - they are dummy bills)
+    // Today's sales (excluding PROFORMA - it's a dummy bill for quotations only)
     const [todaySales] = await db
       .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
       .from(sales)
       .where(and(
         eq(sales.date, today), 
         eq(sales.companyId, companyId),
-        ne(sales.saleType, "PROFORMA"),
-        ne(sales.saleType, "ESTIMATE")
+        ne(sales.saleType, "PROFORMA")
       ));
 
     // Recent sales
@@ -1360,8 +1358,7 @@ export class DatabaseStorage implements IStorage {
           .where(and(
             eq(sales.date, date), 
             eq(sales.companyId, companyId),
-            ne(sales.saleType, "PROFORMA"),
-            ne(sales.saleType, "ESTIMATE")
+            ne(sales.saleType, "PROFORMA")
           ));
         return {
           date,
@@ -1382,7 +1379,7 @@ export class DatabaseStorage implements IStorage {
       .where(eq(sales.companyId, companyId))
       .groupBy(sales.saleType);
 
-    // Top 5 selling items (by quantity sold) - excluding PROFORMA/ESTIMATE
+    // Top 5 selling items (by quantity sold) - excluding PROFORMA only
     const topSellingItems = await db
       .select({
         itemId: saleItems.itemId,
@@ -1394,8 +1391,7 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(sales, eq(saleItems.saleId, sales.id))
       .where(and(
         eq(sales.companyId, companyId),
-        ne(sales.saleType, "PROFORMA"),
-        ne(sales.saleType, "ESTIMATE")
+        ne(sales.saleType, "PROFORMA")
       ))
       .groupBy(saleItems.itemId, saleItems.itemName)
       .orderBy(desc(sql`SUM(${saleItems.quantity})`))
@@ -1427,7 +1423,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(stockInwardItems.expdate)
       .limit(10);
 
-    // This month's sales total (excluding PROFORMA/ESTIMATE - they are dummy bills)
+    // This month's sales total (excluding PROFORMA - it's a dummy bill for quotations only)
     const firstDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1).toISOString().split('T')[0];
     const [monthSales] = await db
       .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
@@ -1435,8 +1431,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         gte(sales.date, firstDayOfMonth), 
         eq(sales.companyId, companyId),
-        ne(sales.saleType, "PROFORMA"),
-        ne(sales.saleType, "ESTIMATE")
+        ne(sales.saleType, "PROFORMA")
       ));
 
     // This month's purchases total
@@ -1491,7 +1486,7 @@ export class DatabaseStorage implements IStorage {
         totalPaymentsDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
       })
       .from(parties)
-      .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA"), ne(sales.saleType, "ESTIMATE")))
+      .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")))
       .leftJoin(purchases, and(eq(parties.id, purchases.partyId), eq(purchases.companyId, companyId)))
       .leftJoin(payments, and(
         eq(parties.id, payments.partyId),
