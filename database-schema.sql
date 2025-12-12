@@ -524,3 +524,11 @@ ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS margin_top decimal(
 ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS margin_left decimal(6,2) DEFAULT '5';
 ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS gap_horizontal decimal(6,2) DEFAULT '2';
 ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS gap_vertical decimal(6,2) DEFAULT '2';
+
+-- E-Invoice fields for sales (India GST e-invoice response data)
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS einvoice_status varchar(20);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS irn varchar(100);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS ack_number varchar(50);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS ack_date timestamp;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS qr_code text;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS signed_invoice text;

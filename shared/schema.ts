@@ -304,6 +304,13 @@ export const sales = pgTable("sales", {
   printOutstanding: boolean("print_outstanding").default(false).notNull(), // B2B: print outstanding on invoice
   partyOutstanding: decimal("party_outstanding", { precision: 12, scale: 2 }).default("0").notNull(), // Outstanding at time of sale
   mobile: varchar("mobile", { length: 20 }),
+  // E-Invoice fields (India GST)
+  einvoiceStatus: varchar("einvoice_status", { length: 20 }), // pending, generated, cancelled, failed
+  irn: varchar("irn", { length: 100 }), // Invoice Reference Number from e-invoice portal
+  ackNumber: varchar("ack_number", { length: 50 }), // Acknowledgement number
+  ackDate: timestamp("ack_date"), // Acknowledgement date
+  qrCode: text("qr_code"), // QR code data (base64 or raw text)
+  signedInvoice: text("signed_invoice"), // Signed invoice JSON from portal
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
