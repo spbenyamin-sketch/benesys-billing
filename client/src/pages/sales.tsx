@@ -18,7 +18,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Search, FileText, Filter, Printer, Eye, Edit, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Search, FileText, Filter, Printer, Eye, Edit, Trash2, FileCheck, Download, QrCode } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useLocation } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +49,11 @@ interface Sale {
   grandTotal: string;
   totalQty: string;
   gstType: number;
+  einvoiceStatus: string | null;
+  irn: string | null;
+  ackNumber: string | null;
+  ackDate: string | null;
+  qrCode: string | null;
 }
 
 export default function Sales() {
@@ -50,6 +65,16 @@ export default function Sales() {
   const { user } = useAuth();
   const { toast } = useToast();
   const canDeleteBill = user?.role === "admin" || user?.role === "superadmin";
+  
+  // E-Invoice dialog state
+  const [einvoiceDialogOpen, setEinvoiceDialogOpen] = useState(false);
+  const [selectedSaleForEinvoice, setSelectedSaleForEinvoice] = useState<Sale | null>(null);
+  const [einvoiceForm, setEinvoiceForm] = useState({
+    irn: "",
+    ackNumber: "",
+    ackDate: "",
+    qrCode: "",
+  });
 
   const { data: sales, isLoading } = useQuery<Sale[]>({
     queryKey: ["/api/sales"],
@@ -81,6 +106,79 @@ export default function Sales() {
     if (window.confirm("Are you sure you want to delete this sale?")) {
       deleteMutation.mutate(saleId);
     }
+  };
+
+  // E-Invoice mutation
+  const einvoiceMutation = useMutation({
+    mutationFn: async (data: { saleId: number; einvoiceData: typeof einvoiceForm }) => {
+      const response = await apiRequest("PATCH", `/api/sales/${data.saleId}/einvoice`, data.einvoiceData);
+      if (!response.ok) throw new Error("Failed to update e-invoice details");
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "E-Invoice details saved successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      setEinvoiceDialogOpen(false);
+      setSelectedSaleForEinvoice(null);
+      setEinvoiceForm({ irn: "", ackNumber: "", ackDate: "", qrCode: "" });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save e-invoice details",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const openEinvoiceDialog = (sale: Sale) => {
+    setSelectedSaleForEinvoice(sale);
+    setEinvoiceForm({
+      irn: sale.irn || "",
+      ackNumber: sale.ackNumber || "",
+      ackDate: sale.ackDate ? format(new Date(sale.ackDate), "yyyy-MM-dd'T'HH:mm") : "",
+      qrCode: sale.qrCode || "",
+    });
+    setEinvoiceDialogOpen(true);
+  };
+
+  const handleDownloadEinvoiceJson = async (saleId: number) => {
+    try {
+      const response = await fetch(`/api/sales/${saleId}/einvoice-json`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error("Failed to generate e-invoice JSON");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `einvoice-${saleId}.json`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast({
+        title: "Success",
+        description: "E-Invoice JSON downloaded",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to download e-invoice JSON",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveEinvoice = () => {
+    if (!selectedSaleForEinvoice) return;
+    einvoiceMutation.mutate({
+      saleId: selectedSaleForEinvoice.id,
+      einvoiceData: einvoiceForm,
+    });
   };
 
   const filteredSales = sales?.filter((sale) => {
@@ -252,6 +350,29 @@ export default function Sales() {
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             )}
+                            {sale.saleType === "B2B" && (
+                              <>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  onClick={() => handleDownloadEinvoiceJson(sale.id)}
+                                  title="Download e-Invoice JSON"
+                                  data-testid={`button-download-einvoice-${sale.id}`}
+                                >
+                                  <Download className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant={sale.irn ? "default" : "ghost"}
+                                  onClick={() => openEinvoiceDialog(sale)}
+                                  title={sale.irn ? "e-Invoice Generated" : "Enter e-Invoice Response"}
+                                  data-testid={`button-einvoice-${sale.id}`}
+                                  className={sale.irn ? "bg-green-600 hover:bg-green-700 text-white" : ""}
+                                >
+                                  {sale.irn ? <FileCheck className="h-4 w-4" /> : <QrCode className="h-4 w-4" />}
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -287,6 +408,77 @@ export default function Sales() {
           )}
         </CardContent>
       </Card>
+
+      {/* E-Invoice Dialog */}
+      <Dialog open={einvoiceDialogOpen} onOpenChange={setEinvoiceDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>E-Invoice Details</DialogTitle>
+            <DialogDescription>
+              Enter the e-Invoice response data from the GST portal after uploading the JSON.
+              Invoice: {selectedSaleForEinvoice?.saleType}-{selectedSaleForEinvoice?.invoiceNo}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="irn">IRN (Invoice Reference Number)</Label>
+              <Input
+                id="irn"
+                placeholder="Enter IRN from GST portal"
+                value={einvoiceForm.irn}
+                onChange={(e) => setEinvoiceForm({ ...einvoiceForm, irn: e.target.value })}
+                data-testid="input-einvoice-irn"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ackNumber">Acknowledgement Number</Label>
+              <Input
+                id="ackNumber"
+                placeholder="Enter acknowledgement number"
+                value={einvoiceForm.ackNumber}
+                onChange={(e) => setEinvoiceForm({ ...einvoiceForm, ackNumber: e.target.value })}
+                data-testid="input-einvoice-ack-number"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="ackDate">Acknowledgement Date & Time</Label>
+              <Input
+                id="ackDate"
+                type="datetime-local"
+                value={einvoiceForm.ackDate}
+                onChange={(e) => setEinvoiceForm({ ...einvoiceForm, ackDate: e.target.value })}
+                data-testid="input-einvoice-ack-date"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="qrCode">QR Code Data</Label>
+              <Textarea
+                id="qrCode"
+                placeholder="Paste the QR code data from e-Invoice response"
+                value={einvoiceForm.qrCode}
+                onChange={(e) => setEinvoiceForm({ ...einvoiceForm, qrCode: e.target.value })}
+                rows={4}
+                data-testid="input-einvoice-qr-code"
+              />
+              <p className="text-xs text-muted-foreground">
+                This QR code will be printed on your invoice
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEinvoiceDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveEinvoice}
+              disabled={einvoiceMutation.isPending}
+              data-testid="button-save-einvoice"
+            >
+              {einvoiceMutation.isPending ? "Saving..." : "Save E-Invoice Details"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
