@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
-import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink, Printer, ZoomIn, ZoomOut } from "lucide-react";
+import { Barcode, Search, Edit2, Check, X, Filter, RefreshCw, Settings, ExternalLink, Printer, ZoomIn, ZoomOut, FileDown } from "lucide-react";
 import { Link } from "wouter";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -197,6 +197,24 @@ export default function BarcodeManagement() {
     },
     onError: (error: any) => {
       toast({ 
+  const generatePRN = async () => {
+    if (selectedItemsForPrint.size === 0) return;
+    try {
+      const response = await apiRequest("/api/barcodes/generate-prn", "POST", {
+        barcodeIds: Array.from(selectedItemsForPrint),
+      });
+      const blob = new Blob([response], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `LABELS_${Date.now()}.PRN`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Success", description: "PRN file generated" });
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to generate PRN", variant: "destructive" });
+    }
+  };
         title: "Error", 
         description: error?.message || "Failed to update item", 
         variant: "destructive" 
@@ -386,6 +404,16 @@ export default function BarcodeManagement() {
               >
                 <Printer className="h-4 w-4 mr-2" />
                 Print Barcodes
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => generatePRN()}
+                disabled={selectedItemsForPrint.size === 0}
+                data-testid="button-generate-prn"
+              >
+                <FileDown className="h-4 w-4 mr-2" />
+                Generate PRN
               </Button>
             </div>
           </CardTitle>

@@ -162,6 +162,7 @@ export interface IStorage {
   updatePurchaseItem(id: number, item: Partial<InsertPurchaseItem>, companyId: number): Promise<PurchaseItem>;
   deletePurchaseItem(id: number, companyId: number): Promise<void>;
   createStockInwardItems(purchaseItemId: number, items: InsertStockInwardItem[], companyId: number): Promise<StockInwardItem[]>;
+  getBarcodesByIds(ids: number[]): Promise<any[]>;
   getStockInwardItems(purchaseItemId: number, companyId: number): Promise<StockInwardItem[]>;
   getNextGlobalSerial(companyId: number): Promise<number>;
   completePurchase(purchaseId: number, companyId: number): Promise<void>;
@@ -3056,6 +3057,24 @@ export class DatabaseStorage implements IStorage {
       return [];
     }
   }
+
+  async getBarcodesByIds(ids: number[]): Promise<any[]> {
+    return await db
+      .select({
+        id: stockInwardItems.id,
+        barcode: stockInwardItems.barcode,
+        itemName: stockInwardItems.itemName,
+        itemCode: items.code,
+        mrp: items.mrp,
+        sellingPrice: items.sellingPrice,
+        hsnCode: items.hsnCode,
+      })
+      .from(stockInwardItems)
+      .leftJoin(items, eq(stockInwardItems.itemId, items.id))
+      .where(inArray(stockInwardItems.id, ids));
+  }
 }
 
 export const storage = new DatabaseStorage();
+}
+
