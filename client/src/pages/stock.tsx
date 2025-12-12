@@ -477,10 +477,10 @@ export default function Stock() {
   ].filter(Boolean).join(", ");
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Stock Inventory</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Stock Inventory</h1>
           <p className="text-muted-foreground mt-2">
             View and analyze current stock levels
           </p>
@@ -497,7 +497,7 @@ export default function Stock() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-6 sm:grid-cols-4">
+      <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Items</CardTitle>

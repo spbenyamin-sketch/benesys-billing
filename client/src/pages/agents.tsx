@@ -177,10 +177,10 @@ export default function Agents() {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Agents</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Agents</h1>
           <p className="text-muted-foreground mt-2">
             Manage sales agents and commission rates
           </p>

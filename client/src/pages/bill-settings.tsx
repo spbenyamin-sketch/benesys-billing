@@ -245,9 +245,9 @@ export default function BillSettings() {
   const thermalTemplates = templates?.filter(t => t.formatType?.startsWith("thermal")) || [];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight">Bill Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Bill Settings</h1>
         <p className="text-muted-foreground mt-2">Configure printing, templates, and bill formats</p>
       </div>
 
