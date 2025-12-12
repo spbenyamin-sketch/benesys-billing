@@ -3023,6 +3023,10 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db
         .insert(printSettings)
         .values({ companyId, ...settings })
+        .returning();
+      return created;
+    }
+  }
 
   async getAgentCommissionReport(companyId: number): Promise<any[]> {
     try {
