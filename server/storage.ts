@@ -1329,8 +1329,9 @@ export class DatabaseStorage implements IStorage {
     const todayDate = new Date();
 
     // Today's sales (excluding PROFORMA - it's a dummy bill for quotations only)
+    // CREDIT_NOTE amounts should be negative (reduce sales)
     const [todaySales] = await db
-      .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+      .select({ total: sql<number>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` })
       .from(sales)
       .where(and(
         eq(sales.date, today), 
@@ -1380,7 +1381,7 @@ export class DatabaseStorage implements IStorage {
     const salesTrend = await Promise.all(
       last7Days.map(async (date) => {
         const [result] = await db
-          .select({ total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+          .select({ total: sql<number>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` })
           .from(sales)
           .where(and(
             eq(sales.date, date), 
@@ -1395,11 +1396,11 @@ export class DatabaseStorage implements IStorage {
       })
     );
 
-    // Sales by type (B2B, B2C, Estimate)
+    // Sales by type (B2B, B2C, Estimate) - CREDIT_NOTE amounts should be negative
     const salesByType = await db
       .select({
         saleType: sales.saleType,
-        total: sql<number>`COALESCE(SUM(${sales.grandTotal}), 0)`,
+        total: sql<number>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)`,
         count: sql<number>`COUNT(*)`,
       })
       .from(sales)
@@ -1514,7 +1515,7 @@ export class DatabaseStorage implements IStorage {
     // Use subqueries to avoid cartesian product
     const result = await Promise.all(allParties.map(async (party) => {
       const [salesResult] = await db
-        .select({ total: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+        .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` })
         .from(sales)
         .where(and(eq(sales.partyId, party.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")));
 
