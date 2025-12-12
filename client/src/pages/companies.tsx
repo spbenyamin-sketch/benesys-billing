@@ -45,6 +45,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Building2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
+import { validateGSTNumber, getGSTErrorMessage } from "@/lib/gst-validator";
 
 export default function Companies() {
   const { toast } = useToast();

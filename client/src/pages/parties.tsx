@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { INDIA_STATES, getStateFromGSTCode, isIGSTParty } from "@/lib/india-states";
+import { validateGSTNumber, getGSTErrorMessage } from "@/lib/gst-validator";
 
 const partyFormSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -47,7 +48,10 @@ const partyFormSchema = z.object({
   address: z.string().optional(),
   state: z.string().optional(),
   stateCode: z.string().optional(),
-  gstNo: z.string().optional(),
+  gstNo: z.string().optional().refine(
+    (val) => !val || validateGSTNumber(val),
+    (val) => ({ message: getGSTErrorMessage(val) || "Invalid GST number" })
+  ),
   phone: z.string().optional(),
   agentId: z.string().optional(),
   openingDebit: z.string().default("0"),
