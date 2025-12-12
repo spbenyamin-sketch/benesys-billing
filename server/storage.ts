@@ -2226,8 +2226,8 @@ export class DatabaseStorage implements IStorage {
         type: sql<string>`'sale'`.as('type'),
         reference: sql<string>`CONCAT(${sales.saleType}, '-', ${sales.invoiceNo})`.as('reference'),
         details: sql<string>`NULL`.as('details'),
-        debit: sales.grandTotal,
-        credit: sql<string>`'0'`.as('credit'),
+        debit: sql<string>`CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN '0' ELSE ${sales.grandTotal} END`,
+        credit: sql<string>`CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN ${sales.grandTotal} ELSE '0' END`,
       })
       .from(sales)
       .where(and(...salesConditions));
