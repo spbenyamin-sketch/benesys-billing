@@ -351,6 +351,8 @@ export default function Invoice() {
       previousBalance: sale.partyOutstanding ? parseFloat(sale.partyOutstanding) : undefined,
       currentBalance: sale.partyOutstanding ? parseFloat(sale.partyOutstanding) + parseFloat(sale.grandTotal) : undefined,
       isInterState: sale.gstType === 1,
+      billType: sale.billType,
+      saleType: sale.saleType || undefined,
     };
   };
 

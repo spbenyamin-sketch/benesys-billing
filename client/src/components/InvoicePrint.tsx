@@ -44,6 +44,8 @@ interface InvoiceData {
   isInterState?: boolean;
   totalTax?: number;
   gstType?: number;
+  billType?: string;
+  saleType?: string;
 }
 
 interface BillTemplate {
@@ -129,7 +131,9 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
             )}
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>TAX INVOICE</div>
+            <div style={{ fontSize: "20px", fontWeight: 700, marginBottom: "8px" }}>
+              {invoice.billType === "CN" ? "CREDIT NOTE" : invoice.billType === "DN" ? "DEBIT NOTE" : invoice.billType === "EST" ? "ESTIMATE" : "TAX INVOICE"}
+            </div>
             <div style={{ fontSize: "11px" }}>
               <div><span style={{ fontWeight: 500 }}>Invoice No:</span> {invoice.invoiceNo}</div>
               <div><span style={{ fontWeight: 500 }}>Date:</span> {format(new Date(invoice.date), "dd/MM/yyyy")}</div>
@@ -348,7 +352,9 @@ export const InvoiceB4CenteredPrint = forwardRef<HTMLDivElement, InvoicePrintPro
               )}
             </div>
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>TAX INVOICE</div>
+              <div style={{ fontSize: "18px", fontWeight: 700, marginBottom: "6px" }}>
+                {invoice.billType === "CN" ? "CREDIT NOTE" : invoice.billType === "DN" ? "DEBIT NOTE" : invoice.billType === "EST" ? "ESTIMATE" : "TAX INVOICE"}
+              </div>
               <div style={{ fontSize: "10px" }}>
                 <div>Invoice: {invoice.invoiceNo}</div>
                 <div>Date: {format(new Date(invoice.date), "dd/MM/yyyy")}</div>

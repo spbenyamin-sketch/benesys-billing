@@ -43,6 +43,8 @@ interface InvoiceData {
   roundOff: number;
   grandTotal: number;
   isInterState?: boolean;
+  billType?: string;
+  saleType?: string;
 }
 
 interface BillTemplate {
