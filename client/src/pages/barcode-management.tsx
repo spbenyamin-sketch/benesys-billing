@@ -197,13 +197,27 @@ export default function BarcodeManagement() {
     },
     onError: (error: any) => {
       toast({ 
+        title: "Error", 
+        description: error?.message || "Failed to update item", 
+        variant: "destructive" 
+      });
+    },
+  });
+
   const generatePRN = async () => {
     if (selectedItemsForPrint.size === 0) return;
     try {
-      const response = await apiRequest("/api/barcodes/generate-prn", "POST", {
-        barcodeIds: Array.from(selectedItemsForPrint),
+      const response = await fetch("/api/barcodes/generate-prn", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getCompanyHeader(),
+        },
+        credentials: "include",
+        body: JSON.stringify({ barcodeIds: Array.from(selectedItemsForPrint) }),
       });
-      const blob = new Blob([response], { type: "text/plain" });
+      if (!response.ok) throw new Error("Failed to generate PRN");
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -215,13 +229,6 @@ export default function BarcodeManagement() {
       toast({ title: "Error", description: "Failed to generate PRN", variant: "destructive" });
     }
   };
-        title: "Error", 
-        description: error?.message || "Failed to update item", 
-        variant: "destructive" 
-      });
-    },
-  });
-
 
   const handleStartEdit = (item: StockInwardItem) => {
     setEditingId(item.id);

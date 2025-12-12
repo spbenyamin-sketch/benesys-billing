@@ -1800,10 +1800,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch agent commission report" });
     }
   });
-  
-  return httpServer;
-}
 
+  // Generate PRN file for Zebra barcode printers
   app.post("/api/barcodes/generate-prn", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const { barcodeIds } = req.body;
@@ -1811,69 +1809,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No barcodes selected" });
       }
 
-      let prnContent = '';
-      prnContent += 'Set dele on\n';
-      prnContent += 'Set curs off\n';
-      prnContent += 'Set cons off\n';
-      prnContent += 'Set safe off\n';
-      prnContent += 'Set alte to TEMP\\LABELS.PRN\n';
-      prnContent += 'Set alte on\n';
-      prnContent += 'Set safe on\n\n';
-
       const barcodes = await storage.getBarcodesByIds(barcodeIds);
       
-      barcodes.forEach((barcode: any, idx: number) => {
-        const itemName = barcode.itemName || '';
+      let prnContent = '';
+      barcodes.forEach((barcode: any) => {
+        const itemName = (barcode.itemName || '').substring(0, 30);
         const mrp = barcode.mrp || '0';
         const sellingPrice = barcode.sellingPrice || '0';
-        const barcode_num = barcode.barcode || '';
-        const serial = barcode.id || '';
-        
-        const yOffset = idx === 0 ? 83 : 83;
-        const xOffset = idx === 0 ? 674 : 290;
+        const barcodeNum = barcode.barcode || '';
+        const hsnCode = barcode.hsnCode || '';
 
-        prnContent += '?"I8,A"\n';
-        prnContent += '?"q800"\n';
-        prnContent += '?"O"\n';
-        prnContent += '?"OD,S"\n';
-        prnContent += '?"JF"\n';
-        prnContent += '?"ZT"\n';
-        prnContent += '?"Q280,16"\n';
-        prnContent += '?"N"\n\n';
-
-        prnContent += `?'b${xOffset},${yOffset},Q,m2,s3,eL,"${barcode_num}"\n`;
-        prnContent += `?'A${xOffset + 73},224,2,2,2,2,N,"${itemName}"\n`;
-        prnContent += `?'A${xOffset - 190},164,2,1,2,2,N,"${sellingPrice}"\n`;
-        prnContent += `?'A${xOffset - 190},122,2,1,2,2,N,"MRP"\n`;
-        
-        if (parseFloat(mrp) > 0) {
-          if (mrp.length <= 3) {
-            prnContent += `?'A${xOffset - 175},90,2,1,3,3,N,"${mrp}"\n`;
-          } else {
-            prnContent += `?'A${xOffset - 184},80,2,1,2,2,N,"${mrp}"\n`;
-          }
+        // Zebra EPL2 commands for each label
+        prnContent += '\nN\n';
+        prnContent += 'q400\n';
+        prnContent += 'Q200,24\n';
+        prnContent += `B50,20,0,1,2,7,80,B,"${barcodeNum}"\n`;
+        prnContent += `A50,110,0,2,1,1,N,"${itemName}"\n`;
+        prnContent += `A50,135,0,2,1,1,N,"MRP: ${mrp}  Rate: ${sellingPrice}"\n`;
+        if (hsnCode) {
+          prnContent += `A50,160,0,1,1,1,N,"HSN: ${hsnCode}"\n`;
         }
-
-        prnContent += `?'A${xOffset + 69},177,2,2,1,1,N,"${itemName}"\n`;
-        prnContent += `?'A${xOffset - 14},110,2,2,1,1,N,"${new Date().toLocaleDateString()}"\n`;
-        prnContent += `?'A${xOffset - 9},140,2,2,1,1,N,"${serial}"\n`;
-        prnContent += `?'A${xOffset - 100},82,2,1,2,2,N,"Rs."\n`;
-        prnContent += `?'A${xOffset + 45},59,2,1,1,1,N,"LABEL"\n`;
-        prnContent += '?"P1"\n\n';
+        prnContent += 'P1\n';
       });
 
-      prnContent += 'set curs on\n';
-      prnContent += 'set cons on\n';
-      prnContent += 'set alte off\n';
-      prnContent += 'set alte to\n';
-      prnContent += 'MESSAGEBOX("' + barcodes.length + ' LABELS GENERATED",0,"STORE")\n';
-      prnContent += 'retu\n';
-
       res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', 'attachment; filename="LABELS_' + Date.now() + '.PRN"');
+      res.setHeader('Content-Disposition', `attachment; filename="LABELS_${Date.now()}.PRN"`);
       res.send(prnContent);
     } catch (error) {
       console.error("Error generating PRN file:", error);
       res.status(500).json({ message: "Failed to generate PRN file" });
     }
   });
+  
+  return httpServer;
+}
