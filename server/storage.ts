@@ -51,7 +51,7 @@ import {
   type InsertPrintSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, lt, sql, or, isNotNull } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
