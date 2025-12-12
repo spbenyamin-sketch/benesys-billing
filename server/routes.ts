@@ -1790,6 +1790,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to create ZIP file' });
     }
   });
+
+  app.get("/api/reports/agent-commission", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const commissions = await storage.getAgentCommissionReport(req.companyId);
+      res.json(commissions);
+    } catch (error) {
+      console.error("Error fetching agent commission report:", error);
+      res.status(500).json({ message: "Failed to fetch agent commission report" });
+    }
+  });
   
   return httpServer;
 }

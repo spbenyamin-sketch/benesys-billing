@@ -45,6 +45,7 @@ import CategoriesReport from "@/pages/reports/categories-report";
 import PurchaseReport from "@/pages/reports/purchase-report";
 import Ledger from "@/pages/reports/ledger";
 import PaymentsReport from "@/pages/reports/payments-report";
+import AgentCommissionReport from "@/pages/reports/agent-commission";
 import Invoice from "@/pages/invoice";
 import EditSale from "@/pages/edit-sale";
 import UserManagement from "@/pages/user-management";
@@ -105,6 +106,7 @@ function Router() {
       <ProtectedRoute path="/reports/purchases" component={PurchaseReport} />
       <ProtectedRoute path="/reports/items" component={ItemsReport} />
       <ProtectedRoute path="/reports/categories" component={CategoriesReport} />
+      <ProtectedRoute path="/reports/agent-commission" component={AgentCommissionReport} />
       <ProtectedRoute path="/reports/payments" component={PaymentsReport} />
       <ProtectedRoute path="/reports/ledger/:id" component={Ledger} />
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}

@@ -3023,8 +3023,33 @@ export class DatabaseStorage implements IStorage {
       const [created] = await db
         .insert(printSettings)
         .values({ companyId, ...settings })
-        .returning();
-      return created;
+
+  async getAgentCommissionReport(companyId: number): Promise<any[]> {
+    try {
+      const agentsData = await db.select().from(agentsTable).where(eq(agentsTable.companyId, companyId));
+      const salesData = await db.select().from(salesTable).where(eq(salesTable.companyId, companyId));
+      const paymentsData = await db.select().from(paymentsTable).where(eq(paymentsTable.companyId, companyId));
+      const partiesData = await db.select().from(partiesTable).where(eq(partiesTable.companyId, companyId));
+
+      return agentsData.map(agent => {
+        const agentParties = partiesData.filter(p => p.agentId === agent.id);
+        const agentPartyIds = agentParties.map(p => p.id);
+        const totalSalesAmount = salesData.filter(s => agentPartyIds.includes(s.partyId || -1)).reduce((sum, s) => sum + parseFloat(s.totalAmount || "0"), 0);
+        const totalPaymentReceived = paymentsData.filter(p => agentPartyIds.includes(p.partyId || -1)).reduce((sum, p) => sum + parseFloat(p.credit || "0"), 0);
+        const commissionAmount = totalPaymentReceived * (parseFloat(agent.commission || "0") / 100);
+        return {
+          agentId: agent.id,
+          agentCode: agent.code,
+          agentName: agent.name,
+          commissionPercentage: parseFloat(agent.commission || "0"),
+          totalSalesAmount: totalSalesAmount.toString(),
+          totalPaymentReceived: totalPaymentReceived.toString(),
+          commissionAmount,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching agent commission report:", error);
+      return [];
     }
   }
 }

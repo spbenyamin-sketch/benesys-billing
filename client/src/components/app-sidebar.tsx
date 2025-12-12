@@ -163,6 +163,11 @@ export function AppSidebar() {
       icon: Wallet,
     },
     {
+      title: "Agent Commission",
+      url: "/reports/agent-commission",
+      icon: Users,
+    },
+    {
       title: "Stock",
       url: "/stock",
       icon: Package,
