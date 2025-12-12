@@ -548,6 +548,7 @@ export default function EditSale() {
                           type="number"
                           value={lineItem.quantity}
                           onChange={(e) => updateLineItem(lineItem.tempId, "quantity", parseFloat(e.target.value) || 0)}
+                          onFocus={(e) => e.currentTarget.select()}
                           className="w-20"
                           data-testid={`input-qty-${lineItem.tempId}`}
                         />
@@ -557,6 +558,7 @@ export default function EditSale() {
                           type="number"
                           value={lineItem.rate}
                           onChange={(e) => updateLineItem(lineItem.tempId, "rate", parseFloat(e.target.value) || 0)}
+                          onFocus={(e) => e.currentTarget.select()}
                           className="w-24"
                           data-testid={`input-rate-${lineItem.tempId}`}
                         />
@@ -665,6 +667,7 @@ export default function EditSale() {
                   type="number"
                   value={amountGiven}
                   onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
+                  onFocus={(e) => e.currentTarget.select()}
                   data-testid="input-amount-given"
                 />
               </div>
