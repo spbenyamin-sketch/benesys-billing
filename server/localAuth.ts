@@ -134,7 +134,7 @@ export async function setupAuth(app: Express) {
       return res.status(400).json({ message: "Username and password required" });
     }
     
-    passport.authenticate("local", (err: any, user: any, info: any) => {
+    passport.authenticate("local", async (err: any, user: any, info: any) => {
       console.log("[AUTH] Passport authenticate callback");
       console.log("[AUTH] Error:", err);
       console.log("[AUTH] User found:", !!user);
@@ -147,6 +147,26 @@ export async function setupAuth(app: Express) {
       if (!user) {
         console.log("[AUTH] No user found - invalid credentials");
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
+      }
+      
+      // Check company expiry for non-superadmin users
+      if (user.role !== 'superadmin') {
+        try {
+          const userCompanies = await storage.getUserCompanies(user.id);
+          const now = new Date();
+          const hasValidCompany = userCompanies.some(uc => {
+            const expiryDate = new Date(uc.company.expiryDate);
+            return expiryDate > now;
+          });
+          
+          if (!hasValidCompany) {
+            console.log("[AUTH] Non-superadmin user login denied - all companies expired");
+            return res.status(403).json({ message: "Company license has expired. Please recharge to login." });
+          }
+        } catch (error) {
+          console.error("[AUTH] Error checking company expiry:", error);
+          return res.status(500).json({ message: "Error checking company status" });
+        }
       }
       
       console.log("[AUTH] User authenticated, creating session...");
@@ -236,13 +256,43 @@ export async function setupAuth(app: Express) {
   });
 }
 
-export const isAuthenticated: RequestHandler = (req, res, next) => {
+export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const isAuth = req.isAuthenticated();
   if (!isAuth) {
     console.log("[AUTH] Unauthorized request to:", req.path, "Session:", !!req.session, "User:", !!req.user);
+    return res.status(401).json({ message: "Unauthorized" });
   }
-  if (isAuth) {
-    return next();
+  
+  // For non-superadmin users, check if their company has expired
+  const user = req.user as any;
+  if (user?.role !== 'superadmin') {
+    try {
+      const userCompanies = await storage.getUserCompanies(user.id);
+      const now = new Date();
+      const hasValidCompany = userCompanies.some(uc => {
+        const expiryDate = new Date(uc.company.expiryDate);
+        return expiryDate > now;
+      });
+      
+      if (!hasValidCompany) {
+        console.log("[AUTH] Session expiry check: Company expired for user", user.username);
+        req.logout((err) => {
+          if (err) {
+            console.error("[AUTH] Error logging out expired user:", err);
+          }
+          return res.status(403).json({ 
+            message: "Company license has expired. Please recharge to login.",
+            expired: true 
+          });
+        });
+        return;
+      }
+    } catch (error) {
+      console.error("[AUTH] Error checking company expiry:", error);
+      // Allow access even if check fails - don't block legitimate users
+      return next();
+    }
   }
-  res.status(401).json({ message: "Unauthorized" });
+  
+  return next();
 };
