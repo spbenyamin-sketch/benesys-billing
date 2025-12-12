@@ -97,6 +97,7 @@ export interface IStorage {
   getNextInvoiceNumber(billType: string, companyId: number): Promise<number>;
   createSale(sale: InsertSale, items: InsertSaleItem[], userId: string, companyId: number): Promise<Sale>;
   updateSale(id: number, sale: Partial<InsertSale>, items: InsertSaleItem[], companyId: number): Promise<Sale>;
+  updateSaleEinvoice(id: number, companyId: number, einvoiceData: { irn?: string; ackNumber?: string; ackDate?: Date | null; qrCode?: string; einvoiceStatus?: string; signedInvoice?: string }): Promise<Sale>;
 
   // Purchase operations
   getPurchases(companyId: number): Promise<Purchase[]>;
@@ -837,6 +838,31 @@ export class DatabaseStorage implements IStorage {
         await this.updateStock(item.itemId, -parseFloat(item.quantity.toString()), companyId);
       }
     }
+
+    return updatedSale;
+  }
+
+  async updateSaleEinvoice(id: number, companyId: number, einvoiceData: { irn?: string; ackNumber?: string; ackDate?: Date | null; qrCode?: string; einvoiceStatus?: string; signedInvoice?: string }): Promise<Sale> {
+    // Get existing sale and verify it belongs to this company
+    const existingSale = await this.getSale(id, companyId);
+    if (!existingSale) {
+      throw new Error("Sale not found");
+    }
+
+    // Update e-invoice fields only
+    const [updatedSale] = await db
+      .update(sales)
+      .set({
+        irn: einvoiceData.irn,
+        ackNumber: einvoiceData.ackNumber,
+        ackDate: einvoiceData.ackDate,
+        qrCode: einvoiceData.qrCode,
+        einvoiceStatus: einvoiceData.einvoiceStatus,
+        signedInvoice: einvoiceData.signedInvoice,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(sales.id, id), eq(sales.companyId, companyId)))
+      .returning();
 
     return updatedSale;
   }

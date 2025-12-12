@@ -1040,6 +1040,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update e-invoice details for a sale (after uploading to GST portal)
+  app.patch("/api/sales/:id/einvoice", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const saleId = parseInt(req.params.id);
+      const { irn, ackNumber, ackDate, qrCode, einvoiceStatus, signedInvoice } = req.body;
+      
+      const updatedSale = await storage.updateSaleEinvoice(saleId, req.companyId, {
+        irn,
+        ackNumber,
+        ackDate: ackDate ? new Date(ackDate) : null,
+        qrCode,
+        einvoiceStatus: einvoiceStatus || 'generated',
+        signedInvoice
+      });
+      
+      res.json(updatedSale);
+    } catch (error: any) {
+      console.error("Error updating e-Invoice details:", error);
+      res.status(400).json({ message: error.message || "Failed to update e-Invoice details" });
+    }
+  });
+
   app.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const partyId = parseInt(req.params.partyId);
