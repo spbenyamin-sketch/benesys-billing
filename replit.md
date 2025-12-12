@@ -40,6 +40,7 @@ Toggleable support for Tamil labels on invoices via the `enableTamilPrint` field
 - **Invoice Numbering:** Separate auto-incrementing counters for B2B, B2C, and ESTIMATE sale types (e.g., `{TYPE}-{YYYY}-{SEQUENCE}`).
 - **Invoice Editing:** Allows modification of existing sales with validation for items, quantity, and rate.
 - **e-Invoice JSON Generation:** For B2B sales, generates India GST e-Invoice JSON v1.1 for upload to GST portal.
+- **Proforma Invoice:** Dummy bill type for quotations/estimates that does NOT affect outstanding balances or stock levels. Displays "PROFORMA INVOICE" heading and is excluded from financial calculations.
 
 ### Payment Management
 Thermal format payment receipt printing with company details, number-to-words conversion for amounts, and `useReactToPrint` integration.
@@ -56,6 +57,9 @@ Thermal format payment receipt printing with company details, number-to-words co
 
 ### Stock Management
 - **Item Movement History:** API `GET /api/items/:id/history` provides consolidated item details, stock levels, purchases, sales, and movement summary.
+
+### Barcode & Label Printing
+- **PRN File Generation:** Generates Zebra EPL2 format PRN files for direct printing to Zebra barcode printers via `POST /api/barcodes/generate-prn`. Includes barcode, item name, MRP, selling price, and HSN code. Accessible from Barcode Management page with "Generate PRN" button.
 
 ## External Dependencies
 
