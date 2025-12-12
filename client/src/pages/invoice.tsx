@@ -358,6 +358,10 @@ export default function Invoice() {
       isInterState: sale.gstType === 1,
       billType: sale.billType,
       saleType: sale.saleType || undefined,
+      irn: sale.irn || undefined,
+      ackNumber: sale.ackNumber || undefined,
+      ackDate: sale.ackDate || undefined,
+      qrCode: sale.qrCode || undefined,
     };
   };
 

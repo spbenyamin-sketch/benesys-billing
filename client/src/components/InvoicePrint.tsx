@@ -46,6 +46,10 @@ interface InvoiceData {
   gstType?: number;
   billType?: string;
   saleType?: string;
+  irn?: string | null;
+  ackNumber?: string | null;
+  ackDate?: string | null;
+  qrCode?: string | null;
 }
 
 interface BillTemplate {
@@ -282,6 +286,54 @@ export const InvoiceA4Print = forwardRef<HTMLDivElement, InvoicePrintProps>(
               <span>₹{invoice.currentBalance.toFixed(2)}</span>
             </div>
           </div>
+        )}
+
+        {/* E-Invoice Section - For B2B invoices */}
+        {invoice.saleType === "B2B" && (
+          invoice.irn ? (
+            <div style={{ marginTop: "12px", border: "2px solid #000", padding: "10px", backgroundColor: "#f9f9f9" }}>
+              <div style={{ fontWeight: 700, marginBottom: "8px", fontSize: "12px", textAlign: "center", borderBottom: "1px solid #000", paddingBottom: "4px" }}>
+                e-Invoice Details
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div style={{ flex: 1, fontSize: "10px" }}>
+                  <div style={{ marginBottom: "4px" }}>
+                    <span style={{ fontWeight: 600 }}>IRN: </span>
+                    <span style={{ fontFamily: "monospace", fontSize: "9px", wordBreak: "break-all" }}>{invoice.irn}</span>
+                  </div>
+                  <div style={{ marginBottom: "4px" }}>
+                    <span style={{ fontWeight: 600 }}>Ack. No: </span>
+                    <span style={{ fontFamily: "monospace" }}>{invoice.ackNumber}</span>
+                  </div>
+                  {invoice.ackDate && (
+                    <div>
+                      <span style={{ fontWeight: 600 }}>Ack. Date: </span>
+                      <span>{format(new Date(invoice.ackDate), "dd/MM/yyyy HH:mm:ss")}</span>
+                    </div>
+                  )}
+                </div>
+                {invoice.qrCode && (
+                  <div style={{ marginLeft: "15px", textAlign: "center" }}>
+                    <img 
+                      src={invoice.qrCode.startsWith('data:') ? invoice.qrCode : `data:image/png;base64,${invoice.qrCode}`}
+                      alt="e-Invoice QR Code"
+                      style={{ width: "80px", height: "80px", border: "1px solid #000" }}
+                    />
+                    <div style={{ fontSize: "8px", marginTop: "2px" }}>Scan for e-Invoice</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div style={{ marginTop: "12px", border: "2px dashed #999", padding: "10px", backgroundColor: "#fff9e6", textAlign: "center" }}>
+              <div style={{ fontWeight: 600, fontSize: "11px", color: "#b45309" }}>
+                ⚠ e-Invoice Pending
+              </div>
+              <div style={{ fontSize: "9px", color: "#92400e", marginTop: "4px" }}>
+                This B2B invoice requires e-Invoice registration on the GST portal
+              </div>
+            </div>
+          )
         )}
 
         {template.footerText && (
