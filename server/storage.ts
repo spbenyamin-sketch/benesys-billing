@@ -1499,7 +1499,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOutstanding(companyId: number): Promise<any[]> {
-    const result = await db
+    const allParties = await db
       .select({
         partyId: parties.id,
         partyCode: parties.code,
@@ -1507,34 +1507,48 @@ export class DatabaseStorage implements IStorage {
         partyCity: parties.city,
         openingDebit: parties.openingDebit,
         openingCredit: parties.openingCredit,
-        totalSales: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)`,
-        totalPurchases: sql<string>`COALESCE(SUM(${purchases.amount}), 0)`,
-        totalPaymentsCredit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`,
-        totalPaymentsDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
       })
       .from(parties)
-      .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")))
-      .leftJoin(purchases, and(eq(parties.id, purchases.partyId), eq(purchases.companyId, companyId)))
-      .leftJoin(payments, and(
-        eq(parties.id, payments.partyId),
-        eq(payments.companyId, companyId)
-      ))
-      .where(eq(parties.companyId, companyId))
-      .groupBy(parties.id, parties.code, parties.name, parties.city, parties.openingDebit, parties.openingCredit);
+      .where(eq(parties.companyId, companyId));
 
-    return result.map((row) => {
-      const openingBal = parseFloat(row.openingDebit) - parseFloat(row.openingCredit);
-      const salesAmt = parseFloat(row.totalSales);
-      const purchasesAmt = parseFloat(row.totalPurchases);
-      const paymentsCredit = parseFloat(row.totalPaymentsCredit);
-      const paymentsDebit = parseFloat(row.totalPaymentsDebit);
+    // Use subqueries to avoid cartesian product
+    const result = await Promise.all(allParties.map(async (party) => {
+      const [salesResult] = await db
+        .select({ total: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)` })
+        .from(sales)
+        .where(and(eq(sales.partyId, party.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")));
+
+      const [purchasesResult] = await db
+        .select({ total: sql<string>`COALESCE(SUM(${purchases.amount}), 0)` })
+        .from(purchases)
+        .where(and(eq(purchases.partyId, party.partyId), eq(purchases.companyId, companyId)));
+
+      const [paymentsResult] = await db
+        .select({
+          totalCredit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`,
+          totalDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
+        })
+        .from(payments)
+        .where(and(eq(payments.partyId, party.partyId), eq(payments.companyId, companyId)));
+
+      const openingBal = parseFloat(party.openingDebit) - parseFloat(party.openingCredit);
+      const salesAmt = parseFloat(salesResult?.total || "0");
+      const purchasesAmt = parseFloat(purchasesResult?.total || "0");
+      const paymentsCredit = parseFloat(paymentsResult?.totalCredit || "0");
+      const paymentsDebit = parseFloat(paymentsResult?.totalDebit || "0");
       const balance = openingBal + salesAmt - purchasesAmt - paymentsCredit + paymentsDebit;
 
       return {
-        ...row,
+        ...party,
+        totalSales: salesAmt,
+        totalPurchases: purchasesAmt,
+        totalPaymentsCredit: paymentsCredit,
+        totalPaymentsDebit: paymentsDebit,
         balance,
       };
-    });
+    }));
+
+    return result;
   }
 
   async getSalesReport(companyId: number, startDate?: string, endDate?: string, saleType?: string, itemId?: string): Promise<any[]> {
