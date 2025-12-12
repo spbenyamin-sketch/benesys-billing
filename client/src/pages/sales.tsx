@@ -147,27 +147,34 @@ export default function Sales() {
 
   const handleDownloadEinvoiceJson = async (saleId: number) => {
     try {
+      const companyId = localStorage.getItem("currentCompanyId") || "";
       const response = await fetch(`/api/sales/${saleId}/einvoice-json`, {
         credentials: 'include',
+        headers: { "X-Company-Id": companyId },
       });
-      if (!response.ok) throw new Error("Failed to generate e-invoice JSON");
-      const blob = await response.blob();
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to generate e-invoice JSON");
+      }
+      
+      const jsonData = await response.json();
+      const blob = new Blob([JSON.stringify(jsonData, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `einvoice-${saleId}.json`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       toast({
         title: "Success",
         description: "E-Invoice JSON downloaded",
       });
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to download e-invoice JSON",
+        description: error.message || "Failed to download e-invoice JSON",
         variant: "destructive",
       });
     }
