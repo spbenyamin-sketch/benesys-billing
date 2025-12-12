@@ -1466,7 +1466,7 @@ export class DatabaseStorage implements IStorage {
         totalPaymentsDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
       })
       .from(parties)
-      .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId)))
+      .leftJoin(sales, and(eq(parties.id, sales.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")))
       .leftJoin(purchases, and(eq(parties.id, purchases.partyId), eq(purchases.companyId, companyId)))
       .leftJoin(payments, and(
         eq(parties.id, payments.partyId),
@@ -2120,7 +2120,7 @@ export class DatabaseStorage implements IStorage {
       const priorSales = await db
         .select({ total: sql<string>`COALESCE(SUM(${sales.grandTotal}), 0)` })
         .from(sales)
-        .where(and(eq(sales.partyId, partyId), eq(sales.companyId, companyId), lt(sales.date, startDate)));
+        .where(and(eq(sales.partyId, partyId), eq(sales.companyId, companyId), lt(sales.date, startDate), ne(sales.saleType, "PROFORMA")));
       
       const priorPurchases = await db
         .select({ total: sql<string>`COALESCE(SUM(${purchases.amount}), 0)` })
@@ -2142,7 +2142,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Build date conditions for the transactions to display
-    const salesConditions = [eq(sales.partyId, partyId), eq(sales.companyId, companyId)];
+    const salesConditions = [eq(sales.partyId, partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")];
     const purchasesConditions = [eq(purchases.partyId, partyId), eq(purchases.companyId, companyId)];
     const paymentsConditions = [eq(payments.partyId, partyId), eq(payments.companyId, companyId)];
     

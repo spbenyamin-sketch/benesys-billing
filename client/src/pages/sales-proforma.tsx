@@ -482,9 +482,9 @@ export default function SalesProforma() {
     <div ref={formContainerRef} className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight">B2B Sales (Credit)</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">Proforma Invoice</h1>
           <p className="text-muted-foreground mt-2">
-            Create credit invoices for business customers with GST
+            Create quotations and preliminary invoices
           </p>
         </div>
         <div className="flex gap-2">
