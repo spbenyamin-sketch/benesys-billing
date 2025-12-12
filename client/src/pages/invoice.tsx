@@ -67,6 +67,11 @@ interface Sale {
   byCard: string | null;
   printOutstanding: boolean | null;
   partyOutstanding: string | null;
+  irn: string | null;
+  ackNumber: string | null;
+  ackDate: string | null;
+  qrCode: string | null;
+  einvoiceStatus: string | null;
 }
 
 interface BillTemplate {
