@@ -50,10 +50,10 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
-  // For Windows offline installation: always allow HTTP cookies
-  // Secure cookies would break HTTP-only localhost access
-  // This is safe since the app runs on localhost without internet exposure
-  const shouldUseSecureCookies = false;
+  // For internet access via Cloudflare Tunnel, enable secure cookies
+  // For localhost-only access, disable secure cookies
+  const enableInternetAccess = process.env.ENABLE_INTERNET_ACCESS === 'true';
+  const shouldUseSecureCookies = enableInternetAccess;
   
   console.log("[SESSION] ✅ Session initialized");
   console.log("[SESSION] Node environment:", process.env.NODE_ENV);
