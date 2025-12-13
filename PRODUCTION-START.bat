@@ -259,7 +259,22 @@ echo.
 
 REM Start using pm2-start.js wrapper (Windows compatible)
 call pm2 start pm2-start.js --name billing_system
-call pm2 save
+
+REM Save PM2 process list for auto-restart
+echo Saving PM2 configuration...
+call pm2 save --force
+
+REM Install PM2 Windows startup service (ensures PM2 starts on system restart)
+echo Configuring PM2 to start on Windows boot...
+call pm2-startup install >nul 2>&1
+if errorlevel 1 (
+    echo Installing pm2-windows-startup module...
+    call npm install -g pm2-windows-startup >nul 2>&1
+    call pm2-startup install >nul 2>&1
+)
+call pm2 save --force
+echo PM2 Windows startup configured!
+echo.
 
 if errorlevel 1 (
     echo ERROR: PM2 startup failed
