@@ -26,7 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Package, AlertCircle, Printer, Eye, BarChart2, Grid, List, ArrowUpRight, ArrowDownLeft, History } from "lucide-react";
+import { Search, Package, AlertCircle, Printer, Eye, BarChart2, Grid, List, ArrowUpRight, ArrowDownLeft, History, X, Filter } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -45,6 +45,10 @@ interface StockItem {
   brandName: string | null;
   quality: string | null;
   size: string | null;
+  designNo: string | null;
+  pattern: string | null;
+  color: string | null;
+  hsnCode: string | null;
   partyId: number | null;
   partyName: string | null;
   quantity: string;
@@ -393,6 +397,13 @@ export default function Stock() {
   const [stockStatusFilter, setStockStatusFilter] = useState("all");
   const [partyFilter, setPartyFilter] = useState("all");
   const [itemFilter, setItemFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
+  const [sizeFilter, setSizeFilter] = useState("all");
+  const [qualityFilter, setQualityFilter] = useState("all");
+  const [designNoFilter, setDesignNoFilter] = useState("all");
+  const [patternFilter, setPatternFilter] = useState("all");
+  const [colorFilter, setColorFilter] = useState("all");
+  const [hsnCodeFilter, setHsnCodeFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -430,6 +441,13 @@ export default function Stock() {
   // Get unique values for filters from fetched data
   const categories = Array.from(new Set(stock?.map(item => item.category).filter(Boolean))).sort();
   const packTypes = Array.from(new Set(stock?.map(item => item.packType))).sort();
+  const brands = Array.from(new Set(stock?.map(item => item.brandName).filter(Boolean))).sort();
+  const sizes = Array.from(new Set(stock?.map(item => item.size).filter(Boolean))).sort();
+  const qualities = Array.from(new Set(stock?.map(item => item.quality).filter(Boolean))).sort();
+  const designNos = Array.from(new Set(stock?.map(item => item.designNo).filter(Boolean))).sort();
+  const patterns = Array.from(new Set(stock?.map(item => item.pattern).filter(Boolean))).sort();
+  const colors = Array.from(new Set(stock?.map(item => item.color).filter(Boolean))).sort();
+  const hsnCodes = Array.from(new Set(stock?.map(item => item.hsnCode).filter(Boolean))).sort();
   const items = Array.from(new Set(stock?.map(item => item.itemId))).map(itemId => {
     const item = stock?.find(s => s.itemId === itemId);
     return item ? { id: item.itemId, code: item.itemCode, name: item.itemName } : null;
@@ -441,13 +459,25 @@ export default function Stock() {
       item.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.itemCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.partyName?.toLowerCase().includes(searchQuery.toLowerCase());
+      item.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.brandName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.designNo?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.hsnCode?.toLowerCase().includes(searchQuery.toLowerCase());
 
     // Category filter
     const matchesCategory = categoryFilter === "all" || item.category === categoryFilter;
 
     // Pack type filter
     const matchesPackType = packTypeFilter === "all" || item.packType === packTypeFilter;
+
+    // Stock inward field filters
+    const matchesBrand = brandFilter === "all" || item.brandName === brandFilter;
+    const matchesSize = sizeFilter === "all" || item.size === sizeFilter;
+    const matchesQuality = qualityFilter === "all" || item.quality === qualityFilter;
+    const matchesDesignNo = designNoFilter === "all" || item.designNo === designNoFilter;
+    const matchesPattern = patternFilter === "all" || item.pattern === patternFilter;
+    const matchesColor = colorFilter === "all" || item.color === colorFilter;
+    const matchesHsnCode = hsnCodeFilter === "all" || item.hsnCode === hsnCodeFilter;
 
     // Stock status filter
     const qty = parseFloat(item.quantity);
@@ -456,7 +486,9 @@ export default function Stock() {
     else if (stockStatusFilter === "low") matchesStatus = qty > 0 && qty <= 10;
     else if (stockStatusFilter === "out") matchesStatus = qty === 0;
 
-    return matchesSearch && matchesCategory && matchesPackType && matchesStatus;
+    return matchesSearch && matchesCategory && matchesPackType && matchesStatus && 
+           matchesBrand && matchesSize && matchesQuality && matchesDesignNo && 
+           matchesPattern && matchesColor && matchesHsnCode;
   });
 
   const lowStockItems = filteredStock?.filter(item => parseFloat(item.quantity) < 10 && parseFloat(item.quantity) > 0) || [];
@@ -473,8 +505,33 @@ export default function Stock() {
     itemFilter !== "all" ? `Item: ${items.find(i => i?.id.toString() === itemFilter)?.name}` : null,
     categoryFilter !== "all" ? `Category: ${categoryFilter}` : null,
     packTypeFilter !== "all" ? `Pack: ${packTypeFilter}` : null,
+    brandFilter !== "all" ? `Brand: ${brandFilter}` : null,
+    sizeFilter !== "all" ? `Size: ${sizeFilter}` : null,
+    qualityFilter !== "all" ? `Quality: ${qualityFilter}` : null,
+    designNoFilter !== "all" ? `Design: ${designNoFilter}` : null,
+    patternFilter !== "all" ? `Pattern: ${patternFilter}` : null,
+    colorFilter !== "all" ? `Color: ${colorFilter}` : null,
+    hsnCodeFilter !== "all" ? `HSN: ${hsnCodeFilter}` : null,
     stockStatusFilter !== "all" ? `Status: ${stockStatusFilter}` : null,
   ].filter(Boolean).join(", ");
+  
+  const hasActiveFilters = activeFilters.length > 0;
+  
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter("all");
+    setPackTypeFilter("all");
+    setStockStatusFilter("all");
+    setPartyFilter("all");
+    setItemFilter("all");
+    setBrandFilter("all");
+    setSizeFilter("all");
+    setQualityFilter("all");
+    setDesignNoFilter("all");
+    setPatternFilter("all");
+    setColorFilter("all");
+    setHsnCodeFilter("all");
+  };
 
   return (
     <div className="p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 md:space-y-6">
@@ -550,30 +607,48 @@ export default function Stock() {
 
       {/* Filters */}
       <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            Filters
+          </CardTitle>
+          {hasActiveFilters && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearAllFilters}
+              className="h-8 text-xs"
+              data-testid="button-clear-filters"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear All
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-6">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="search">Search</Label>
+          <div className="grid gap-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7">
+            {/* Search */}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label htmlFor="search" className="text-xs">Search</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   id="search"
-                  placeholder="Search by name, code, party..."
+                  placeholder="Name, code, brand, HSN..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-8 h-8 text-sm"
                   data-testid="input-search-stock"
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="party">Supplier</Label>
+            
+            {/* Supplier */}
+            <div className="space-y-1.5">
+              <Label htmlFor="party" className="text-xs">Supplier</Label>
               <Select value={partyFilter} onValueChange={setPartyFilter}>
-                <SelectTrigger id="party" data-testid="select-party">
-                  <SelectValue placeholder="All Suppliers" />
+                <SelectTrigger id="party" className="h-8 text-sm" data-testid="select-party">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Suppliers</SelectItem>
@@ -585,12 +660,14 @@ export default function Stock() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="item">Item</Label>
+            
+            {/* Item */}
+            <div className="space-y-1.5">
+              <Label htmlFor="item" className="text-xs">Item</Label>
               <Button
                 type="button"
                 variant="outline"
-                className="w-full justify-start text-left h-9"
+                className="w-full justify-start text-left h-8 text-sm"
                 onClick={() => setShowItemSearch(true)}
                 data-testid="button-search-stock-item"
               >
@@ -599,11 +676,13 @@ export default function Stock() {
                   : "All Items"}
               </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
+            
+            {/* Category */}
+            <div className="space-y-1.5">
+              <Label htmlFor="category" className="text-xs">Category</Label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger id="category" data-testid="select-category">
-                  <SelectValue placeholder="All Categories" />
+                <SelectTrigger id="category" className="h-8 text-sm" data-testid="select-category">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
@@ -613,11 +692,125 @@ export default function Stock() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="packType">Pack Type</Label>
+            
+            {/* Brand */}
+            <div className="space-y-1.5">
+              <Label htmlFor="brand" className="text-xs">Brand</Label>
+              <Select value={brandFilter} onValueChange={setBrandFilter}>
+                <SelectTrigger id="brand" className="h-8 text-sm" data-testid="select-brand">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Brands</SelectItem>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand} value={brand!}>{brand}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Size */}
+            <div className="space-y-1.5">
+              <Label htmlFor="size" className="text-xs">Size</Label>
+              <Select value={sizeFilter} onValueChange={setSizeFilter}>
+                <SelectTrigger id="size" className="h-8 text-sm" data-testid="select-size">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sizes</SelectItem>
+                  {sizes.map((size) => (
+                    <SelectItem key={size} value={size!}>{size}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Quality */}
+            <div className="space-y-1.5">
+              <Label htmlFor="quality" className="text-xs">Quality</Label>
+              <Select value={qualityFilter} onValueChange={setQualityFilter}>
+                <SelectTrigger id="quality" className="h-8 text-sm" data-testid="select-quality">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Qualities</SelectItem>
+                  {qualities.map((quality) => (
+                    <SelectItem key={quality} value={quality!}>{quality}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Design Number */}
+            <div className="space-y-1.5">
+              <Label htmlFor="designNo" className="text-xs">Design No</Label>
+              <Select value={designNoFilter} onValueChange={setDesignNoFilter}>
+                <SelectTrigger id="designNo" className="h-8 text-sm" data-testid="select-design-no">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Designs</SelectItem>
+                  {designNos.map((dno) => (
+                    <SelectItem key={dno} value={dno!}>{dno}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Pattern */}
+            <div className="space-y-1.5">
+              <Label htmlFor="pattern" className="text-xs">Pattern</Label>
+              <Select value={patternFilter} onValueChange={setPatternFilter}>
+                <SelectTrigger id="pattern" className="h-8 text-sm" data-testid="select-pattern">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Patterns</SelectItem>
+                  {patterns.map((pattern) => (
+                    <SelectItem key={pattern} value={pattern!}>{pattern}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Color */}
+            <div className="space-y-1.5">
+              <Label htmlFor="color" className="text-xs">Color</Label>
+              <Select value={colorFilter} onValueChange={setColorFilter}>
+                <SelectTrigger id="color" className="h-8 text-sm" data-testid="select-color">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Colors</SelectItem>
+                  {colors.map((color) => (
+                    <SelectItem key={color} value={color!}>{color}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* HSN Code */}
+            <div className="space-y-1.5">
+              <Label htmlFor="hsnCode" className="text-xs">HSN Code</Label>
+              <Select value={hsnCodeFilter} onValueChange={setHsnCodeFilter}>
+                <SelectTrigger id="hsnCode" className="h-8 text-sm" data-testid="select-hsn-code">
+                  <SelectValue placeholder="All" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All HSN Codes</SelectItem>
+                  {hsnCodes.map((hsn) => (
+                    <SelectItem key={hsn} value={hsn!}>{hsn}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            {/* Pack Type */}
+            <div className="space-y-1.5">
+              <Label htmlFor="packType" className="text-xs">Pack Type</Label>
               <Select value={packTypeFilter} onValueChange={setPackTypeFilter}>
-                <SelectTrigger id="packType" data-testid="select-pack-type">
-                  <SelectValue placeholder="All Pack Types" />
+                <SelectTrigger id="packType" className="h-8 text-sm" data-testid="select-pack-type">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Pack Types</SelectItem>
@@ -627,11 +820,13 @@ export default function Stock() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Stock Status</Label>
+            
+            {/* Stock Status */}
+            <div className="space-y-1.5">
+              <Label htmlFor="status" className="text-xs">Stock Status</Label>
               <Select value={stockStatusFilter} onValueChange={setStockStatusFilter}>
-                <SelectTrigger id="status" data-testid="select-status">
-                  <SelectValue placeholder="All Status" />
+                <SelectTrigger id="status" className="h-8 text-sm" data-testid="select-status">
+                  <SelectValue placeholder="All" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
