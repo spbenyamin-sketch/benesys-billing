@@ -135,11 +135,28 @@ echo.
 
 REM Clean and recreate database
 echo [3/7] Preparing database...
-call node drop-db.js >nul 2>&1
-if errorlevel 1 (
-    echo Warning: Database preparation had issues. Continuing...
+echo.
+echo ========================================
+echo WARNING: DATABASE CLEAR OPTION
+echo ========================================
+echo.
+echo This will DELETE ALL existing data in the database!
+echo (Sales, Purchases, Parties, Items, Stock, etc.)
+echo.
+set /p CLEAR_DB="Clear database records? (YES/NO): "
+if /i "!CLEAR_DB!"=="YES" (
+    echo.
+    echo Clearing database...
+    call node drop-db.js >nul 2>&1
+    if errorlevel 1 (
+        echo Warning: Database preparation had issues. Continuing...
+    )
+    echo Database cleared and ready.
+) else (
+    echo.
+    echo Skipping database clear. Keeping existing data.
+    echo Database will be updated with any new schema changes only.
 )
-echo Database ready.
 echo.
 
 REM Setup database schema
