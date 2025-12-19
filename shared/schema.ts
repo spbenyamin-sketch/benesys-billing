@@ -64,6 +64,10 @@ export const companies = pgTable("companies", {
   email: varchar("email", { length: 100 }),
   logoUrl: text("logo_url"),
   expiryDate: timestamp("expiry_date"), // Software license expiry date
+  // Financial Year settings
+  currentFinancialYearId: integer("current_financial_year_id"), // Active financial year
+  fyStartMonth: integer("fy_start_month").default(4).notNull(), // Default April (4)
+  fyStartDay: integer("fy_start_day").default(1).notNull(), // Default 1st
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
@@ -125,6 +129,51 @@ export const userCompanies = pgTable("user_companies", {
 });
 
 export type UserCompany = typeof userCompanies.$inferSelect;
+
+// ============================================================================
+// FINANCIAL YEAR MANAGEMENT
+// ============================================================================
+
+export const financialYears = pgTable("financial_years", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  label: varchar("label", { length: 20 }).notNull(), // e.g., "2024-25"
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  isActive: boolean("is_active").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertFinancialYearSchema = createInsertSchema(financialYears).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFinancialYear = z.infer<typeof insertFinancialYearSchema>;
+export type FinancialYear = typeof financialYears.$inferSelect;
+
+// Bill sequences per financial year
+export const billSequences = pgTable("bill_sequences", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  financialYearId: integer("financial_year_id").references(() => financialYears.id).notNull(),
+  billType: varchar("bill_type", { length: 20 }).notNull(), // B2B, B2C, ESTIMATE, CREDIT_NOTE, DEBIT_NOTE, PURCHASE
+  nextNumber: integer("next_number").default(1).notNull(),
+  prefix: varchar("prefix", { length: 20 }), // Optional custom prefix
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertBillSequenceSchema = createInsertSchema(billSequences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillSequence = z.infer<typeof insertBillSequenceSchema>;
+export type BillSequence = typeof billSequences.$inferSelect;
 
 // ============================================================================
 // PARTY/CUSTOMER TABLES
@@ -276,7 +325,9 @@ export type Stock = typeof stock.$inferSelect;
 export const sales = pgTable("sales", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
+  financialYearId: integer("financial_year_id").references(() => financialYears.id), // Financial year for this sale
   invoiceNo: integer("invoice_no").notNull(),
+  invoiceCode: varchar("invoice_code", { length: 50 }), // Formatted invoice code e.g., B2B-2024-25-0001
   billType: varchar("bill_type", { length: 10 }).notNull(), // GST or EST
   saleType: varchar("sale_type", { length: 20 }).default("B2C").notNull(), // B2B, B2C, ESTIMATE, CREDIT_NOTE, DEBIT_NOTE
   paymentMode: varchar("payment_mode", { length: 10 }).default("CASH").notNull(), // CASH, CARD, CREDIT
@@ -371,7 +422,9 @@ export type SaleItem = typeof saleItems.$inferSelect;
 export const purchases = pgTable("purchases", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
+  financialYearId: integer("financial_year_id").references(() => financialYears.id), // Financial year for this purchase
   purchaseNo: integer("purchase_no").notNull(), // Entry number for stock inward
+  purchaseCode: varchar("purchase_code", { length: 50 }), // Formatted purchase code e.g., PUR-2024-25-0001
   date: date("date").notNull(),
   invoiceNo: varchar("invoice_no", { length: 50 }),
   partyId: integer("party_id").references(() => parties.id),
