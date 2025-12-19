@@ -54,8 +54,16 @@ Supports A4, B4, Thermal 3-inch, and Thermal 4-inch formats. Templates are assig
 ### Tamil Language Support
 Toggleable support for Tamil labels on invoices via the `enableTamilPrint` field in bill templates. Uses `client/src/lib/tamil-translator.ts` for translations of key invoice elements.
 
+### Financial Year Management (Added Dec 2024)
+- **Financial Year Tables:** `financial_years` tracks FY periods (label, startDate, endDate, isActive), `bill_sequences` tracks bill numbers per FY and type.
+- **Bill Number Reset:** Each Financial Year maintains separate bill sequences. Bill numbers reset to 1 when a new FY is created.
+- **Bill Code Format:** `{TYPE}-{FY_LABEL}-{SEQUENCE}` (e.g., B2B-2024-25-0001, B2C-2025-26-0001)
+- **Bill Types:** B2B, B2C, ESTIMATE, CREDIT_NOTE, DEBIT_NOTE, PURCHASE each have independent sequences per FY.
+- **FY Switcher:** Header dropdown allows switching active financial year. Active FY is used for all new transactions.
+- **Admin Access:** Only admin/superadmin can create/edit financial years via /financial-years page.
+
 ### Invoice Management
-- **Invoice Numbering:** Separate auto-incrementing counters for B2B, B2C, and ESTIMATE sale types (e.g., `{TYPE}-{YYYY}-{SEQUENCE}`).
+- **Invoice Numbering:** Separate auto-incrementing counters per financial year for B2B, B2C, ESTIMATE, etc. (e.g., `{TYPE}-{FY}-{SEQUENCE}`).
 - **Invoice Editing:** Allows modification of existing sales with validation for items, quantity, and rate.
 - **e-Invoice JSON Generation:** For B2B sales, generates India GST e-Invoice JSON v1.1 for upload to GST portal.
 - **Proforma Invoice:** Dummy bill type for quotations/estimates that does NOT affect outstanding balances or stock levels. Displays "PROFORMA INVOICE" heading and is excluded from financial calculations.
