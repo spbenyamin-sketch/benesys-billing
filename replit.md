@@ -95,6 +95,29 @@ Thermal format payment receipt printing with company details, number-to-words co
 - **To Change Choice:** Delete the `.db-clear-choice.txt` file and run PRODUCTION-START.bat again to re-prompt
 - **Auto-Restart on Crash:** PM2 keeps the service running 24/7 with automatic restart
 - **Windows Boot Service:** PM2 is configured to start automatically on Windows system restart
+- **Automatic Schema Updates:** Runs both `database-schema.sql` and `RECOVERY-DATABASE.sql` to ensure all required columns exist (prevents "errorMissingColumn" errors)
+
+### Troubleshooting: "Server may not be responding" or "errorMissingColumn" Errors
+If you see database errors when running PRODUCTION-START.bat:
+
+**Quick Fix:**
+1. Run `FIX-DATABASE-ERROR.bat` - This adds any missing columns to the database
+2. Run PRODUCTION-START.bat again
+
+**What causes this:**
+- Database schema updates from recent releases weren't applied to your existing database
+- The recovery script automatically detects and fixes missing columns
+
+**Manual Recovery:**
+If the batch file doesn't work:
+```cmd
+psql -U postgres -d billing_system -f RECOVERY-DATABASE.sql
+```
+
+**Files involved:**
+- `database-schema.sql` - Full schema creation script (CREATE TABLE IF NOT EXISTS)
+- `RECOVERY-DATABASE.sql` - Recovery script (ALTER TABLE to add missing columns)
+- `FIX-DATABASE-ERROR.bat` - Automated recovery script for Windows
 
 ## External Dependencies
 

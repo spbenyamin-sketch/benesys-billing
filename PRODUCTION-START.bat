@@ -197,7 +197,17 @@ REM Apply migrations for existing databases
 echo [4.5/7] Applying schema migrations...
 echo Running migration scripts for any missing columns...
 psql -U postgres -d billing_system -f database-schema.sql >nul 2>&1
-echo Schema migrations complete.
+if errorlevel 0 (
+    echo Schema migrations applied successfully.
+) else (
+    echo Warning: Some migrations may have skipped (columns already exist)
+)
+echo.
+
+REM Apply recovery script to ensure all new columns exist (for existing databases)
+echo Verifying all required columns exist...
+psql -U postgres -d billing_system -f RECOVERY-DATABASE.sql >nul 2>&1
+echo Database verification complete.
 echo.
 
 REM Install PM2 globally

@@ -508,6 +508,28 @@ CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date);
 CREATE INDEX IF NOT EXISTS idx_payments_company_id ON payments(company_id);
 
 -- ============================================================================
+-- MIGRATION SCRIPTS FOR EXISTING INSTALLATIONS
+-- Run these to update schema if upgrading from an older version
+-- ============================================================================
+
+-- Add missing columns to companies table if not exists
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS current_financial_year_id integer;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS fy_start_month integer DEFAULT 4;
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS fy_start_day integer DEFAULT 1;
+
+-- Add missing columns to sales table if not exists
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS financial_year_id integer REFERENCES financial_years(id);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_code varchar(50);
+
+-- Add missing columns to purchases table if not exists
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS financial_year_id integer REFERENCES financial_years(id);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS purchase_code varchar(50);
+
+-- Add missing columns to payments table if not exists
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS debit decimal(12,2) DEFAULT 0;
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit decimal(12,2) DEFAULT 0;
+
+-- ============================================================================
 -- SETUP COMPLETE - 21 TABLES CREATED
 -- ============================================================================
 
