@@ -750,6 +750,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "At least one item is required" });
       }
 
+      // Validate transaction date is within active FY period
+      const activeFY = await storage.getActiveFinancialYear(req.companyId);
+      if (!activeFY) {
+        return res.status(400).json({ message: "No active Financial Year set for this company" });
+      }
+
+      const transactionDate = new Date(saleData.date);
+      const fyStartDate = new Date(activeFY.startDate);
+      const fyEndDate = new Date(activeFY.endDate);
+
+      if (transactionDate < fyStartDate || transactionDate > fyEndDate) {
+        return res.status(400).json({ 
+          message: `Transaction date must be between ${fyStartDate.toLocaleDateString()} and ${fyEndDate.toLocaleDateString()} (Active FY: ${activeFY.label})` 
+        });
+      }
+
       const userId = req.user.id;
       const sale = await storage.createSale(saleData, saleItems, userId, req.companyId);
       res.json(sale);
@@ -791,6 +807,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!saleItems || !Array.isArray(saleItems) || saleItems.length === 0) {
         return res.status(400).json({ message: "At least one item is required" });
+      }
+
+      // Validate transaction date is within active FY period
+      const activeFY = await storage.getActiveFinancialYear(req.companyId);
+      if (!activeFY) {
+        return res.status(400).json({ message: "No active Financial Year set for this company" });
+      }
+
+      const transactionDate = new Date(saleData.date);
+      const fyStartDate = new Date(activeFY.startDate);
+      const fyEndDate = new Date(activeFY.endDate);
+
+      if (transactionDate < fyStartDate || transactionDate > fyEndDate) {
+        return res.status(400).json({ 
+          message: `Transaction date must be between ${fyStartDate.toLocaleDateString()} and ${fyEndDate.toLocaleDateString()} (Active FY: ${activeFY.label})` 
+        });
       }
 
       // Validate each item has required fields

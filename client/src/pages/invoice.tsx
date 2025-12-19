@@ -43,6 +43,7 @@ interface SaleItem {
 interface Sale {
   id: number;
   invoiceNo: number;
+  invoiceCode: string | null;
   billType: string;
   saleType: string | null;
   paymentMode: string | null;
