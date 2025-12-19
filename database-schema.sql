@@ -1,6 +1,6 @@
 -- Billing & Inventory Management System - Database Schema
 -- PostgreSQL 12+
--- Complete schema with all 17 tables
+-- Complete schema with all 19 tables (includes Financial Year management)
 
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -532,3 +532,43 @@ ALTER TABLE sales ADD COLUMN IF NOT EXISTS ack_number varchar(50);
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS ack_date timestamp;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS qr_code text;
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS signed_invoice text;
+
+-- ============================================================================
+-- FINANCIAL YEAR MANAGEMENT (Added Dec 2024)
+-- ============================================================================
+
+-- Financial Years table - tracks FY periods per company
+CREATE TABLE IF NOT EXISTS financial_years (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  label varchar(20) NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  is_active boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_financial_years_company ON financial_years(company_id);
+CREATE INDEX IF NOT EXISTS idx_financial_years_active ON financial_years(company_id, is_active);
+
+-- Bill Sequences table - tracks bill numbers per FY and type
+CREATE TABLE IF NOT EXISTS bill_sequences (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  financial_year_id integer REFERENCES financial_years(id) NOT NULL,
+  bill_type varchar(20) NOT NULL,
+  last_number integer DEFAULT 0 NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bill_sequences_company_fy ON bill_sequences(company_id, financial_year_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_sequences_unique ON bill_sequences(company_id, financial_year_id, bill_type);
+
+-- Add current_financial_year_id to companies
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS current_financial_year_id integer REFERENCES financial_years(id);
+
+-- Add financial_year_id to sales for tracking which FY each sale belongs to
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS financial_year_id integer REFERENCES financial_years(id);
