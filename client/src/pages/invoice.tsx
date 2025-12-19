@@ -518,7 +518,7 @@ export default function Invoice() {
           <div className="text-center">
             <h1 className="text-xl font-bold">{getBillTypeLabel()}</h1>
             <div className="mt-2 font-mono text-lg">
-              {sale.billType}-{sale.invoiceNo}
+              {sale.invoiceCode || `${sale.billType}-${sale.invoiceNo}`}
             </div>
           </div>
         </CardHeader>

@@ -840,6 +840,15 @@ export class DatabaseStorage implements IStorage {
     // Get next invoice number based on sale type (B2B, B2C, ESTIMATE)
     const invoiceNo = await this.getNextInvoiceNumber(saleData.saleType, companyId);
 
+    // Get active financial year for bill code generation
+    const activeFY = await this.getActiveFinancialYear(companyId);
+    if (!activeFY) {
+      throw new Error("No active Financial Year set for this company");
+    }
+
+    // Get next bill number and code (e.g., "B2B-2024-25-0001")
+    const { code: invoiceCode } = await this.getNextBillNumber(companyId, activeFY.id, saleData.billType || 'B2C');
+
     // SECURITY: Validate all items belong to this company before creating sale
     for (const item of saleItemsData) {
       if (item.itemId) {
@@ -856,6 +865,8 @@ export class DatabaseStorage implements IStorage {
       .values({
         ...saleData,
         invoiceNo,
+        invoiceCode,
+        financialYearId: activeFY.id,
         time: new Date().toTimeString().substring(0, 8),
         createdBy: userId,
         companyId,
