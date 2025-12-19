@@ -29,6 +29,7 @@ import {
   CreditCard,
   PackagePlus,
   Barcode,
+  Calendar,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -298,6 +299,14 @@ export function AppSidebar() {
                     <Link href="/bill-settings" data-testid="link-bill-settings">
                       <FileText className="h-5 w-5" />
                       <span>Bill Settings</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={location === "/financial-years"}>
+                    <Link href="/financial-years" data-testid="link-financial-years">
+                      <Calendar className="h-5 w-5" />
+                      <span>Financial Years</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

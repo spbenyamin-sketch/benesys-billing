@@ -54,6 +54,8 @@ import Companies from "@/pages/companies";
 import SelectCompany from "@/pages/select-company";
 import BarcodeLookup from "@/pages/barcode-lookup";
 import PurchaseDetails from "@/pages/purchase-details";
+import FinancialYears from "@/pages/financial-years";
+import { FinancialYearSwitcher } from "@/components/FinancialYearSwitcher";
 
 function ProtectedRoute({ path, component: Component }: { path: string; component: any }) {
   const { canAccess } = usePermissions();
@@ -112,6 +114,7 @@ function Router() {
       {isSuperAdmin && <Route path="/users" component={UserManagement} />}
       {isSuperAdmin && <Route path="/companies" component={Companies} />}
       {isSuperAdmin && <Route path="/bill-settings" component={BillSettings} />}
+      {isSuperAdmin && <Route path="/financial-years" component={FinancialYears} />}
       <Route component={NotFound} />
     </Switch>
   );
@@ -239,6 +242,7 @@ function AppContent() {
                   {currentCompany.name}
                 </span>
               </div>
+              <FinancialYearSwitcher />
               <CompanySwitcher />
             </div>
           </header>
