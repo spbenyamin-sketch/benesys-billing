@@ -21,6 +21,7 @@ import {
   insertAgentSchema,
   insertBarcodeLabelTemplateSchema,
   updateStockInwardItemSchema,
+  insertFinancialYearSchema,
   type PrintSettings,
 } from "@shared/schema";
 import { ObjectStorageService } from "./objectStorage";
@@ -432,6 +433,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting company:", error);
       res.status(500).json({ message: "Failed to delete company" });
+    }
+  });
+
+  // ==================== FINANCIAL YEAR ROUTES ====================
+  app.get('/api/financial-years', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const financialYears = await storage.getFinancialYears(req.companyId);
+      res.json(financialYears);
+    } catch (error) {
+      console.error("Error fetching financial years:", error);
+      res.status(500).json({ message: "Failed to fetch financial years" });
+    }
+  });
+
+  app.get('/api/financial-years/active', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const activeFY = await storage.getActiveFinancialYear(req.companyId);
+      res.json(activeFY || null);
+    } catch (error) {
+      console.error("Error fetching active financial year:", error);
+      res.status(500).json({ message: "Failed to fetch active financial year" });
+    }
+  });
+
+  app.get('/api/financial-years/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const fy = await storage.getFinancialYear(id, req.companyId);
+      if (!fy) {
+        return res.status(404).json({ message: "Financial year not found" });
+      }
+      res.json(fy);
+    } catch (error) {
+      console.error("Error fetching financial year:", error);
+      res.status(500).json({ message: "Failed to fetch financial year" });
+    }
+  });
+
+  app.post('/api/financial-years', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can create financial years" });
+      }
+      const validated = insertFinancialYearSchema.parse({
+        ...req.body,
+        companyId: req.companyId,
+      });
+      const fy = await storage.createFinancialYear(validated);
+      res.json(fy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error creating financial year:", error);
+      res.status(500).json({ message: "Failed to create financial year" });
+    }
+  });
+
+  app.put('/api/financial-years/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can update financial years" });
+      }
+      const id = parseInt(req.params.id);
+      const validated = insertFinancialYearSchema.partial().parse(req.body);
+      const fy = await storage.updateFinancialYear(id, validated, req.companyId);
+      res.json(fy);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Validation error", errors: error.errors });
+      }
+      console.error("Error updating financial year:", error);
+      res.status(500).json({ message: "Failed to update financial year" });
+    }
+  });
+
+  app.post('/api/financial-years/:id/activate', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can activate financial years" });
+      }
+      const id = parseInt(req.params.id);
+      const fy = await storage.setActiveFinancialYear(id, req.companyId);
+      res.json(fy);
+    } catch (error) {
+      console.error("Error activating financial year:", error);
+      res.status(500).json({ message: "Failed to activate financial year" });
     }
   });
 
