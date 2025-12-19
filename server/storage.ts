@@ -17,6 +17,8 @@ import {
   agents,
   printTokens,
   printSettings,
+  financialYears,
+  billSequences,
   type User,
   type UpsertUser,
   type Party,
@@ -49,6 +51,10 @@ import {
   type InsertPrintToken,
   type PrintSettings,
   type InsertPrintSettings,
+  type FinancialYear,
+  type InsertFinancialYear,
+  type BillSequence,
+  type InsertBillSequence,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne } from "drizzle-orm";
@@ -77,6 +83,15 @@ export interface IStorage {
   createCompany(company: InsertCompany, userId: string): Promise<Company>;
   updateCompany(id: number, company: InsertCompany): Promise<Company>;
   deleteCompany(id: number): Promise<void>;
+
+  // Financial Year operations
+  getFinancialYears(companyId: number): Promise<FinancialYear[]>;
+  getFinancialYear(id: number, companyId: number): Promise<FinancialYear | undefined>;
+  getActiveFinancialYear(companyId: number): Promise<FinancialYear | undefined>;
+  createFinancialYear(data: InsertFinancialYear): Promise<FinancialYear>;
+  updateFinancialYear(id: number, data: Partial<InsertFinancialYear>, companyId: number): Promise<FinancialYear>;
+  setActiveFinancialYear(id: number, companyId: number): Promise<FinancialYear>;
+  getNextBillNumber(companyId: number, financialYearId: number, billType: string): Promise<{ number: number; code: string }>;
 
   // Party operations
   getParties(companyId: number): Promise<Party[]>;
@@ -478,6 +493,146 @@ export class DatabaseStorage implements IStorage {
   async deleteCompany(id: number): Promise<void> {
     await db.delete(userCompanies).where(eq(userCompanies.companyId, id));
     await db.delete(companies).where(eq(companies.id, id));
+  }
+
+  // ==================== FINANCIAL YEAR OPERATIONS ====================
+  async getFinancialYears(companyId: number): Promise<FinancialYear[]> {
+    return await db
+      .select()
+      .from(financialYears)
+      .where(eq(financialYears.companyId, companyId))
+      .orderBy(desc(financialYears.startDate));
+  }
+
+  async getFinancialYear(id: number, companyId: number): Promise<FinancialYear | undefined> {
+    const [fy] = await db
+      .select()
+      .from(financialYears)
+      .where(and(eq(financialYears.id, id), eq(financialYears.companyId, companyId)));
+    return fy;
+  }
+
+  async getActiveFinancialYear(companyId: number): Promise<FinancialYear | undefined> {
+    const [fy] = await db
+      .select()
+      .from(financialYears)
+      .where(and(eq(financialYears.companyId, companyId), eq(financialYears.isActive, true)));
+    return fy;
+  }
+
+  async createFinancialYear(data: InsertFinancialYear): Promise<FinancialYear> {
+    // If this is the first FY for the company or marked as active, set it as active
+    const existingFYs = await this.getFinancialYears(data.companyId);
+    const shouldBeActive = existingFYs.length === 0 || data.isActive;
+
+    // If setting this one as active, deactivate others first
+    if (shouldBeActive) {
+      await db
+        .update(financialYears)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(eq(financialYears.companyId, data.companyId));
+    }
+
+    const [newFY] = await db
+      .insert(financialYears)
+      .values({ ...data, isActive: shouldBeActive })
+      .returning();
+
+    // Update company's current financial year
+    if (shouldBeActive) {
+      await db
+        .update(companies)
+        .set({ currentFinancialYearId: newFY.id, updatedAt: new Date() })
+        .where(eq(companies.id, data.companyId));
+    }
+
+    // Initialize bill sequences for this financial year
+    const billTypes = ['B2B', 'B2C', 'ESTIMATE', 'CREDIT_NOTE', 'DEBIT_NOTE', 'PURCHASE'];
+    for (const billType of billTypes) {
+      await db.insert(billSequences).values({
+        companyId: data.companyId,
+        financialYearId: newFY.id,
+        billType,
+        nextNumber: 1,
+      });
+    }
+
+    return newFY;
+  }
+
+  async updateFinancialYear(id: number, data: Partial<InsertFinancialYear>, companyId: number): Promise<FinancialYear> {
+    const [updated] = await db
+      .update(financialYears)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(financialYears.id, id), eq(financialYears.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async setActiveFinancialYear(id: number, companyId: number): Promise<FinancialYear> {
+    // Deactivate all other FYs for this company
+    await db
+      .update(financialYears)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(financialYears.companyId, companyId));
+
+    // Activate the selected FY
+    const [activated] = await db
+      .update(financialYears)
+      .set({ isActive: true, updatedAt: new Date() })
+      .where(and(eq(financialYears.id, id), eq(financialYears.companyId, companyId)))
+      .returning();
+
+    // Update company's current financial year
+    await db
+      .update(companies)
+      .set({ currentFinancialYearId: id, updatedAt: new Date() })
+      .where(eq(companies.id, companyId));
+
+    return activated;
+  }
+
+  async getNextBillNumber(companyId: number, financialYearId: number, billType: string): Promise<{ number: number; code: string }> {
+    // Get or create bill sequence for this FY and type
+    let [sequence] = await db
+      .select()
+      .from(billSequences)
+      .where(and(
+        eq(billSequences.companyId, companyId),
+        eq(billSequences.financialYearId, financialYearId),
+        eq(billSequences.billType, billType)
+      ));
+
+    if (!sequence) {
+      // Create sequence if doesn't exist
+      [sequence] = await db
+        .insert(billSequences)
+        .values({
+          companyId,
+          financialYearId,
+          billType,
+          nextNumber: 1,
+        })
+        .returning();
+    }
+
+    const currentNumber = sequence.nextNumber;
+
+    // Increment the sequence
+    await db
+      .update(billSequences)
+      .set({ nextNumber: currentNumber + 1, updatedAt: new Date() })
+      .where(eq(billSequences.id, sequence.id));
+
+    // Get financial year label for the code
+    const fy = await this.getFinancialYear(financialYearId, companyId);
+    const fyLabel = fy?.label || '';
+
+    // Format: TYPE-YYYY-YY-NNNN (e.g., B2B-2024-25-0001)
+    const prefix = sequence.prefix || billType;
+    const code = `${prefix}-${fyLabel}-${String(currentNumber).padStart(4, '0')}`;
+
+    return { number: currentNumber, code };
   }
 
   // ==================== PARTY OPERATIONS ====================
