@@ -88,6 +88,14 @@ Thermal format payment receipt printing with company details, number-to-words co
 ### Barcode & Label Printing
 - **PRN File Generation:** Generates Zebra EPL2 format PRN files for direct printing to Zebra barcode printers via `POST /api/barcodes/generate-prn`. Includes barcode, item name, MRP, selling price, and HSN code. Accessible from Barcode Management page with "Generate PRN" button.
 
+## Offline Windows Installation Features
+
+### PRODUCTION-START.bat Enhancements
+- **Persistent Database Clear Choice:** First time the script runs, user is asked "Clear database records? (YES/NO)". The choice is saved to `.db-clear-choice.txt` and remembered for future runs
+- **To Change Choice:** Delete the `.db-clear-choice.txt` file and run PRODUCTION-START.bat again to re-prompt
+- **Auto-Restart on Crash:** PM2 keeps the service running 24/7 with automatic restart
+- **Windows Boot Service:** PM2 is configured to start automatically on Windows system restart
+
 ## External Dependencies
 
 **Database & Infrastructure:**

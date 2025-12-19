@@ -136,14 +136,37 @@ echo.
 REM Clean and recreate database
 echo [3/7] Preparing database...
 echo.
-echo ========================================
-echo WARNING: DATABASE CLEAR OPTION
-echo ========================================
-echo.
-echo This will DELETE ALL existing data in the database!
-echo (Sales, Purchases, Parties, Items, Stock, etc.)
-echo.
-set /p CLEAR_DB="Clear database records? (YES/NO): "
+
+REM Check if user choice was already saved
+set CHOICE_FILE=.db-clear-choice.txt
+set CLEAR_DB=
+
+if exist "!CHOICE_FILE!" (
+    REM Read the saved choice
+    for /f "delims=" %%a in ('type "!CHOICE_FILE!"') do set CLEAR_DB=%%a
+    echo Using saved choice: !CLEAR_DB! (from previous run)
+    echo If you want to change this, delete the !CHOICE_FILE! file and run again.
+    echo.
+) else (
+    REM Ask user for the first time
+    echo ========================================
+    echo WARNING: DATABASE CLEAR OPTION
+    echo ========================================
+    echo.
+    echo This will DELETE ALL existing data in the database!
+    echo (Sales, Purchases, Parties, Items, Stock, etc.)
+    echo.
+    echo YOUR CHOICE WILL BE REMEMBERED FOR FUTURE RUNS.
+    echo To change it later, delete the .db-clear-choice.txt file.
+    echo.
+    set /p CLEAR_DB="Clear database records? (YES/NO): "
+    
+    REM Save the choice
+    echo !CLEAR_DB! > "!CHOICE_FILE!"
+    echo Choice saved to !CHOICE_FILE!
+    echo.
+)
+
 if /i "!CLEAR_DB!"=="YES" (
     echo.
     echo Clearing database...
