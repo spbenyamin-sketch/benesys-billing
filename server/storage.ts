@@ -91,6 +91,7 @@ export interface IStorage {
   createFinancialYear(data: InsertFinancialYear): Promise<FinancialYear>;
   updateFinancialYear(id: number, data: Partial<InsertFinancialYear>, companyId: number): Promise<FinancialYear>;
   setActiveFinancialYear(id: number, companyId: number): Promise<FinancialYear>;
+  deleteFinancialYear(id: number, companyId: number): Promise<void>;
   getNextBillNumber(companyId: number, financialYearId: number, billType: string): Promise<{ number: number; code: string }>;
 
   // Party operations
@@ -561,6 +562,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateFinancialYear(id: number, data: Partial<InsertFinancialYear>, companyId: number): Promise<FinancialYear> {
+    // If setting as active, use the setActiveFinancialYear method
+    if (data.isActive === true) {
+      // First update other fields
+      const { isActive, ...otherData } = data;
+      if (Object.keys(otherData).length > 0) {
+        await db
+          .update(financialYears)
+          .set({ ...otherData, updatedAt: new Date() })
+          .where(and(eq(financialYears.id, id), eq(financialYears.companyId, companyId)));
+      }
+      // Then activate it (this handles deactivating others)
+      return await this.setActiveFinancialYear(id, companyId);
+    }
+
     const [updated] = await db
       .update(financialYears)
       .set({ ...data, updatedAt: new Date() })
@@ -590,6 +605,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(companies.id, companyId));
 
     return activated;
+  }
+
+  async deleteFinancialYear(id: number, companyId: number): Promise<void> {
+    // Check if this FY is the active one
+    const fy = await this.getFinancialYear(id, companyId);
+    if (!fy) {
+      throw new Error("Financial year not found");
+    }
+    if (fy.isActive) {
+      throw new Error("Cannot delete the active financial year. Please activate another FY first.");
+    }
+
+    // Delete associated bill sequences first
+    await db
+      .delete(billSequences)
+      .where(and(
+        eq(billSequences.financialYearId, id),
+        eq(billSequences.companyId, companyId)
+      ));
+
+    // Delete the financial year
+    await db
+      .delete(financialYears)
+      .where(and(eq(financialYears.id, id), eq(financialYears.companyId, companyId)));
   }
 
   async getNextBillNumber(companyId: number, financialYearId: number, billType: string): Promise<{ number: number; code: string }> {

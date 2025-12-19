@@ -43,7 +43,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Calendar, CheckCircle, Edit, Loader2 } from "lucide-react";
+import { Plus, Calendar, CheckCircle, Edit, Loader2, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface FinancialYear {
@@ -78,6 +88,7 @@ export default function FinancialYears() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingFY, setEditingFY] = useState<FinancialYear | null>(null);
+  const [deletingFY, setDeletingFY] = useState<FinancialYear | null>(null);
 
   const { data: financialYears, isLoading } = useQuery<FinancialYear[]>({
     queryKey: ["/api/financial-years"],
@@ -153,6 +164,29 @@ export default function FinancialYears() {
       toast({
         title: "Error",
         description: error.message || "Failed to activate financial year",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      return await apiRequest("DELETE", `/api/financial-years/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-years"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/financial-years/active"] });
+      setDeletingFY(null);
+      toast({
+        title: "Financial Year Deleted",
+        description: "The financial year has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      setDeletingFY(null);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete financial year",
         variant: "destructive",
       });
     },
@@ -479,29 +513,94 @@ export default function FinancialYears() {
                   </FormItem>
                 )}
               />
-              <DialogFooter>
+              <FormField
+                control={form.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5">
+                      <FormLabel>Set as Active</FormLabel>
+                      <FormDescription>
+                        Active FY will be used for new transactions
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        data-testid="switch-edit-is-active"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => setEditingFY(null)}
+                  variant="destructive"
+                  onClick={() => {
+                    if (editingFY) {
+                      setDeletingFY(editingFY);
+                      setEditingFY(null);
+                    }
+                  }}
+                  data-testid="button-delete-fy"
                 >
-                  Cancel
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={updateMutation.isPending}
-                  data-testid="button-update-fy"
-                >
-                  {updateMutation.isPending && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  Update
-                </Button>
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingFY(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={updateMutation.isPending}
+                    data-testid="button-update-fy"
+                  >
+                    {updateMutation.isPending && (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    )}
+                    Update
+                  </Button>
+                </div>
               </DialogFooter>
             </form>
           </Form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deletingFY} onOpenChange={(open) => !open && setDeletingFY(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Financial Year?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the financial year "{deletingFY?.label}"? 
+              This action cannot be undone. Any associated bill sequences will also be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deletingFY && deleteMutation.mutate(deletingFY.id)}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete-fy"
+            >
+              {deleteMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

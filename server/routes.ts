@@ -526,6 +526,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete('/api/financial-years/:id', isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const currentUser = await storage.getUser(req.user.id);
+      if (!isAdminRole(currentUser?.role)) {
+        return res.status(403).json({ message: "Only admin can delete financial years" });
+      }
+      const id = parseInt(req.params.id);
+      await storage.deleteFinancialYear(id, req.companyId);
+      res.json({ success: true, message: "Financial year deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting financial year:", error);
+      res.status(500).json({ message: error.message || "Failed to delete financial year" });
+    }
+  });
+
   // ==================== PARTY ROUTES ====================
   app.get("/api/parties", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
