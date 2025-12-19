@@ -1,6 +1,7 @@
 -- Billing & Inventory Management System - Database Schema
 -- PostgreSQL 12+
--- Complete schema with all 19 tables (includes Financial Year management)
+-- Complete schema with all 21 tables including Financial Year management
+-- For offline Windows installations - use this to initialize fresh databases
 
 -- Create extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -45,7 +46,10 @@ CREATE TABLE IF NOT EXISTS companies (
   phone varchar(50),
   email varchar(100),
   logo_url text,
-  expiry_date timestamp,  -- Software license expiry date
+  expiry_date timestamp,
+  current_financial_year_id integer,
+  fy_start_month integer DEFAULT 4 NOT NULL,
+  fy_start_day integer DEFAULT 1 NOT NULL,
   created_at timestamp DEFAULT now() NOT NULL,
   updated_at timestamp DEFAULT now() NOT NULL,
   created_by varchar REFERENCES users(id)
@@ -151,9 +155,95 @@ CREATE TABLE IF NOT EXISTS stock (
   last_updated timestamp DEFAULT now() NOT NULL
 );
 
+-- ============================================================================
+-- FINANCIAL YEAR MANAGEMENT
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS financial_years (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  label varchar(20) NOT NULL,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  is_active boolean DEFAULT false NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_financial_years_company ON financial_years(company_id);
+CREATE INDEX IF NOT EXISTS idx_financial_years_active ON financial_years(company_id, is_active);
+
+CREATE TABLE IF NOT EXISTS bill_sequences (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  financial_year_id integer REFERENCES financial_years(id) NOT NULL,
+  bill_type varchar(20) NOT NULL,
+  last_number integer DEFAULT 0 NOT NULL,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_bill_sequences_company_fy ON bill_sequences(company_id, financial_year_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_sequences_unique ON bill_sequences(company_id, financial_year_id, bill_type);
+
+-- ============================================================================
+-- PURCHASE TABLES
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS purchases (
+  id serial PRIMARY KEY,
+  company_id integer REFERENCES companies(id) NOT NULL,
+  financial_year_id integer REFERENCES financial_years(id),
+  purchase_no integer NOT NULL,
+  purchase_code varchar(50),
+  date date NOT NULL,
+  invoice_no varchar(50),
+  party_id integer REFERENCES parties(id),
+  party_name varchar(200),
+  city varchar(100),
+  invoice_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  discount_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  packing_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  other_charges decimal(12,2) DEFAULT 0 NOT NULL,
+  profit_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  rst_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  surcharge_percent decimal(5,2) DEFAULT 0 NOT NULL,
+  total_qty decimal(12,2) DEFAULT 0 NOT NULL,
+  amount decimal(12,2) DEFAULT 0 NOT NULL,
+  before_tax_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  bill_total_amount decimal(12,2) DEFAULT 0 NOT NULL,
+  val_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  val_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  ctax_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  stax_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_0 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_5 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_12 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_18 decimal(12,2) DEFAULT 0 NOT NULL,
+  itax_28 decimal(12,2) DEFAULT 0 NOT NULL,
+  status varchar(20) DEFAULT 'pending' NOT NULL,
+  stock_inward_completed boolean DEFAULT false NOT NULL,
+  details text,
+  created_at timestamp DEFAULT now() NOT NULL,
+  updated_at timestamp DEFAULT now() NOT NULL,
+  created_by varchar REFERENCES users(id)
+);
+
 CREATE TABLE IF NOT EXISTS purchase_items (
   id serial PRIMARY KEY,
-  purchase_id integer NOT NULL,
+  purchase_id integer REFERENCES purchases(id) NOT NULL,
   item_id integer REFERENCES items(id),
   serial integer NOT NULL,
   itname varchar(300) NOT NULL,
@@ -256,7 +346,9 @@ CREATE INDEX IF NOT EXISTS idx_stock_inward_company ON stock_inward_items(compan
 CREATE TABLE IF NOT EXISTS sales (
   id serial PRIMARY KEY,
   company_id integer REFERENCES companies(id) NOT NULL,
+  financial_year_id integer REFERENCES financial_years(id),
   invoice_no integer NOT NULL,
+  invoice_code varchar(50),
   bill_type varchar(10) NOT NULL,
   sale_type varchar(20) DEFAULT 'B2C' NOT NULL,
   payment_mode varchar(10) DEFAULT 'CASH' NOT NULL,
@@ -284,6 +376,12 @@ CREATE TABLE IF NOT EXISTS sales (
   print_outstanding boolean DEFAULT false NOT NULL,
   party_outstanding decimal(12,2) DEFAULT 0 NOT NULL,
   mobile varchar(20),
+  einvoice_status varchar(20),
+  irn varchar(100),
+  ack_number varchar(50),
+  ack_date timestamp,
+  qr_code text,
+  signed_invoice text,
   created_at timestamp DEFAULT now() NOT NULL,
   updated_at timestamp DEFAULT now() NOT NULL,
   created_by varchar REFERENCES users(id)
@@ -318,58 +416,6 @@ CREATE TABLE IF NOT EXISTS sale_items (
 );
 
 -- ============================================================================
--- PURCHASE TABLES
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS purchases (
-  id serial PRIMARY KEY,
-  company_id integer REFERENCES companies(id) NOT NULL,
-  purchase_no integer NOT NULL,
-  date date NOT NULL,
-  invoice_no varchar(50),
-  party_id integer REFERENCES parties(id),
-  party_name varchar(200),
-  city varchar(100),
-  invoice_amount decimal(12,2) DEFAULT 0 NOT NULL,
-  discount_amount decimal(12,2) DEFAULT 0 NOT NULL,
-  packing_amount decimal(12,2) DEFAULT 0 NOT NULL,
-  other_charges decimal(12,2) DEFAULT 0 NOT NULL,
-  profit_percent decimal(5,2) DEFAULT 0 NOT NULL,
-  rst_percent decimal(5,2) DEFAULT 0 NOT NULL,
-  surcharge_percent decimal(5,2) DEFAULT 0 NOT NULL,
-  total_qty decimal(12,2) DEFAULT 0 NOT NULL,
-  amount decimal(12,2) DEFAULT 0 NOT NULL,
-  before_tax_amount decimal(12,2) DEFAULT 0 NOT NULL,
-  bill_total_amount decimal(12,2) DEFAULT 0 NOT NULL,
-  val_0 decimal(12,2) DEFAULT 0 NOT NULL,
-  val_5 decimal(12,2) DEFAULT 0 NOT NULL,
-  val_12 decimal(12,2) DEFAULT 0 NOT NULL,
-  val_18 decimal(12,2) DEFAULT 0 NOT NULL,
-  val_28 decimal(12,2) DEFAULT 0 NOT NULL,
-  ctax_0 decimal(12,2) DEFAULT 0 NOT NULL,
-  ctax_5 decimal(12,2) DEFAULT 0 NOT NULL,
-  ctax_12 decimal(12,2) DEFAULT 0 NOT NULL,
-  ctax_18 decimal(12,2) DEFAULT 0 NOT NULL,
-  ctax_28 decimal(12,2) DEFAULT 0 NOT NULL,
-  stax_0 decimal(12,2) DEFAULT 0 NOT NULL,
-  stax_5 decimal(12,2) DEFAULT 0 NOT NULL,
-  stax_12 decimal(12,2) DEFAULT 0 NOT NULL,
-  stax_18 decimal(12,2) DEFAULT 0 NOT NULL,
-  stax_28 decimal(12,2) DEFAULT 0 NOT NULL,
-  itax_0 decimal(12,2) DEFAULT 0 NOT NULL,
-  itax_5 decimal(12,2) DEFAULT 0 NOT NULL,
-  itax_12 decimal(12,2) DEFAULT 0 NOT NULL,
-  itax_18 decimal(12,2) DEFAULT 0 NOT NULL,
-  itax_28 decimal(12,2) DEFAULT 0 NOT NULL,
-  status varchar(20) DEFAULT 'pending' NOT NULL,
-  stock_inward_completed boolean DEFAULT false NOT NULL,
-  details text,
-  created_at timestamp DEFAULT now() NOT NULL,
-  updated_at timestamp DEFAULT now() NOT NULL,
-  created_by varchar REFERENCES users(id)
-);
-
--- ============================================================================
 -- PAYMENT & CONFIGURATION TABLES
 -- ============================================================================
 
@@ -380,6 +426,8 @@ CREATE TABLE IF NOT EXISTS payments (
   payment_type varchar(20) NOT NULL,
   mode varchar(20) DEFAULT 'CASH' NOT NULL,
   amount decimal(12,2) NOT NULL,
+  debit decimal(12,2) DEFAULT 0 NOT NULL,
+  credit decimal(12,2) DEFAULT 0 NOT NULL,
   date date NOT NULL,
   reference_no varchar(100),
   notes text,
@@ -430,8 +478,18 @@ CREATE TABLE IF NOT EXISTS print_settings (
   print_copies_b2b integer DEFAULT 2 NOT NULL,
   print_copies_b2c integer DEFAULT 1 NOT NULL,
   print_copies_estimate integer DEFAULT 1 NOT NULL,
-  print_copies_credit_note integer DEFAULT 1 NOT NULL,
-  print_copies_debit_note integer DEFAULT 1 NOT NULL,
+  print_copies_credit_note integer DEFAULT 2 NOT NULL,
+  print_copies_debit_note integer DEFAULT 2 NOT NULL,
+  show_print_confirmation boolean DEFAULT true NOT NULL,
+  default_printer_name varchar(255) DEFAULT '' NOT NULL,
+  enable_tamil_print boolean DEFAULT false NOT NULL,
+  direct_print_b2b boolean DEFAULT false NOT NULL,
+  direct_print_b2c boolean DEFAULT false NOT NULL,
+  direct_print_estimate boolean DEFAULT false NOT NULL,
+  direct_print_credit_note boolean DEFAULT false NOT NULL,
+  direct_print_debit_note boolean DEFAULT false NOT NULL,
+  enable_web_socket_print boolean DEFAULT false NOT NULL,
+  web_socket_printer_name varchar(255) DEFAULT '' NOT NULL,
   created_at timestamp DEFAULT now() NOT NULL,
   updated_at timestamp DEFAULT now() NOT NULL
 );
@@ -450,125 +508,45 @@ CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date);
 CREATE INDEX IF NOT EXISTS idx_payments_company_id ON payments(company_id);
 
 -- ============================================================================
--- SETUP COMPLETE - 17 TABLES CREATED
+-- SETUP COMPLETE - 21 TABLES CREATED
 -- ============================================================================
 
 -- ============================================================================
--- MIGRATION SCRIPTS FOR EXISTING INSTALLATIONS
--- Run these if upgrading from an older version
+-- KEY FEATURES IMPLEMENTED:
 -- ============================================================================
-
--- Add expiry_date to companies if not exists
-ALTER TABLE companies ADD COLUMN IF NOT EXISTS expiry_date timestamp;
-
--- Add missing columns to payments table
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS debit decimal(12,2) DEFAULT 0 NOT NULL;
-ALTER TABLE payments ADD COLUMN IF NOT EXISTS credit decimal(12,2) DEFAULT 0 NOT NULL;
-
--- Add missing columns to stock_inward_items
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS purchase_id integer REFERENCES purchases(id);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS serial integer;
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS itname varchar(300);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS brandname varchar(200);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS quality varchar(100);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS dno1 varchar(50);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS pattern varchar(100);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sleeve varchar(100);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS size varchar(10);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS size_code integer;
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS cost decimal(12,2);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS ncost decimal(12,2);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS lcost decimal(12,2);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS rate decimal(12,2);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS tax decimal(5,2) DEFAULT 0;
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS qty decimal(12,2) DEFAULT 1;
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS status varchar(20) DEFAULT 'available';
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sold_at timestamp;
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sale_id integer REFERENCES sales(id);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS sale_item_id integer REFERENCES sale_items(id);
-ALTER TABLE stock_inward_items ADD COLUMN IF NOT EXISTS expdate date;
-
--- Create print_settings table if not exists
-CREATE TABLE IF NOT EXISTS print_settings (
-  id serial PRIMARY KEY,
-  company_id integer REFERENCES companies(id) NOT NULL,
-  auto_print_b2b boolean DEFAULT false NOT NULL,
-  auto_print_b2c boolean DEFAULT true NOT NULL,
-  auto_print_estimate boolean DEFAULT false NOT NULL,
-  auto_print_credit_note boolean DEFAULT false NOT NULL,
-  auto_print_debit_note boolean DEFAULT false NOT NULL,
-  print_copies_b2b integer DEFAULT 2 NOT NULL,
-  print_copies_b2c integer DEFAULT 1 NOT NULL,
-  print_copies_estimate integer DEFAULT 1 NOT NULL,
-  print_copies_credit_note integer DEFAULT 1 NOT NULL,
-  print_copies_debit_note integer DEFAULT 1 NOT NULL,
-  created_at timestamp DEFAULT now() NOT NULL,
-  updated_at timestamp DEFAULT now() NOT NULL
-);
-
--- Create indexes if not exist
-CREATE INDEX IF NOT EXISTS idx_stock_inward_barcode ON stock_inward_items(barcode);
-CREATE INDEX IF NOT EXISTS idx_stock_inward_status ON stock_inward_items(status);
-CREATE INDEX IF NOT EXISTS idx_stock_inward_company ON stock_inward_items(company_id);
-
--- Add prn_program column to barcode_label_templates for storing EPL2/ZPL printer programs
--- Supports placeholders: {barcode}, {itemName}, {mrp}, {sellingPrice}, {hsnCode}, {size}, {sizeCode}
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS prn_program text;
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS label_width decimal(6,2) DEFAULT '50';
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS label_height decimal(6,2) DEFAULT '25';
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS config text;
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS paper_size varchar(20) DEFAULT 'A4';
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS labels_per_row integer DEFAULT 4;
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS labels_per_column integer DEFAULT 10;
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS margin_top decimal(6,2) DEFAULT '10';
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS margin_left decimal(6,2) DEFAULT '5';
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS gap_horizontal decimal(6,2) DEFAULT '2';
-ALTER TABLE barcode_label_templates ADD COLUMN IF NOT EXISTS gap_vertical decimal(6,2) DEFAULT '2';
-
--- E-Invoice fields for sales (India GST e-invoice response data)
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS einvoice_status varchar(20);
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS irn varchar(100);
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS ack_number varchar(50);
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS ack_date timestamp;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS qr_code text;
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS signed_invoice text;
-
+-- 1. Financial Year Management (Dec 2024)
+--    - financial_years: Tracks FY periods with start/end dates and active flag
+--    - bill_sequences: Auto-incrementing bill numbers per FY and bill type
+--    - Format: TYPE-FY_LABEL-SEQUENCE (e.g., B2B-2024-25-0001)
+--
+-- 2. Multi-Company Support
+--    - All transactional tables scoped by company_id
+--    - user_companies: Maps users to companies
+--    - Financial years per company
+--
+-- 3. GST E-Invoice Support (India)
+--    - einvoice_status, irn, ack_number, ack_date, qr_code, signed_invoice
+--
+-- 4. Stock & Inventory Management
+--    - stock_inward_items: Barcode-tracked inventory with status
+--    - Supports: available, in_stock, sold tracking
+--
+-- 5. Bill Printing & Templates
+--    - A4, B4, and Thermal (3-inch, 4-inch) formats
+--    - Tamil language support via enable_tamil_print flag
+--    - Direct printer integration via WebSocket
+--
+-- 6. Transaction Date Validation
+--    - All sales/purchases must have dates within active FY period
+--    - Enforced at backend via date validation
+--
 -- ============================================================================
--- FINANCIAL YEAR MANAGEMENT (Added Dec 2024)
+-- FOR OFFLINE WINDOWS INSTALLATION:
 -- ============================================================================
-
--- Financial Years table - tracks FY periods per company
-CREATE TABLE IF NOT EXISTS financial_years (
-  id serial PRIMARY KEY,
-  company_id integer REFERENCES companies(id) NOT NULL,
-  label varchar(20) NOT NULL,
-  start_date date NOT NULL,
-  end_date date NOT NULL,
-  is_active boolean DEFAULT false NOT NULL,
-  created_at timestamp DEFAULT now() NOT NULL,
-  updated_at timestamp DEFAULT now() NOT NULL,
-  created_by varchar REFERENCES users(id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_financial_years_company ON financial_years(company_id);
-CREATE INDEX IF NOT EXISTS idx_financial_years_active ON financial_years(company_id, is_active);
-
--- Bill Sequences table - tracks bill numbers per FY and type
-CREATE TABLE IF NOT EXISTS bill_sequences (
-  id serial PRIMARY KEY,
-  company_id integer REFERENCES companies(id) NOT NULL,
-  financial_year_id integer REFERENCES financial_years(id) NOT NULL,
-  bill_type varchar(20) NOT NULL,
-  last_number integer DEFAULT 0 NOT NULL,
-  created_at timestamp DEFAULT now() NOT NULL,
-  updated_at timestamp DEFAULT now() NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_bill_sequences_company_fy ON bill_sequences(company_id, financial_year_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_bill_sequences_unique ON bill_sequences(company_id, financial_year_id, bill_type);
-
--- Add current_financial_year_id to companies
-ALTER TABLE companies ADD COLUMN IF NOT EXISTS current_financial_year_id integer REFERENCES financial_years(id);
-
--- Add financial_year_id to sales for tracking which FY each sale belongs to
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS financial_year_id integer REFERENCES financial_years(id);
+-- 1. Install PostgreSQL 12+ on Windows
+-- 2. Create a database: createdb "inventory_system"
+-- 3. Run this script: psql -U username -d inventory_system -f database-schema.sql
+-- 4. Configure connection in app (.env file)
+-- 5. Run app startup script to initialize data
+--
+-- ============================================================================
