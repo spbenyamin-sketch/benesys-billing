@@ -114,6 +114,9 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
   createdBy: true,
 }).extend({
   expiryDate: z.coerce.date().optional(),
+  currentFinancialYearId: z.number().optional(),
+  fyStartMonth: z.number().default(4).optional(),
+  fyStartDay: z.number().default(1).optional(),
 });
 
 export type InsertCompany = z.infer<typeof insertCompanySchema>;

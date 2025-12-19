@@ -390,8 +390,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only super admin can create companies" });
       }
       const validated = insertCompanySchema.parse(req.body);
+      // Ensure default FY start dates
+      const companyData = {
+        ...validated,
+        fyStartMonth: validated.fyStartMonth ?? 4,
+        fyStartDay: validated.fyStartDay ?? 1,
+      };
       const userId = req.user.id;
-      const company = await storage.createCompany(validated, userId);
+      const company = await storage.createCompany(companyData, userId);
       res.json(company);
     } catch (error) {
       if (error instanceof z.ZodError) {
