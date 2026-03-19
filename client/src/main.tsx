@@ -1,6 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+import { initGlobalTabNavigation } from "./hooks/useTabNavigation";
+
+// Initialize global Tab key navigation + auto-select for all inputs
+initGlobalTabNavigation();
 
 // Register Service Worker for PWA support
 if ("serviceWorker" in navigator) {
