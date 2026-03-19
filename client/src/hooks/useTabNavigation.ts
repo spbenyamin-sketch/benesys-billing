@@ -1,7 +1,7 @@
 /**
  * Global Keyboard Navigation for BeneSys
  * Tab / Enter → next field | Shift+Tab → previous field
- * Number/text inputs auto-select on focus
+ * Stays within the main content area — never jumps to sidebar nav
  */
 
 const SKIP_TESTIDS = [
@@ -12,6 +12,13 @@ const SKIP_TESTIDS = [
   'button-barcode-search',
 ];
 
+function isInSidebar(el: HTMLElement): boolean {
+  return !!el.closest('[data-slot="sidebar"]') ||
+         !!el.closest('[data-sidebar="sidebar"]') ||
+         !!el.closest('nav') ||
+         !!el.closest('aside');
+}
+
 function isVisible(el: HTMLElement): boolean {
   if (!el.offsetParent && el.tagName !== 'BODY') return false;
   const s = window.getComputedStyle(el);
@@ -19,6 +26,7 @@ function isVisible(el: HTMLElement): boolean {
 }
 
 function shouldSkip(el: HTMLElement): boolean {
+  if (isInSidebar(el)) return true;
   const testId = el.getAttribute('data-testid') || '';
   return SKIP_TESTIDS.some(s => testId.startsWith(s));
 }
@@ -42,7 +50,7 @@ function moveFocus(current: HTMLElement, reverse = false) {
   if (!target) return;
   target.focus();
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-    setTimeout(() => (target as HTMLInputElement).select(), 10);
+    setTimeout(() => { try { (target as HTMLInputElement).select(); } catch(_) {} }, 10);
   }
 }
 
@@ -56,7 +64,8 @@ export function initGlobalTabNavigation() {
       el.type !== 'radio' &&
       el.type !== 'date' &&
       el.type !== 'file' &&
-      el.type !== 'color'
+      el.type !== 'color' &&
+      !isInSidebar(el)
     ) {
       setTimeout(() => { try { el.select(); } catch(_) {} }, 10);
     }
@@ -66,6 +75,9 @@ export function initGlobalTabNavigation() {
     const active = document.activeElement as HTMLElement;
     if (!active) return;
 
+    // Never intercept keys when focus is in sidebar
+    if (isInSidebar(active)) return;
+
     const tag = active.tagName;
     const type = (active as HTMLInputElement).type || '';
     const testId = active.getAttribute('data-testid') || '';
@@ -74,9 +86,7 @@ export function initGlobalTabNavigation() {
 
     if (!isTab && !isEnter) return;
 
-    // ── Special cases ──────────────────────────────────────────────
-
-    // Textarea: Enter = newline (don't intercept), Tab = next field
+    // Textarea: Enter = newline, Tab = next field
     if (tag === 'TEXTAREA') {
       if (isEnter) return;
       e.preventDefault();
@@ -84,30 +94,30 @@ export function initGlobalTabNavigation() {
       return;
     }
 
-    // Barcode input: Enter fires search, not navigation
+    // Barcode input: Enter fires search
     if (testId === 'input-barcode') return;
 
-    // Date: Tab works natively (browser date picker), Enter = next field
+    // Date: Tab native, Enter = next field
     if (type === 'date') {
       if (isEnter) { e.preventDefault(); moveFocus(active); }
       return;
     }
 
-    // Checkbox / radio: Tab moves, Enter toggles (native)
+    // Checkbox / radio: Enter toggles, Tab moves
     if (type === 'checkbox' || type === 'radio') {
-      if (isEnter) return; // let it toggle
+      if (isEnter) return;
       if (isTab) { e.preventDefault(); moveFocus(active, e.shiftKey); }
       return;
     }
 
-    // ── Regular INPUT / SELECT ─────────────────────────────────────
+    // Regular INPUT / SELECT
     if (tag === 'INPUT' || tag === 'SELECT') {
       e.preventDefault();
       moveFocus(active, isTab && e.shiftKey);
       return;
     }
 
-    // ── BUTTON ────────────────────────────────────────────────────
+    // BUTTON
     if (tag === 'BUTTON') {
       if (isTab) {
         e.preventDefault();
@@ -115,10 +125,8 @@ export function initGlobalTabNavigation() {
         return;
       }
       if (isEnter) {
-        // Let button click happen, then move focus to next field
         setTimeout(() => {
           const cur = document.activeElement as HTMLElement;
-          // If focus is still on a button after click, move forward
           if (cur && cur.tagName === 'BUTTON' && cur === active) {
             moveFocus(cur);
           }
