@@ -175,9 +175,9 @@ function AppContent() {
     if (isSuperAdmin) {
       return (
         <SidebarProvider style={sidebarStyle}>
-          <div className="flex h-screen w-full">
+          <div className="flex h-screen w-full max-w-full overflow-hidden">
             <AppSidebar />
-            <div className="flex flex-col flex-1 overflow-hidden">
+            <div className="flex flex-col flex-1 overflow-hidden min-w-0">
               <header className="flex items-center justify-between border-b px-4 py-2">
                 <div className="flex items-center gap-2">
                   <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -186,7 +186,7 @@ function AppContent() {
                   No company selected - Create a company to get started
                 </div>
               </header>
-              <main className="flex-1 overflow-y-auto">
+              <main className="flex-1 overflow-y-auto overflow-x-hidden">
                 <Router />
               </main>
             </div>
@@ -227,9 +227,9 @@ function AppContent() {
   
   return (
     <SidebarProvider style={sidebarStyle}>
-      <div className="flex h-screen w-full">
+      <div className="flex h-screen w-full max-w-full overflow-hidden">
         <AppSidebar />
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden min-w-0">
           <header className="flex items-center justify-between border-b px-2 sm:px-4 py-2 gap-2">
             <div className="flex items-center gap-2 min-w-0">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
@@ -270,7 +270,7 @@ function AppContent() {
           <footer className="border-t px-2 sm:px-4 py-1 sm:py-2 text-[10px] sm:text-xs text-muted-foreground text-center">
             <p className="truncate">BeneSys {currentCompany.expiryDate && `| Expires: ${format(new Date(currentCompany.expiryDate), "MMM d, yyyy")}`}</p>
           </footer>
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden">
             <Router />
           </main>
         </div>
