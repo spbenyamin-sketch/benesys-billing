@@ -449,7 +449,8 @@ export default function SalesBilling() {
                             type="number"
                             step="0.001"
                             value={lineItem.quantity}
-                            onChange={(e) => updateLineItem(lineItem.tempId, "quantity", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(lineItem.tempId, "quantity", e.target.value)}
                             className="font-mono"
                             data-testid={`input-qty-${lineItem.tempId}`}
                           />
@@ -459,7 +460,8 @@ export default function SalesBilling() {
                             type="number"
                             step="0.01"
                             value={lineItem.rate}
-                            onChange={(e) => updateLineItem(lineItem.tempId, "rate", e.target.value)}
+                            onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(lineItem.tempId, "rate", e.target.value)}
                             className="font-mono"
                             data-testid={`input-rate-${lineItem.tempId}`}
                           />
@@ -470,7 +472,8 @@ export default function SalesBilling() {
                               type="number"
                               step="0.01"
                               value={lineItem.taxRate}
-                              onChange={(e) => updateLineItem(lineItem.tempId, "taxRate", e.target.value)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(lineItem.tempId, "taxRate", e.target.value)}
                               className="font-mono"
                               data-testid={`input-tax-${lineItem.tempId}`}
                             />
@@ -607,7 +610,8 @@ export default function SalesBilling() {
                   type="number"
                   step="0.01"
                   value={amountGiven}
-                  onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
+                  onFocus={(e) => e.target.select()}
+              onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
                   className="font-mono"
                   data-testid="input-amount-given"
                 />

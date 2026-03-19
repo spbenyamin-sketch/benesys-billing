@@ -483,7 +483,8 @@ export default function BarcodeManagement() {
                           <Input
                             type="number"
                             value={editRate}
-                            onChange={(e) => setEditRate(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+              onChange={(e) => setEditRate(e.target.value)}
                             className="w-24 h-8"
                             data-testid={`input-rate-${item.id}`}
                           />
@@ -496,7 +497,8 @@ export default function BarcodeManagement() {
                           <Input
                             type="number"
                             value={editMrp}
-                            onChange={(e) => setEditMrp(e.target.value)}
+                            onFocus={(e) => e.target.select()}
+              onChange={(e) => setEditMrp(e.target.value)}
                             className="w-24 h-8"
                             data-testid={`input-mrp-${item.id}`}
                           />
@@ -798,30 +800,36 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
             <div className="flex gap-4 mb-4">
               <div className="flex-1">
                 <Label className="text-xs">Width (mm)</Label>
-                <Input type="number" value={labelWidth} onChange={(e) => setLabelWidth(Math.max(1, parseInt(e.target.value) || 50))} />
+                <Input type="number" value={labelWidth} onFocus={(e) => e.target.select()}
+              onChange={(e) => setLabelWidth(Math.max(1, parseInt(e.target.value) || 50))} />
               </div>
               <div className="flex-1">
                 <Label className="text-xs">Height (mm)</Label>
-                <Input type="number" value={labelHeight} onChange={(e) => setLabelHeight(Math.max(1, parseInt(e.target.value) || 25))} />
+                <Input type="number" value={labelHeight} onFocus={(e) => e.target.select()}
+              onChange={(e) => setLabelHeight(Math.max(1, parseInt(e.target.value) || 25))} />
               </div>
             </div>
 
             <div className="grid grid-cols-4 gap-3 mb-4 p-3 bg-blue-50 rounded border border-blue-200">
               <div>
                 <Label className="text-xs">Top Margin (mm)</Label>
-                <Input type="number" value={marginTop} onChange={(e) => setMarginTop(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
+                <Input type="number" value={marginTop} onFocus={(e) => e.target.select()}
+              onChange={(e) => setMarginTop(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
               </div>
               <div>
                 <Label className="text-xs">Bottom Margin (mm)</Label>
-                <Input type="number" value={marginBottom} onChange={(e) => setMarginBottom(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
+                <Input type="number" value={marginBottom} onFocus={(e) => e.target.select()}
+              onChange={(e) => setMarginBottom(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
               </div>
               <div>
                 <Label className="text-xs">Horizontal Gap (mm)</Label>
-                <Input type="number" value={gapHorizontal} onChange={(e) => setGapHorizontal(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
+                <Input type="number" value={gapHorizontal} onFocus={(e) => e.target.select()}
+              onChange={(e) => setGapHorizontal(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
               </div>
               <div>
                 <Label className="text-xs">Vertical Gap (mm)</Label>
-                <Input type="number" value={gapVertical} onChange={(e) => setGapVertical(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
+                <Input type="number" value={gapVertical} onFocus={(e) => e.target.select()}
+              onChange={(e) => setGapVertical(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
               </div>
             </div>
 
@@ -989,7 +997,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                     type="number"
                     step="0.5"
                     value={selectedElConfig.x}
-                    onChange={(e) => updateElement(selectedElConfig.id, { x: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+              onChange={(e) => updateElement(selectedElConfig.id, { x: parseFloat(e.target.value) || 0 })}
                     className="text-xs"
                   />
                 </div>
@@ -999,7 +1008,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                     type="number"
                     step="0.5"
                     value={selectedElConfig.y}
-                    onChange={(e) => updateElement(selectedElConfig.id, { y: parseFloat(e.target.value) || 0 })}
+                    onFocus={(e) => e.target.select()}
+              onChange={(e) => updateElement(selectedElConfig.id, { y: parseFloat(e.target.value) || 0 })}
                     className="text-xs"
                   />
                 </div>
@@ -1008,7 +1018,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                   <Input
                     type="number"
                     value={selectedElConfig.fontSize}
-                    onChange={(e) => updateElement(selectedElConfig.id, { fontSize: parseInt(e.target.value) || 8 })}
+                    onFocus={(e) => e.target.select()}
+              onChange={(e) => updateElement(selectedElConfig.id, { fontSize: parseInt(e.target.value) || 8 })}
                     className="text-xs"
                   />
                 </div>
@@ -1058,7 +1069,8 @@ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
                       min="0"
                       max="4"
                       value={selectedElConfig.decimals ?? 2}
-                      onChange={(e) => updateElement(selectedElConfig.id, { decimals: parseInt(e.target.value) || 0 })}
+                      onFocus={(e) => e.target.select()}
+              onChange={(e) => updateElement(selectedElConfig.id, { decimals: parseInt(e.target.value) || 0 })}
                       className="text-xs"
                       data-testid="input-decimals"
                     />

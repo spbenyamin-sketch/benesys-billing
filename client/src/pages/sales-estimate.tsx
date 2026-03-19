@@ -574,7 +574,8 @@ export default function SalesEstimate() {
                               min="0"
                               step="0.001"
                               value={item.quantity}
-                              onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
                             />
@@ -585,7 +586,8 @@ export default function SalesEstimate() {
                               min="0"
                               step="0.01"
                               value={item.rate}
-                              onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
                               className="w-20"
                               data-testid={`input-rate-${item.tempId}`}
                             />
@@ -597,7 +599,8 @@ export default function SalesEstimate() {
                               max="100"
                               step="0.01"
                               value={item.discountPercent}
-                              onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
                               className="w-16"
                               data-testid={`input-discount-${item.tempId}`}
                             />
@@ -655,7 +658,8 @@ export default function SalesEstimate() {
                     min="0"
                     step="1"
                     value={amountGiven || ""}
-                    onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
+                    onFocus={(e) => e.target.select()}
+              onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
                     placeholder="Enter amount"
                     data-testid="input-amount-given"
                   />

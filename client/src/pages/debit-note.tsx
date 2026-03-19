@@ -697,7 +697,8 @@ export default function DebitNote() {
                               min="0.01"
                               step="0.01"
                               value={item.quantity}
-                              onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
                             />
@@ -708,7 +709,8 @@ export default function DebitNote() {
                               step="0.01"
                               min="0"
                               value={item.rate}
-                              onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
                               className="w-20"
                               data-testid={`input-rate-${item.tempId}`}
                             />
@@ -720,7 +722,8 @@ export default function DebitNote() {
                               min="0"
                               max="100"
                               value={item.discountPercent}
-                              onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
                               className="w-16"
                               data-testid={`input-disc-${item.tempId}`}
                             />

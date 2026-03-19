@@ -712,7 +712,8 @@ export default function SalesB2C() {
                               max={item.isFromBarcode ? (item.stockQty || 1) : undefined}
                               step="1"
                               value={item.quantity}
-                              onChange={(e) => {
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
                                 const newQty = parseFloat(e.target.value) || 0;
                                 // Stock checking for barcode items
                                 if (item.isFromBarcode && item.stockQty !== null && newQty > item.stockQty) {
@@ -740,7 +741,8 @@ export default function SalesB2C() {
                                 min="0"
                                 step="0.01"
                                 value={item.rate}
-                                onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                                onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
                                 className="w-20"
                                 data-testid={`input-rate-${item.tempId}`}
                               />
@@ -753,7 +755,8 @@ export default function SalesB2C() {
                               max="100"
                               step="0.01"
                               value={item.discountPercent}
-                              onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                              onFocus={(e) => e.target.select()}
+              onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
                               className="w-16"
                               data-testid={`input-discount-${item.tempId}`}
                             />
@@ -837,7 +840,8 @@ export default function SalesB2C() {
                       min="0"
                       step="1"
                       value={amountGiven || ""}
-                      onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
+              onChange={(e) => setAmountGiven(parseFloat(e.target.value) || 0)}
                       placeholder="Enter amount received"
                       className="text-lg"
                       data-testid="input-amount-given"

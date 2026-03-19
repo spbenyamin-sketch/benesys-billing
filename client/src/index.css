@@ -297,3 +297,8 @@
     inset: -1px;
   }
 }
+
+/* Auto-select text when clicking number inputs */
+input[type="number"]:focus {
+  select: all;
+}
