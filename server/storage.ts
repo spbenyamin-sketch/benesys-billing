@@ -377,19 +377,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async assignUserToDefaultCompany(userId: string): Promise<void> {
-    // Find or create default company
-    let defaultCompany = await db
+    // Find any existing company
+    let existingCompanies = await db
       .select()
       .from(companies)
-      .where(eq(companies.id, 1))
       .limit(1);
     
-    if (defaultCompany.length === 0) {
-      // Create default company if it doesn't exist
+    let companyId: number;
+
+    if (existingCompanies.length === 0) {
+      // Create default company if none exists (let DB auto-assign id)
       const newCompany = await db
         .insert(companies)
         .values({
-          id: 1,
           name: "Default Company",
           address: "Default Address",
           city: "Default City",
@@ -398,15 +398,25 @@ export class DatabaseStorage implements IStorage {
           createdBy: userId,
         })
         .returning();
-      defaultCompany = newCompany;
+      companyId = newCompany[0].id;
+    } else {
+      companyId = existingCompanies[0].id;
     }
-    
-    // Assign user to default company
-    await db.insert(userCompanies).values({
-      userId,
-      companyId: 1,
-      isDefault: true,
-    });
+
+    // Check if user is already assigned
+    const existing = await db
+      .select()
+      .from(userCompanies)
+      .where(and(eq(userCompanies.userId, userId), eq(userCompanies.companyId, companyId)))
+      .limit(1);
+
+    if (existing.length === 0) {
+      await db.insert(userCompanies).values({
+        userId,
+        companyId,
+        isDefault: true,
+      });
+    }
   }
 
   async assignUserToCompany(userId: string, companyId: number, isDefault: boolean = false): Promise<void> {
