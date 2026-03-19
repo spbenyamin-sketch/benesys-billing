@@ -492,6 +492,7 @@ export default function SalesB2B() {
             onClick={() => saveMutation.mutate()}
             disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId || totals.grandTotal <= 0}
             data-testid="button-save-b2b-sale"
+                  tabIndex={-1}
           >
             <Save className="mr-2 h-4 w-4" />
             {saveMutation.isPending ? "Saving..." : "Save & Print"}
@@ -512,6 +513,7 @@ export default function SalesB2B() {
                     checked={inclusiveTax}
                     onCheckedChange={setInclusiveTax}
                     data-testid="switch-inclusive-tax"
+                  tabIndex={-1}
                   />
                 </div>
                 <Badge variant="secondary">Credit Sale</Badge>
@@ -539,6 +541,7 @@ export default function SalesB2B() {
                   className="w-full justify-start text-left h-9"
                   onClick={() => setShowPartySearch(true)}
                   data-testid="button-search-party"
+                  tabIndex={-1}
                 >
                   {selectedParty ? (
                     <div className="flex flex-col items-start">
@@ -557,6 +560,7 @@ export default function SalesB2B() {
                     onClick={() => setSelectedPartyId(null)}
                     className="w-full"
                     data-testid="button-clear-party"
+                    tabIndex={-1}
                   >
                     Clear Selection
                   </Button>
@@ -578,6 +582,7 @@ export default function SalesB2B() {
                       checked={printOutstanding}
                       onCheckedChange={(checked) => setPrintOutstanding(checked as boolean)}
                       data-testid="checkbox-print-outstanding"
+                      tabIndex={-1}
                     />
                     <Label htmlFor="print-outstanding" className="text-sm">Print on Invoice</Label>
                   </div>
@@ -614,6 +619,7 @@ export default function SalesB2B() {
                   variant={searchMode === "item" ? "default" : "outline"}
                   onClick={() => setSearchMode("item")}
                   data-testid="button-search-mode-item"
+                  tabIndex={-1}
                 >
                   <Search className="mr-1 h-3 w-3" />
                   Item Search
@@ -626,6 +632,7 @@ export default function SalesB2B() {
                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
                   }}
                   data-testid="button-search-mode-barcode"
+                  tabIndex={-1}
                 >
                   <Barcode className="mr-1 h-3 w-3" />
                   Barcode Scan
@@ -641,7 +648,8 @@ export default function SalesB2B() {
                     onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
                     data-testid="input-barcode"
                   />
-                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search">
+                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search"
+                    tabIndex={-1}>
                     Add
                   </Button>
                 </div>
@@ -734,6 +742,7 @@ export default function SalesB2B() {
                                   setShowItemSearch(true);
                                 }}
                                 data-testid={`button-select-item-${item.tempId}`}
+                                tabIndex={-1}
                               >
                                 {item.itemId && item.itemName ? (
                                   <div>
@@ -771,6 +780,7 @@ export default function SalesB2B() {
                               }}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -788,6 +798,7 @@ export default function SalesB2B() {
               onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
                                 className="w-20"
                                 data-testid={`input-rate-${item.tempId}`}
+                                tabIndex={0}
                               />
                             )}
                           </TableCell>
@@ -802,6 +813,7 @@ export default function SalesB2B() {
               onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
                               className="w-16"
                               data-testid={`input-discount-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -823,6 +835,7 @@ export default function SalesB2B() {
                               variant="ghost"
                               onClick={() => removeLineItem(item.tempId)}
                               data-testid={`button-remove-${item.tempId}`}
+                              tabIndex={-1}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

@@ -302,6 +302,7 @@ export default function SalesBilling() {
           onClick={() => saveMutation.mutate()}
           disabled={saveMutation.isPending || lineItems.length === 0}
           data-testid="button-save-sale"
+                  tabIndex={-1}
         >
           <Save className="mr-2 h-4 w-4" />
           {saveMutation.isPending ? "Saving..." : "Save Invoice"}
@@ -488,6 +489,7 @@ export default function SalesBilling() {
                             variant="ghost"
                             onClick={() => removeLineItem(lineItem.tempId)}
                             data-testid={`button-remove-${lineItem.tempId}`}
+                              tabIndex={-1}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

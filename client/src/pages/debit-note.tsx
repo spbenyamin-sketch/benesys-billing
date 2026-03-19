@@ -482,6 +482,7 @@ export default function DebitNote() {
                     checked={inclusiveTax}
                     onCheckedChange={setInclusiveTax}
                     data-testid="switch-inclusive-tax"
+                  tabIndex={-1}
                   />
                 </div>
               </div>
@@ -560,6 +561,7 @@ export default function DebitNote() {
                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
                   }}
                   data-testid="button-search-mode-barcode"
+                  tabIndex={-1}
                 >
                   <Barcode className="mr-1 h-3 w-3" />
                   Barcode Scan
@@ -569,6 +571,7 @@ export default function DebitNote() {
                   variant={searchMode === "item" ? "default" : "outline"}
                   onClick={() => setSearchMode("item")}
                   data-testid="button-search-mode-item"
+                  tabIndex={-1}
                 >
                   <Search className="mr-1 h-3 w-3" />
                   Item Search
@@ -675,6 +678,7 @@ export default function DebitNote() {
                                   setShowItemSearch(true);
                                 }}
                                 data-testid={`button-select-item-${item.tempId}`}
+                                tabIndex={-1}
                               >
                                 {item.itemName ? (
                                   <span className="text-sm">{item.itemName}</span>
@@ -701,6 +705,7 @@ export default function DebitNote() {
               onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -713,6 +718,7 @@ export default function DebitNote() {
               onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
                               className="w-20"
                               data-testid={`input-rate-${item.tempId}`}
+                                tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -726,6 +732,7 @@ export default function DebitNote() {
               onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
                               className="w-16"
                               data-testid={`input-disc-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium text-red-600 dark:text-red-400">

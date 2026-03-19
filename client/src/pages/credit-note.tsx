@@ -456,6 +456,7 @@ export default function CreditNote() {
                     checked={inclusiveTax}
                     onCheckedChange={setInclusiveTax}
                     data-testid="switch-inclusive-tax"
+                  tabIndex={-1}
                   />
                 </div>
               </div>
@@ -537,6 +538,7 @@ export default function CreditNote() {
                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
                   }}
                   data-testid="button-search-mode-barcode"
+                  tabIndex={-1}
                 >
                   <Barcode className="mr-1 h-3 w-3" />
                   Barcode Scan
@@ -546,6 +548,7 @@ export default function CreditNote() {
                   variant={searchMode === "item" ? "default" : "outline"}
                   onClick={() => setSearchMode("item")}
                   data-testid="button-search-mode-item"
+                  tabIndex={-1}
                 >
                   <Search className="mr-1 h-3 w-3" />
                   Item Search
@@ -652,6 +655,7 @@ export default function CreditNote() {
                                   setShowItemSearch(true);
                                 }}
                                 data-testid={`button-select-item-${item.tempId}`}
+                                tabIndex={-1}
                               >
                                 {item.itemName ? (
                                   <span className="text-sm">{item.itemName}</span>
@@ -678,6 +682,7 @@ export default function CreditNote() {
               onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -690,6 +695,7 @@ export default function CreditNote() {
               onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
                               className="w-20"
                               data-testid={`input-rate-${item.tempId}`}
+                                tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -703,6 +709,7 @@ export default function CreditNote() {
               onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
                               className="w-16"
                               data-testid={`input-disc-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium">
@@ -714,6 +721,7 @@ export default function CreditNote() {
                               variant="ghost"
                               onClick={() => removeLineItem(item.tempId)}
                               data-testid={`button-remove-${item.tempId}`}
+                              tabIndex={-1}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

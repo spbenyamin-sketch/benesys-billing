@@ -414,6 +414,7 @@ export default function EditSale() {
             onClick={() => updateMutation.mutate()}
             disabled={updateMutation.isPending || lineItems.length === 0}
             data-testid="button-save-sale"
+                  tabIndex={-1}
           >
             <Save className="mr-2 h-4 w-4" />
             {updateMutation.isPending ? "Saving..." : "Save Changes"}

@@ -1,0 +1,717 @@
+From 5c8bbe39ffecfa68814d6b46cfe66c2608e0811e Mon Sep 17 00:00:00 2001
+From: BeneSys Fix <fix@benesys.in>
+Date: Thu, 19 Mar 2026 13:12:08 +0000
+Subject: [PATCH] =?UTF-8?q?fix:=20Tab=20navigation=20-=20only=20Qty?=
+ =?UTF-8?q?=E2=86=92Rate=E2=86=92Disc%=E2=86=92next=20row,=20never=20jumps?=
+ =?UTF-8?q?=20to=20sidebar=20or=20buttons?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Simplified global hook: only auto-select + block sidebar Tab
+- Added tabIndex={-1} to all non-input buttons (Save, Search, Tax Type, Remove, etc)
+- Added tabIndex={-1} to all sidebar links and logout
+- Tab strictly flows: Qty→Rate→Disc%→next row Qty (adds new row on last)
+- Matches the expected behavior shown in reference video
+---
+ client/src/hooks/useTabNavigation.ts | 134 ++++-----------------------
+ client/src/pages/credit-note.tsx     |   8 ++
+ client/src/pages/debit-note.tsx      |   7 ++
+ client/src/pages/edit-sale.tsx       |   1 +
+ client/src/pages/sales-b2b.tsx       |  15 ++-
+ client/src/pages/sales-b2c.tsx       |   9 ++
+ client/src/pages/sales-billing.tsx   |   2 +
+ client/src/pages/sales-estimate.tsx  |   8 ++
+ client/src/pages/sales-proforma.tsx  |  15 ++-
+ 9 files changed, 82 insertions(+), 117 deletions(-)
+
+diff --git a/client/src/hooks/useTabNavigation.ts b/client/src/hooks/useTabNavigation.ts
+index 35a3abf..e967a7b 100644
+--- a/client/src/hooks/useTabNavigation.ts
++++ b/client/src/hooks/useTabNavigation.ts
+@@ -1,68 +1,16 @@
+ /**
+  * Global Keyboard Navigation for BeneSys
+- * Tab / Enter → next FORM field only (never sidebar/nav)
+- * Shift+Tab → previous field
+- * Number/text inputs auto-select on focus
++ * 
++ * ONLY handles:
++ * 1. Auto-select text when clicking/tabbing into number inputs
++ * 2. Blocks Tab from going to sidebar/nav elements
++ * 
++ * Field-to-field navigation inside sales forms is handled
++ * per-page using data-tab-group and data-tab-order attributes.
+  */
+ 
+-const SKIP_TESTIDS = [
+-  'button-remove-',
+-  'button-clear-party', 
+-  'button-toggle-password',
+-  'button-toggle-confirm-password',
+-  'button-barcode-search',
+-  'button-logout',
+-  'link-',
+-];
+-
+-function isInSidebar(el: HTMLElement): boolean {
+-  return !!(
+-    el.closest('aside') ||
+-    el.closest('nav') ||
+-    el.closest('[data-slot="sidebar"]') ||
+-    el.closest('[data-sidebar]')
+-  );
+-}
+-
+-function isVisible(el: HTMLElement): boolean {
+-  if (!el.offsetParent && el.tagName !== 'BODY') return false;
+-  const s = window.getComputedStyle(el);
+-  return s.display !== 'none' && s.visibility !== 'hidden';
+-}
+-
+-function shouldSkip(el: HTMLElement): boolean {
+-  if (isInSidebar(el)) return true;
+-  if (el.getAttribute('tabindex') === '-1') return true;
+-  const testId = el.getAttribute('data-testid') || '';
+-  return SKIP_TESTIDS.some(s => testId.startsWith(s));
+-}
+-
+-function getFocusable(): HTMLElement[] {
+-  return Array.from(
+-    document.querySelectorAll<HTMLElement>(
+-      'input:not([disabled]):not([type="hidden"]), ' +
+-      'textarea:not([disabled]), ' +
+-      'select:not([disabled]), ' +
+-      'button:not([disabled]), ' +
+-      'a[href]'
+-    )
+-  ).filter(el => isVisible(el) && !shouldSkip(el));
+-}
+-
+-function moveFocus(current: HTMLElement, reverse = false) {
+-  const all = getFocusable();
+-  const idx = all.indexOf(current);
+-  if (idx === -1) return;
+-  const target = all[reverse ? idx - 1 : idx + 1];
+-  if (!target) return;
+-  target.focus();
+-  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+-    setTimeout(() => { try { (target as HTMLInputElement).select(); } catch(_) {} }, 10);
+-  }
+-}
+-
+ export function initGlobalTabNavigation() {
+-  // Auto-select text on focus for inputs
++  // Auto-select text on focus for number/text inputs
+   document.addEventListener('focusin', (e) => {
+     const el = e.target as HTMLInputElement;
+     if (
+@@ -70,70 +18,26 @@ export function initGlobalTabNavigation() {
+       el.type !== 'checkbox' &&
+       el.type !== 'radio' &&
+       el.type !== 'date' &&
+-      el.type !== 'file' &&
+-      !isInSidebar(el)
++      el.type !== 'file'
+     ) {
+       setTimeout(() => { try { el.select(); } catch(_) {} }, 10);
+     }
+   });
+ 
++  // Block Tab from going into sidebar links/buttons
+   document.addEventListener('keydown', (e) => {
++    if (e.key !== 'Tab') return;
+     const active = document.activeElement as HTMLElement;
+     if (!active) return;
+-    if (isInSidebar(active)) return;
+-
+-    const tag = active.tagName;
+-    const type = (active as HTMLInputElement).type || '';
+-    const testId = active.getAttribute('data-testid') || '';
+-    const isTab = e.key === 'Tab';
+-    const isEnter = e.key === 'Enter';
+ 
+-    if (!isTab && !isEnter) return;
+-
+-    // Textarea: Enter = newline, Tab = next field
+-    if (tag === 'TEXTAREA') {
+-      if (isEnter) return;
+-      e.preventDefault();
+-      moveFocus(active, e.shiftKey);
+-      return;
+-    }
+-
+-    // Barcode input: Enter fires search
+-    if (testId === 'input-barcode') return;
+-
+-    // Date input: Tab = native, Enter = next field
+-    if (type === 'date') {
+-      if (isEnter) { e.preventDefault(); moveFocus(active); }
+-      return;
+-    }
+-
+-    // Checkbox / radio: Enter = toggle, Tab = move
+-    if (type === 'checkbox' || type === 'radio') {
+-      if (isEnter) return;
+-      if (isTab) { e.preventDefault(); moveFocus(active, e.shiftKey); }
+-      return;
+-    }
+-
+-    // Regular INPUT / SELECT
+-    if (tag === 'INPUT' || tag === 'SELECT') {
++    const inSidebar = !!(
++      active.closest('aside') ||
++      active.closest('nav') ||
++      active.closest('[data-slot="sidebar"]') ||
++      active.closest('[data-sidebar]')
++    );
++    if (inSidebar) {
+       e.preventDefault();
+-      moveFocus(active, isTab && e.shiftKey);
+-      return;
+     }
+-
+-    // BUTTON
+-    if (tag === 'BUTTON') {
+-      if (isTab) {
+-        e.preventDefault();
+-        moveFocus(active, e.shiftKey);
+-        return;
+-      }
+-      if (isEnter) {
+-        setTimeout(() => {
+-          const cur = document.activeElement as HTMLElement;
+-          if (cur && cur === active) moveFocus(cur);
+-        }, 200);
+-      }
+-    }
+-  });
++  }, true);
+ }
+diff --git a/client/src/pages/credit-note.tsx b/client/src/pages/credit-note.tsx
+index bbcc630..a417e6d 100644
+--- a/client/src/pages/credit-note.tsx
++++ b/client/src/pages/credit-note.tsx
+@@ -483,6 +483,7 @@ export default function CreditNote() {
+                     checked={inclusiveTax}
+                     onCheckedChange={setInclusiveTax}
+                     data-testid="switch-inclusive-tax"
++                  tabIndex={-1}
+                   />
+                 </div>
+               </div>
+@@ -564,6 +565,7 @@ export default function CreditNote() {
+                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                   }}
+                   data-testid="button-search-mode-barcode"
++                  tabIndex={-1}
+                 >
+                   <Barcode className="mr-1 h-3 w-3" />
+                   Barcode Scan
+@@ -573,6 +575,7 @@ export default function CreditNote() {
+                   variant={searchMode === "item" ? "default" : "outline"}
+                   onClick={() => setSearchMode("item")}
+                   data-testid="button-search-mode-item"
++                  tabIndex={-1}
+                 >
+                   <Search className="mr-1 h-3 w-3" />
+                   Item Search
+@@ -679,6 +682,7 @@ export default function CreditNote() {
+                                   setShowItemSearch(true);
+                                 }}
+                                 data-testid={`button-select-item-${item.tempId}`}
++                                tabIndex={-1}
+                               >
+                                 {item.itemName ? (
+                                   <span className="text-sm">{item.itemName}</span>
+@@ -705,6 +709,7 @@ export default function CreditNote() {
+               onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
+                               className="w-16"
+                               data-testid={`input-qty-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -718,6 +723,7 @@ export default function CreditNote() {
+               onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
+                               className="w-20"
+                               data-testid={`input-rate-${item.tempId}`}
++                                tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -732,6 +738,7 @@ export default function CreditNote() {
+               onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
+                               className="w-16"
+                               data-testid={`input-disc-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell className="text-right font-medium">
+@@ -743,6 +750,7 @@ export default function CreditNote() {
+                               variant="ghost"
+                               onClick={() => removeLineItem(item.tempId)}
+                               data-testid={`button-remove-${item.tempId}`}
++                              tabIndex={-1}
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+diff --git a/client/src/pages/debit-note.tsx b/client/src/pages/debit-note.tsx
+index 0db8f79..fd1c5d1 100644
+--- a/client/src/pages/debit-note.tsx
++++ b/client/src/pages/debit-note.tsx
+@@ -509,6 +509,7 @@ export default function DebitNote() {
+                     checked={inclusiveTax}
+                     onCheckedChange={setInclusiveTax}
+                     data-testid="switch-inclusive-tax"
++                  tabIndex={-1}
+                   />
+                 </div>
+               </div>
+@@ -587,6 +588,7 @@ export default function DebitNote() {
+                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                   }}
+                   data-testid="button-search-mode-barcode"
++                  tabIndex={-1}
+                 >
+                   <Barcode className="mr-1 h-3 w-3" />
+                   Barcode Scan
+@@ -596,6 +598,7 @@ export default function DebitNote() {
+                   variant={searchMode === "item" ? "default" : "outline"}
+                   onClick={() => setSearchMode("item")}
+                   data-testid="button-search-mode-item"
++                  tabIndex={-1}
+                 >
+                   <Search className="mr-1 h-3 w-3" />
+                   Item Search
+@@ -702,6 +705,7 @@ export default function DebitNote() {
+                                   setShowItemSearch(true);
+                                 }}
+                                 data-testid={`button-select-item-${item.tempId}`}
++                                tabIndex={-1}
+                               >
+                                 {item.itemName ? (
+                                   <span className="text-sm">{item.itemName}</span>
+@@ -728,6 +732,7 @@ export default function DebitNote() {
+               onChange={(e) => updateLineItem(item.tempId, "quantity", e.target.value)}
+                               className="w-16"
+                               data-testid={`input-qty-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -741,6 +746,7 @@ export default function DebitNote() {
+               onChange={(e) => updateLineItem(item.tempId, "rate", e.target.value)}
+                               className="w-20"
+                               data-testid={`input-rate-${item.tempId}`}
++                                tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -755,6 +761,7 @@ export default function DebitNote() {
+               onChange={(e) => updateLineItem(item.tempId, "discountPercent", e.target.value)}
+                               className="w-16"
+                               data-testid={`input-disc-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell className="text-right font-medium text-red-600 dark:text-red-400">
+diff --git a/client/src/pages/edit-sale.tsx b/client/src/pages/edit-sale.tsx
+index f4a9418..f67d368 100644
+--- a/client/src/pages/edit-sale.tsx
++++ b/client/src/pages/edit-sale.tsx
+@@ -441,6 +441,7 @@ export default function EditSale() {
+             onClick={() => updateMutation.mutate()}
+             disabled={updateMutation.isPending || lineItems.length === 0}
+             data-testid="button-save-sale"
++                  tabIndex={-1}
+           >
+             <Save className="mr-2 h-4 w-4" />
+             {updateMutation.isPending ? "Saving..." : "Save Changes"}
+diff --git a/client/src/pages/sales-b2b.tsx b/client/src/pages/sales-b2b.tsx
+index cc04f76..43b70c7 100644
+--- a/client/src/pages/sales-b2b.tsx
++++ b/client/src/pages/sales-b2b.tsx
+@@ -529,6 +529,7 @@ export default function SalesB2B() {
+             onClick={() => saveMutation.mutate()}
+             disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId || totals.grandTotal <= 0}
+             data-testid="button-save-b2b-sale"
++                  tabIndex={-1}
+           >
+             <Save className="mr-2 h-4 w-4" />
+             {saveMutation.isPending ? "Saving..." : "Save & Print"}
+@@ -549,6 +550,7 @@ export default function SalesB2B() {
+                     checked={inclusiveTax}
+                     onCheckedChange={setInclusiveTax}
+                     data-testid="switch-inclusive-tax"
++                  tabIndex={-1}
+                   />
+                 </div>
+                 <Badge variant="secondary">Credit Sale</Badge>
+@@ -576,6 +578,7 @@ export default function SalesB2B() {
+                   className="w-full justify-start text-left h-9"
+                   onClick={() => setShowPartySearch(true)}
+                   data-testid="button-search-party"
++                  tabIndex={-1}
+                 >
+                   {selectedParty ? (
+                     <div className="flex flex-col items-start">
+@@ -594,6 +597,7 @@ export default function SalesB2B() {
+                     onClick={() => setSelectedPartyId(null)}
+                     className="w-full"
+                     data-testid="button-clear-party"
++                    tabIndex={-1}
+                   >
+                     Clear Selection
+                   </Button>
+@@ -615,6 +619,7 @@ export default function SalesB2B() {
+                       checked={printOutstanding}
+                       onCheckedChange={(checked) => setPrintOutstanding(checked as boolean)}
+                       data-testid="checkbox-print-outstanding"
++                      tabIndex={-1}
+                     />
+                     <Label htmlFor="print-outstanding" className="text-sm">Print on Invoice</Label>
+                   </div>
+@@ -651,6 +656,7 @@ export default function SalesB2B() {
+                   variant={searchMode === "item" ? "default" : "outline"}
+                   onClick={() => setSearchMode("item")}
+                   data-testid="button-search-mode-item"
++                  tabIndex={-1}
+                 >
+                   <Search className="mr-1 h-3 w-3" />
+                   Item Search
+@@ -663,6 +669,7 @@ export default function SalesB2B() {
+                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                   }}
+                   data-testid="button-search-mode-barcode"
++                  tabIndex={-1}
+                 >
+                   <Barcode className="mr-1 h-3 w-3" />
+                   Barcode Scan
+@@ -678,7 +685,8 @@ export default function SalesB2B() {
+                     onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
+                     data-testid="input-barcode"
+                   />
+-                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search">
++                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search"
++                    tabIndex={-1}>
+                     Add
+                   </Button>
+                 </div>
+@@ -771,6 +779,7 @@ export default function SalesB2B() {
+                                   setShowItemSearch(true);
+                                 }}
+                                 data-testid={`button-select-item-${item.tempId}`}
++                                tabIndex={-1}
+                               >
+                                 {item.itemId && item.itemName ? (
+                                   <div>
+@@ -808,6 +817,7 @@ export default function SalesB2B() {
+                               }}
+                               className="w-16"
+                               data-testid={`input-qty-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -826,6 +836,7 @@ export default function SalesB2B() {
+               onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                                 className="w-20"
+                                 data-testid={`input-rate-${item.tempId}`}
++                                tabIndex={0}
+                               />
+                             )}
+                           </TableCell>
+@@ -841,6 +852,7 @@ export default function SalesB2B() {
+               onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                               className="w-16"
+                               data-testid={`input-discount-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -862,6 +874,7 @@ export default function SalesB2B() {
+                               variant="ghost"
+                               onClick={() => removeLineItem(item.tempId)}
+                               data-testid={`button-remove-${item.tempId}`}
++                              tabIndex={-1}
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+diff --git a/client/src/pages/sales-b2c.tsx b/client/src/pages/sales-b2c.tsx
+index 0725c81..67f6ed9 100644
+--- a/client/src/pages/sales-b2c.tsx
++++ b/client/src/pages/sales-b2c.tsx
+@@ -536,6 +536,7 @@ export default function SalesB2C() {
+                     checked={inclusiveTax}
+                     onCheckedChange={setInclusiveTax}
+                     data-testid="switch-inclusive-tax"
++                  tabIndex={-1}
+                   />
+                 </div>
+               </div>
+@@ -562,6 +563,7 @@ export default function SalesB2C() {
+                     className="flex-1 justify-start text-left h-9"
+                     onClick={() => setShowPartySearch(true)}
+                     data-testid="button-search-party"
++                  tabIndex={-1}
+                   >
+                     {selectedParty ? (
+                       <div className="flex flex-col items-start">
+@@ -579,6 +581,7 @@ export default function SalesB2C() {
+                       variant="ghost"
+                       onClick={() => setSelectedPartyId(null)}
+                       data-testid="button-clear-party"
++                    tabIndex={-1}
+                     >
+                       Clear
+                     </Button>
+@@ -607,6 +610,7 @@ export default function SalesB2C() {
+                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                   }}
+                   data-testid="button-search-mode-barcode"
++                  tabIndex={-1}
+                 >
+                   <Barcode className="mr-1 h-3 w-3" />
+                   Barcode Scan
+@@ -616,6 +620,7 @@ export default function SalesB2C() {
+                   variant={searchMode === "item" ? "default" : "outline"}
+                   onClick={() => setSearchMode("item")}
+                   data-testid="button-search-mode-item"
++                  tabIndex={-1}
+                 >
+                   <Search className="mr-1 h-3 w-3" />
+                   Item Search
+@@ -723,6 +728,7 @@ export default function SalesB2C() {
+                                   setShowItemSearch(true);
+                                 }}
+                                 data-testid={`button-select-item-${item.tempId}`}
++                                tabIndex={-1}
+                               >
+                                 {item.itemName ? (
+                                   <span className="text-sm">{item.itemName}</span>
+@@ -756,6 +762,7 @@ export default function SalesB2C() {
+                               }}
+                               className="w-16"
+                               data-testid={`input-qty-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -774,6 +781,7 @@ export default function SalesB2C() {
+               onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                                 className="w-20"
+                                 data-testid={`input-rate-${item.tempId}`}
++                                tabIndex={0}
+                               />
+                             )}
+                           </TableCell>
+@@ -789,6 +797,7 @@ export default function SalesB2C() {
+               onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                               className="w-16"
+                               data-testid={`input-discount-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell className="text-right font-medium">
+diff --git a/client/src/pages/sales-billing.tsx b/client/src/pages/sales-billing.tsx
+index 81a5c84..fea49d6 100644
+--- a/client/src/pages/sales-billing.tsx
++++ b/client/src/pages/sales-billing.tsx
+@@ -329,6 +329,7 @@ export default function SalesBilling() {
+           onClick={() => saveMutation.mutate()}
+           disabled={saveMutation.isPending || lineItems.length === 0}
+           data-testid="button-save-sale"
++                  tabIndex={-1}
+         >
+           <Save className="mr-2 h-4 w-4" />
+           {saveMutation.isPending ? "Saving..." : "Save Invoice"}
+@@ -515,6 +516,7 @@ export default function SalesBilling() {
+                             variant="ghost"
+                             onClick={() => removeLineItem(lineItem.tempId)}
+                             data-testid={`button-remove-${lineItem.tempId}`}
++                              tabIndex={-1}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+diff --git a/client/src/pages/sales-estimate.tsx b/client/src/pages/sales-estimate.tsx
+index f1ed90c..674eaf1 100644
+--- a/client/src/pages/sales-estimate.tsx
++++ b/client/src/pages/sales-estimate.tsx
+@@ -408,6 +408,7 @@ export default function SalesEstimate() {
+                     className="flex-1 justify-start text-left h-9"
+                     onClick={() => setShowPartySearch(true)}
+                     data-testid="button-search-party"
++                  tabIndex={-1}
+                   >
+                     {selectedParty ? (
+                       <div className="flex flex-col items-start">
+@@ -425,6 +426,7 @@ export default function SalesEstimate() {
+                       variant="ghost"
+                       onClick={() => setSelectedPartyId(null)}
+                       data-testid="button-clear-party"
++                    tabIndex={-1}
+                     >
+                       Clear
+                     </Button>
+@@ -479,6 +481,7 @@ export default function SalesEstimate() {
+                   variant={searchMode === "item" ? "default" : "outline"}
+                   onClick={() => setSearchMode("item")}
+                   data-testid="button-search-mode-item"
++                  tabIndex={-1}
+                 >
+                   <Search className="mr-1 h-3 w-3" />
+                   Item Search
+@@ -491,6 +494,7 @@ export default function SalesEstimate() {
+                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                   }}
+                   data-testid="button-search-mode-barcode"
++                  tabIndex={-1}
+                 >
+                   <Barcode className="mr-1 h-3 w-3" />
+                   Barcode Scan
+@@ -586,6 +590,7 @@ export default function SalesEstimate() {
+                                   setShowItemSearch(true);
+                                 }}
+                                 data-testid={`button-select-item-${item.tempId}`}
++                                tabIndex={-1}
+                               >
+                                 {item.itemName ? (
+                                   <span className="text-sm">{item.itemName}</span>
+@@ -605,6 +610,7 @@ export default function SalesEstimate() {
+               onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
+                               className="w-16"
+                               data-testid={`input-qty-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -618,6 +624,7 @@ export default function SalesEstimate() {
+               onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                               className="w-20"
+                               data-testid={`input-rate-${item.tempId}`}
++                                tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -632,6 +639,7 @@ export default function SalesEstimate() {
+               onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                               className="w-16"
+                               data-testid={`input-discount-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell className="text-right font-medium">
+diff --git a/client/src/pages/sales-proforma.tsx b/client/src/pages/sales-proforma.tsx
+index e1d464e..61e7296 100644
+--- a/client/src/pages/sales-proforma.tsx
++++ b/client/src/pages/sales-proforma.tsx
+@@ -519,6 +519,7 @@ export default function SalesProforma() {
+             onClick={() => saveMutation.mutate()}
+             disabled={saveMutation.isPending || lineItems.length === 0 || !selectedPartyId || totals.grandTotal <= 0}
+             data-testid="button-save-b2b-sale"
++                  tabIndex={-1}
+           >
+             <Save className="mr-2 h-4 w-4" />
+             {saveMutation.isPending ? "Saving..." : "Save & Print"}
+@@ -539,6 +540,7 @@ export default function SalesProforma() {
+                     checked={inclusiveTax}
+                     onCheckedChange={setInclusiveTax}
+                     data-testid="switch-inclusive-tax"
++                  tabIndex={-1}
+                   />
+                 </div>
+                 <Badge variant="secondary">Credit Sale</Badge>
+@@ -566,6 +568,7 @@ export default function SalesProforma() {
+                   className="w-full justify-start text-left h-9"
+                   onClick={() => setShowPartySearch(true)}
+                   data-testid="button-search-party"
++                  tabIndex={-1}
+                 >
+                   {selectedParty ? (
+                     <div className="flex flex-col items-start">
+@@ -584,6 +587,7 @@ export default function SalesProforma() {
+                     onClick={() => setSelectedPartyId(null)}
+                     className="w-full"
+                     data-testid="button-clear-party"
++                    tabIndex={-1}
+                   >
+                     Clear Selection
+                   </Button>
+@@ -605,6 +609,7 @@ export default function SalesProforma() {
+                       checked={printOutstanding}
+                       onCheckedChange={(checked) => setPrintOutstanding(checked as boolean)}
+                       data-testid="checkbox-print-outstanding"
++                      tabIndex={-1}
+                     />
+                     <Label htmlFor="print-outstanding" className="text-sm">Print on Invoice</Label>
+                   </div>
+@@ -641,6 +646,7 @@ export default function SalesProforma() {
+                   variant={searchMode === "item" ? "default" : "outline"}
+                   onClick={() => setSearchMode("item")}
+                   data-testid="button-search-mode-item"
++                  tabIndex={-1}
+                 >
+                   <Search className="mr-1 h-3 w-3" />
+                   Item Search
+@@ -653,6 +659,7 @@ export default function SalesProforma() {
+                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
+                   }}
+                   data-testid="button-search-mode-barcode"
++                  tabIndex={-1}
+                 >
+                   <Barcode className="mr-1 h-3 w-3" />
+                   Barcode Scan
+@@ -668,7 +675,8 @@ export default function SalesProforma() {
+                     onKeyDown={(e) => e.key === "Enter" && handleBarcodeSearch()}
+                     data-testid="input-barcode"
+                   />
+-                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search">
++                  <Button size="sm" onClick={handleBarcodeSearch} data-testid="button-barcode-search"
++                    tabIndex={-1}>
+                     Add
+                   </Button>
+                 </div>
+@@ -761,6 +769,7 @@ export default function SalesProforma() {
+                                   setShowItemSearch(true);
+                                 }}
+                                 data-testid={`button-select-item-${item.tempId}`}
++                                tabIndex={-1}
+                               >
+                                 {item.itemId && item.itemName ? (
+                                   <div>
+@@ -799,6 +808,7 @@ export default function SalesProforma() {
+                               }}
+                               className="w-16"
+                               data-testid={`input-qty-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -817,6 +827,7 @@ export default function SalesProforma() {
+               onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
+                                 className="w-20"
+                                 data-testid={`input-rate-${item.tempId}`}
++                                tabIndex={0}
+                               />
+                             )}
+                           </TableCell>
+@@ -832,6 +843,7 @@ export default function SalesProforma() {
+               onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
+                               className="w-16"
+                               data-testid={`input-discount-${item.tempId}`}
++                              tabIndex={0}
+                             />
+                           </TableCell>
+                           <TableCell>
+@@ -853,6 +865,7 @@ export default function SalesProforma() {
+                               variant="ghost"
+                               onClick={() => removeLineItem(item.tempId)}
+                               data-testid={`button-remove-${item.tempId}`}
++                              tabIndex={-1}
+                             >
+                               <Trash2 className="h-4 w-4" />
+                             </Button>
+-- 
+2.43.0
+

@@ -381,6 +381,7 @@ export default function SalesEstimate() {
                     className="flex-1 justify-start text-left h-9"
                     onClick={() => setShowPartySearch(true)}
                     data-testid="button-search-party"
+                  tabIndex={-1}
                   >
                     {selectedParty ? (
                       <div className="flex flex-col items-start">
@@ -398,6 +399,7 @@ export default function SalesEstimate() {
                       variant="ghost"
                       onClick={() => setSelectedPartyId(null)}
                       data-testid="button-clear-party"
+                    tabIndex={-1}
                     >
                       Clear
                     </Button>
@@ -452,6 +454,7 @@ export default function SalesEstimate() {
                   variant={searchMode === "item" ? "default" : "outline"}
                   onClick={() => setSearchMode("item")}
                   data-testid="button-search-mode-item"
+                  tabIndex={-1}
                 >
                   <Search className="mr-1 h-3 w-3" />
                   Item Search
@@ -464,6 +467,7 @@ export default function SalesEstimate() {
                     setTimeout(() => barcodeInputRef.current?.focus(), 100);
                   }}
                   data-testid="button-search-mode-barcode"
+                  tabIndex={-1}
                 >
                   <Barcode className="mr-1 h-3 w-3" />
                   Barcode Scan
@@ -559,6 +563,7 @@ export default function SalesEstimate() {
                                   setShowItemSearch(true);
                                 }}
                                 data-testid={`button-select-item-${item.tempId}`}
+                                tabIndex={-1}
                               >
                                 {item.itemName ? (
                                   <span className="text-sm">{item.itemName}</span>
@@ -578,6 +583,7 @@ export default function SalesEstimate() {
               onChange={(e) => updateLineItem(item.tempId, "quantity", parseFloat(e.target.value) || 0)}
                               className="w-16"
                               data-testid={`input-qty-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -590,6 +596,7 @@ export default function SalesEstimate() {
               onChange={(e) => updateLineItem(item.tempId, "rate", parseFloat(e.target.value) || 0)}
                               className="w-20"
                               data-testid={`input-rate-${item.tempId}`}
+                                tabIndex={0}
                             />
                           </TableCell>
                           <TableCell>
@@ -603,6 +610,7 @@ export default function SalesEstimate() {
               onChange={(e) => updateLineItem(item.tempId, "discountPercent", parseFloat(e.target.value) || 0)}
                               className="w-16"
                               data-testid={`input-discount-${item.tempId}`}
+                              tabIndex={0}
                             />
                           </TableCell>
                           <TableCell className="text-right font-medium">
