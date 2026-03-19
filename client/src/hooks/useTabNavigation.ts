@@ -1,65 +1,53 @@
 /**
  * Global Keyboard Navigation for BeneSys
- * 
- * Behaviour:
- * - Tab / Enter  → move to NEXT focusable field
- * - Shift+Tab    → move to PREVIOUS field
- * - Click / Tab into number field → auto-select all text
- * - Works on every page automatically (initialized once in main.tsx)
- * 
- * Flow in sales forms:
- * Date → Customer → [Tax Type buttons] → Item Search → Qty → Rate → Disc% → next row ...
+ * Tab / Enter → next field | Shift+Tab → previous field
+ * Number/text inputs auto-select on focus
  */
 
-// Buttons that should be SKIPPED during Tab/Enter navigation
 const SKIP_TESTIDS = [
   'button-remove-',
   'button-clear-party',
-  'button-save-',
-  'button-print',
-  'button-barcode-search',
   'button-toggle-password',
   'button-toggle-confirm-password',
-  'button-setup',
+  'button-barcode-search',
 ];
+
+function isVisible(el: HTMLElement): boolean {
+  if (!el.offsetParent && el.tagName !== 'BODY') return false;
+  const s = window.getComputedStyle(el);
+  return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0';
+}
 
 function shouldSkip(el: HTMLElement): boolean {
   const testId = el.getAttribute('data-testid') || '';
-  return SKIP_TESTIDS.some(skip => testId.startsWith(skip));
+  return SKIP_TESTIDS.some(s => testId.startsWith(s));
 }
 
 function getFocusable(): HTMLElement[] {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
-      'input:not([disabled]):not([type="hidden"]):not([tabindex="-1"]), ' +
-      'textarea:not([disabled]):not([tabindex="-1"]), ' +
-      'select:not([disabled]):not([tabindex="-1"]), ' +
-      'button:not([disabled]):not([tabindex="-1"])'
+      'input:not([disabled]):not([type="hidden"]), ' +
+      'textarea:not([disabled]), ' +
+      'select:not([disabled]), ' +
+      'button:not([disabled])'
     )
-  ).filter(el => {
-    if (window.getComputedStyle(el).display === 'none') return false;
-    if (window.getComputedStyle(el).visibility === 'hidden') return false;
-    if ((el as HTMLElement).offsetParent === null) return false;
-    if (shouldSkip(el)) return false;
-    return true;
-  });
+  ).filter(el => isVisible(el) && !shouldSkip(el));
 }
 
-function focusNext(current: HTMLElement, reverse = false) {
+function moveFocus(current: HTMLElement, reverse = false) {
   const all = getFocusable();
   const idx = all.indexOf(current);
   if (idx === -1) return;
-  const next = reverse ? all[idx - 1] : all[idx + 1];
-  if (!next) return;
-  next.focus();
-  if (next.tagName === 'INPUT') {
-    setTimeout(() => (next as HTMLInputElement).select(), 10);
+  const target = all[reverse ? idx - 1 : idx + 1];
+  if (!target) return;
+  target.focus();
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+    setTimeout(() => (target as HTMLInputElement).select(), 10);
   }
 }
 
 export function initGlobalTabNavigation() {
-
-  // ── Auto-select text on focus for text + number inputs ──────────────────
+  // Auto-select on focus
   document.addEventListener('focusin', (e) => {
     const el = e.target as HTMLInputElement;
     if (
@@ -67,71 +55,75 @@ export function initGlobalTabNavigation() {
       el.type !== 'checkbox' &&
       el.type !== 'radio' &&
       el.type !== 'date' &&
-      el.type !== 'file'
+      el.type !== 'file' &&
+      el.type !== 'color'
     ) {
-      setTimeout(() => el.select(), 10);
+      setTimeout(() => { try { el.select(); } catch(_) {} }, 10);
     }
   });
 
-  // ── Tab / Enter navigation ───────────────────────────────────────────────
   document.addEventListener('keydown', (e) => {
     const active = document.activeElement as HTMLElement;
     if (!active) return;
 
     const tag = active.tagName;
     const type = (active as HTMLInputElement).type || '';
+    const testId = active.getAttribute('data-testid') || '';
     const isTab = e.key === 'Tab';
     const isEnter = e.key === 'Enter';
 
     if (!isTab && !isEnter) return;
 
-    // Textarea: allow Enter for newlines, Tab moves field
+    // ── Special cases ──────────────────────────────────────────────
+
+    // Textarea: Enter = newline (don't intercept), Tab = next field
     if (tag === 'TEXTAREA') {
       if (isEnter) return;
-      if (isTab) {
-        e.preventDefault();
-        focusNext(active, e.shiftKey);
-      }
+      e.preventDefault();
+      moveFocus(active, e.shiftKey);
       return;
     }
 
-    // Date input: Enter moves to next field
-    if (tag === 'INPUT' && type === 'date') {
-      if (isEnter) {
-        e.preventDefault();
-        focusNext(active);
-      }
-      return; // let Tab work natively for date
-    }
+    // Barcode input: Enter fires search, not navigation
+    if (testId === 'input-barcode') return;
 
-    // Barcode input: Enter should search, not navigate
-    if ((active.getAttribute('data-testid') || '').includes('input-barcode')) {
+    // Date: Tab works natively (browser date picker), Enter = next field
+    if (type === 'date') {
+      if (isEnter) { e.preventDefault(); moveFocus(active); }
       return;
     }
 
-    // Regular input / select: both Tab and Enter move forward; Shift+Tab goes back
+    // Checkbox / radio: Tab moves, Enter toggles (native)
+    if (type === 'checkbox' || type === 'radio') {
+      if (isEnter) return; // let it toggle
+      if (isTab) { e.preventDefault(); moveFocus(active, e.shiftKey); }
+      return;
+    }
+
+    // ── Regular INPUT / SELECT ─────────────────────────────────────
     if (tag === 'INPUT' || tag === 'SELECT') {
       e.preventDefault();
-      focusNext(active, isTab && e.shiftKey);
+      moveFocus(active, isTab && e.shiftKey);
       return;
     }
 
-    // Button: Enter clicks it naturally — just move focus AFTER the click
-    if (tag === 'BUTTON' && isEnter) {
-      // Let the button's own onClick fire, then move to next field
-      setTimeout(() => {
-        const stillActive = document.activeElement as HTMLElement;
-        if (stillActive && stillActive.tagName === 'BUTTON') {
-          focusNext(stillActive);
-        }
-      }, 150);
-      return;
-    }
-
-    // Tab on button: move to next/prev
-    if (tag === 'BUTTON' && isTab) {
-      e.preventDefault();
-      focusNext(active, e.shiftKey);
+    // ── BUTTON ────────────────────────────────────────────────────
+    if (tag === 'BUTTON') {
+      if (isTab) {
+        e.preventDefault();
+        moveFocus(active, e.shiftKey);
+        return;
+      }
+      if (isEnter) {
+        // Let button click happen, then move focus to next field
+        setTimeout(() => {
+          const cur = document.activeElement as HTMLElement;
+          // If focus is still on a button after click, move forward
+          if (cur && cur.tagName === 'BUTTON' && cur === active) {
+            moveFocus(cur);
+          }
+        }, 200);
+      }
     }
   });
 }
