@@ -1,0 +1,226 @@
+From 80b977f9ac38cf0e11f1146ebde664ba504cca02 Mon Sep 17 00:00:00 2001
+From: BeneSys Fix <fix@benesys.in>
+Date: Thu, 19 Mar 2026 13:04:33 +0000
+Subject: [PATCH] fix: Tab key completely blocked from sidebar - all nav links
+ get tabIndex=-1
+
+- Added tabIndex={-1} to ALL sidebar Link elements (9 links)
+- Added tabIndex={-1} to Logout button
+- Navigation hook skips any element with tabIndex=-1
+- Navigation hook skips anything inside aside/nav/[data-slot=sidebar]
+- Tab/Enter now stays strictly within form fields only
+---
+ client/src/components/app-sidebar.tsx | 19 +++++++-------
+ client/src/hooks/useTabNavigation.ts  | 38 ++++++++++++++-------------
+ 2 files changed, 30 insertions(+), 27 deletions(-)
+
+diff --git a/client/src/components/app-sidebar.tsx b/client/src/components/app-sidebar.tsx
+index 8928c2a..f42f5f2 100644
+--- a/client/src/components/app-sidebar.tsx
++++ b/client/src/components/app-sidebar.tsx
+@@ -189,7 +189,7 @@ export function AppSidebar() {
+             <SidebarMenu>
+               <SidebarMenuItem>
+                 <SidebarMenuButton asChild isActive={location === "/"}>
+-                  <Link href="/" data-testid="link-dashboard">
++                  <Link href="/" data-testid="link-dashboard" tabIndex={-1}>
+                     <LayoutDashboard className="h-5 w-5" />
+                     <span>Dashboard</span>
+                   </Link>
+@@ -206,7 +206,7 @@ export function AppSidebar() {
+               {salesMenuItems.map((item) => (
+                 <SidebarMenuItem key={item.title}>
+                   <SidebarMenuButton asChild isActive={location === item.url}>
+-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
++                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`} tabIndex={-1}>
+                       <item.icon className="h-5 w-5" />
+                       <span>{item.title}</span>
+                     </Link>
+@@ -224,7 +224,7 @@ export function AppSidebar() {
+               {mastersMenuItems.map((item) => (
+                 <SidebarMenuItem key={item.title}>
+                   <SidebarMenuButton asChild isActive={location === item.url}>
+-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
++                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`} tabIndex={-1}>
+                       <item.icon className="h-5 w-5" />
+                       <span>{item.title}</span>
+                     </Link>
+@@ -242,7 +242,7 @@ export function AppSidebar() {
+               {transactionsMenuItems.map((item) => (
+                 <SidebarMenuItem key={item.title}>
+                   <SidebarMenuButton asChild isActive={location === item.url}>
+-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
++                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`} tabIndex={-1}>
+                       <item.icon className="h-5 w-5" />
+                       <span>{item.title}</span>
+                     </Link>
+@@ -260,7 +260,7 @@ export function AppSidebar() {
+               {reportsMenuItems.map((item) => (
+                 <SidebarMenuItem key={item.title}>
+                   <SidebarMenuButton asChild isActive={location === item.url}>
+-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
++                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`} tabIndex={-1}>
+                       <item.icon className="h-5 w-5" />
+                       <span>{item.title}</span>
+                     </Link>
+@@ -278,7 +278,7 @@ export function AppSidebar() {
+               <SidebarMenu>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild isActive={location === "/users"}>
+-                    <Link href="/users" data-testid="link-user-management">
++                    <Link href="/users" data-testid="link-user-management" tabIndex={-1}>
+                       <Shield className="h-5 w-5" />
+                       <span>User Management</span>
+                     </Link>
+@@ -287,7 +287,7 @@ export function AppSidebar() {
+                 {isSuperAdmin && (
+                   <SidebarMenuItem>
+                     <SidebarMenuButton asChild isActive={location === "/companies"}>
+-                      <Link href="/companies" data-testid="link-companies">
++                      <Link href="/companies" data-testid="link-companies" tabIndex={-1}>
+                         <Building2 className="h-5 w-5" />
+                         <span>Companies</span>
+                       </Link>
+@@ -296,7 +296,7 @@ export function AppSidebar() {
+                 )}
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild isActive={location === "/bill-settings"}>
+-                    <Link href="/bill-settings" data-testid="link-bill-settings">
++                    <Link href="/bill-settings" data-testid="link-bill-settings" tabIndex={-1}>
+                       <FileText className="h-5 w-5" />
+                       <span>Bill Settings</span>
+                     </Link>
+@@ -304,7 +304,7 @@ export function AppSidebar() {
+                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild isActive={location === "/financial-years"}>
+-                    <Link href="/financial-years" data-testid="link-financial-years">
++                    <Link href="/financial-years" data-testid="link-financial-years" tabIndex={-1}>
+                       <Calendar className="h-5 w-5" />
+                       <span>Financial Years</span>
+                     </Link>
+@@ -334,6 +334,7 @@ export function AppSidebar() {
+             }
+           }}
+           data-testid="button-logout"
++          tabIndex={-1}
+         >
+           <LogOut className="mr-2 h-5 w-5" />
+           Logout
+diff --git a/client/src/hooks/useTabNavigation.ts b/client/src/hooks/useTabNavigation.ts
+index 9dc6b5b..35a3abf 100644
+--- a/client/src/hooks/useTabNavigation.ts
++++ b/client/src/hooks/useTabNavigation.ts
+@@ -1,32 +1,38 @@
+ /**
+  * Global Keyboard Navigation for BeneSys
+- * Tab / Enter → next field | Shift+Tab → previous field
+- * Stays within the main content area — never jumps to sidebar nav
++ * Tab / Enter → next FORM field only (never sidebar/nav)
++ * Shift+Tab → previous field
++ * Number/text inputs auto-select on focus
+  */
+ 
+ const SKIP_TESTIDS = [
+   'button-remove-',
+-  'button-clear-party',
++  'button-clear-party', 
+   'button-toggle-password',
+   'button-toggle-confirm-password',
+   'button-barcode-search',
++  'button-logout',
++  'link-',
+ ];
+ 
+ function isInSidebar(el: HTMLElement): boolean {
+-  return !!el.closest('[data-slot="sidebar"]') ||
+-         !!el.closest('[data-sidebar="sidebar"]') ||
+-         !!el.closest('nav') ||
+-         !!el.closest('aside');
++  return !!(
++    el.closest('aside') ||
++    el.closest('nav') ||
++    el.closest('[data-slot="sidebar"]') ||
++    el.closest('[data-sidebar]')
++  );
+ }
+ 
+ function isVisible(el: HTMLElement): boolean {
+   if (!el.offsetParent && el.tagName !== 'BODY') return false;
+   const s = window.getComputedStyle(el);
+-  return s.display !== 'none' && s.visibility !== 'hidden' && s.opacity !== '0';
++  return s.display !== 'none' && s.visibility !== 'hidden';
+ }
+ 
+ function shouldSkip(el: HTMLElement): boolean {
+   if (isInSidebar(el)) return true;
++  if (el.getAttribute('tabindex') === '-1') return true;
+   const testId = el.getAttribute('data-testid') || '';
+   return SKIP_TESTIDS.some(s => testId.startsWith(s));
+ }
+@@ -37,7 +43,8 @@ function getFocusable(): HTMLElement[] {
+       'input:not([disabled]):not([type="hidden"]), ' +
+       'textarea:not([disabled]), ' +
+       'select:not([disabled]), ' +
+-      'button:not([disabled])'
++      'button:not([disabled]), ' +
++      'a[href]'
+     )
+   ).filter(el => isVisible(el) && !shouldSkip(el));
+ }
+@@ -55,7 +62,7 @@ function moveFocus(current: HTMLElement, reverse = false) {
+ }
+ 
+ export function initGlobalTabNavigation() {
+-  // Auto-select on focus
++  // Auto-select text on focus for inputs
+   document.addEventListener('focusin', (e) => {
+     const el = e.target as HTMLInputElement;
+     if (
+@@ -64,7 +71,6 @@ export function initGlobalTabNavigation() {
+       el.type !== 'radio' &&
+       el.type !== 'date' &&
+       el.type !== 'file' &&
+-      el.type !== 'color' &&
+       !isInSidebar(el)
+     ) {
+       setTimeout(() => { try { el.select(); } catch(_) {} }, 10);
+@@ -74,8 +80,6 @@ export function initGlobalTabNavigation() {
+   document.addEventListener('keydown', (e) => {
+     const active = document.activeElement as HTMLElement;
+     if (!active) return;
+-
+-    // Never intercept keys when focus is in sidebar
+     if (isInSidebar(active)) return;
+ 
+     const tag = active.tagName;
+@@ -97,13 +101,13 @@ export function initGlobalTabNavigation() {
+     // Barcode input: Enter fires search
+     if (testId === 'input-barcode') return;
+ 
+-    // Date: Tab native, Enter = next field
++    // Date input: Tab = native, Enter = next field
+     if (type === 'date') {
+       if (isEnter) { e.preventDefault(); moveFocus(active); }
+       return;
+     }
+ 
+-    // Checkbox / radio: Enter toggles, Tab moves
++    // Checkbox / radio: Enter = toggle, Tab = move
+     if (type === 'checkbox' || type === 'radio') {
+       if (isEnter) return;
+       if (isTab) { e.preventDefault(); moveFocus(active, e.shiftKey); }
+@@ -127,9 +131,7 @@ export function initGlobalTabNavigation() {
+       if (isEnter) {
+         setTimeout(() => {
+           const cur = document.activeElement as HTMLElement;
+-          if (cur && cur.tagName === 'BUTTON' && cur === active) {
+-            moveFocus(cur);
+-          }
++          if (cur && cur === active) moveFocus(cur);
+         }, 200);
+       }
+     }
+-- 
+2.43.0
+

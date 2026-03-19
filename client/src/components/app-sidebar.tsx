@@ -189,7 +189,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={location === "/"}>
-                  <Link href="/" data-testid="link-dashboard">
+                  <Link href="/" data-testid="link-dashboard" tabIndex={-1}>
                     <LayoutDashboard className="h-5 w-5" />
                     <span>Dashboard</span>
                   </Link>
@@ -206,7 +206,7 @@ export function AppSidebar() {
               {salesMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`} tabIndex={-1}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
                     </Link>
@@ -224,7 +224,7 @@ export function AppSidebar() {
               {mastersMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`} tabIndex={-1}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
                     </Link>
@@ -242,7 +242,7 @@ export function AppSidebar() {
               {transactionsMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`} tabIndex={-1}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
                     </Link>
@@ -260,7 +260,7 @@ export function AppSidebar() {
               {reportsMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={location === item.url}>
-                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`} tabIndex={-1}>
                       <item.icon className="h-5 w-5" />
                       <span>{item.title}</span>
                     </Link>
@@ -278,7 +278,7 @@ export function AppSidebar() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/users"}>
-                    <Link href="/users" data-testid="link-user-management">
+                    <Link href="/users" data-testid="link-user-management" tabIndex={-1}>
                       <Shield className="h-5 w-5" />
                       <span>User Management</span>
                     </Link>
@@ -287,7 +287,7 @@ export function AppSidebar() {
                 {isSuperAdmin && (
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={location === "/companies"}>
-                      <Link href="/companies" data-testid="link-companies">
+                      <Link href="/companies" data-testid="link-companies" tabIndex={-1}>
                         <Building2 className="h-5 w-5" />
                         <span>Companies</span>
                       </Link>
@@ -296,7 +296,7 @@ export function AppSidebar() {
                 )}
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/bill-settings"}>
-                    <Link href="/bill-settings" data-testid="link-bill-settings">
+                    <Link href="/bill-settings" data-testid="link-bill-settings" tabIndex={-1}>
                       <FileText className="h-5 w-5" />
                       <span>Bill Settings</span>
                     </Link>
@@ -304,7 +304,7 @@ export function AppSidebar() {
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={location === "/financial-years"}>
-                    <Link href="/financial-years" data-testid="link-financial-years">
+                    <Link href="/financial-years" data-testid="link-financial-years" tabIndex={-1}>
                       <Calendar className="h-5 w-5" />
                       <span>Financial Years</span>
                     </Link>
@@ -334,6 +334,7 @@ export function AppSidebar() {
             }
           }}
           data-testid="button-logout"
+          tabIndex={-1}
         >
           <LogOut className="mr-2 h-5 w-5" />
           Logout
