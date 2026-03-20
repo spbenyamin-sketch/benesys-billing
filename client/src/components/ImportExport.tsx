@@ -34,7 +34,10 @@ export function ImportExport({ type, queryKey }: ImportExportProps) {
   async function handleExport() {
     setExporting(true);
     try {
-      const res = await fetch(`/api/${type}/export`, { credentials: "include" });
+      const companyId = localStorage.getItem("currentCompanyId");
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (companyId) headers["X-Company-Id"] = companyId;
+      const res = await fetch(`/api/${type}/export`, { credentials: "include", headers });
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.message || "Export failed (" + res.status + ")");
