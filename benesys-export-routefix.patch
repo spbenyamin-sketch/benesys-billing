@@ -1,0 +1,135 @@
+From 1d19a21c254f196be3e0b1296facca1eb306daa8 Mon Sep 17 00:00:00 2001
+From: BeneSys Fix <fix@benesys.in>
+Date: Fri, 20 Mar 2026 10:51:12 +0000
+Subject: [PATCH] fix: move export routes before :id routes to fix export
+ failed error
+
+---
+ server/routes.ts | 90 +++++++++++++++++++++++++-----------------------
+ 1 file changed, 46 insertions(+), 44 deletions(-)
+
+diff --git a/server/routes.ts b/server/routes.ts
+index ff88ba3..06a11c1 100644
+--- a/server/routes.ts
++++ b/server/routes.ts
+@@ -558,6 +558,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
+     }
+   });
+ 
++  app.get("/api/parties/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
++    try {
++      const parties = await storage.getParties(req.companyId);
++      const exportData = parties.map(party => ({
++        Code: party.code || "",
++        Name: party.name || "",
++        City: party.city || "",
++        State: party.state || "",
++        StateCode: party.stateCode || "",
++        Address: party.address || "",
++        GSTNo: party.gstNo || "",
++        Phone: party.phone || "",
++        OpeningDebit: parseFloat(party.openingDebit) || 0,
++        OpeningCredit: parseFloat(party.openingCredit) || 0,
++      }));
++      res.json(exportData);
++    } catch (error) {
++      res.status(500).json({ message: "Failed to export parties" });
++    }
++  });
++
++
+   app.get("/api/parties/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+     try {
+       const id = parseInt(req.params.id);
+@@ -678,6 +700,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
+     }
+   });
+ 
++  app.get("/api/items/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
++    try {
++      const items = await storage.getItems(req.companyId);
++      const exportData = items.map(item => ({
++        Code: item.code || "",
++        Name: item.name || "",
++        HSN: item.hsnCode || "",
++        Category: item.category || "",
++        Floor: item.floor || "",
++        PackType: item.packType || "PCS",
++        Type: item.type || "product",
++        Cost: parseFloat(item.cost) || 0,
++        MRP: parseFloat(item.mrp) || 0,
++        SellingPrice: parseFloat(item.sellingPrice) || 0,
++        Tax: parseFloat(item.tax) || 0,
++        Active: item.active ? "Yes" : "No",
++      }));
++      res.json(exportData);
++    } catch (error) {
++      res.status(500).json({ message: "Failed to export items" });
++    }
++  });
++
++
+   app.get("/api/items/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+     try {
+       const id = parseInt(req.params.id);
+@@ -740,29 +786,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
+   // ==================== IMPORT / EXPORT ROUTES ====================
+ 
+   // Export Items to JSON
+-  app.get("/api/items/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+-    try {
+-      const items = await storage.getItems(req.companyId);
+-      const exportData = items.map(item => ({
+-        Code: item.code || "",
+-        Name: item.name || "",
+-        HSN: item.hsnCode || "",
+-        Category: item.category || "",
+-        Floor: item.floor || "",
+-        PackType: item.packType || "PCS",
+-        Type: item.type || "product",
+-        Cost: parseFloat(item.cost) || 0,
+-        MRP: parseFloat(item.mrp) || 0,
+-        SellingPrice: parseFloat(item.sellingPrice) || 0,
+-        Tax: parseFloat(item.tax) || 0,
+-        Active: item.active ? "Yes" : "No",
+-      }));
+-      res.json(exportData);
+-    } catch (error) {
+-      res.status(500).json({ message: "Failed to export items" });
+-    }
+-  });
+-
+   // Import Items from Excel
+   app.post("/api/items/import", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+     try {
+@@ -808,27 +831,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
+   });
+ 
+   // Export Parties to JSON
+-  app.get("/api/parties/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+-    try {
+-      const parties = await storage.getParties(req.companyId);
+-      const exportData = parties.map(party => ({
+-        Code: party.code || "",
+-        Name: party.name || "",
+-        City: party.city || "",
+-        State: party.state || "",
+-        StateCode: party.stateCode || "",
+-        Address: party.address || "",
+-        GSTNo: party.gstNo || "",
+-        Phone: party.phone || "",
+-        OpeningDebit: parseFloat(party.openingDebit) || 0,
+-        OpeningCredit: parseFloat(party.openingCredit) || 0,
+-      }));
+-      res.json(exportData);
+-    } catch (error) {
+-      res.status(500).json({ message: "Failed to export parties" });
+-    }
+-  });
+-
+   // Import Parties from Excel
+   app.post("/api/parties/import", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+     try {
+-- 
+2.43.0
+
