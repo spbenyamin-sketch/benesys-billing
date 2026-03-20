@@ -1,0 +1,672 @@
+From a65e4f179b956fd7ae977c21881dd058a55da873 Mon Sep 17 00:00:00 2001
+From: BeneSys Fix <fix@benesys.in>
+Date: Fri, 20 Mar 2026 11:14:25 +0000
+Subject: [PATCH] feat: replace visual label designer with simple PRN editor
+
+- Removed complex drag-and-drop visual designer (600+ lines)
+- Replaced with clean PRN program text editor
+- Shows all available placeholders: barcode, itemName, mrp, sellingPrice, hsnCode, size, sizeCode, cost
+- Shows EPL2 example program for reference
+- Loads existing saved template on open
+- Save/set as default still works
+- Generate PRN button downloads .PRN file directly
+---
+ client/src/pages/barcode-management.tsx | 595 ++++--------------------
+ 1 file changed, 82 insertions(+), 513 deletions(-)
+
+diff --git a/client/src/pages/barcode-management.tsx b/client/src/pages/barcode-management.tsx
+index 0a2a985..6bd1071 100644
+--- a/client/src/pages/barcode-management.tsx
++++ b/client/src/pages/barcode-management.tsx
+@@ -12,7 +12,7 @@ import { Link } from "wouter";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { Badge } from "@/components/ui/badge";
+ import { format } from "date-fns";
+-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
++import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+ import { Label } from "@/components/ui/label";
+ import { Checkbox } from "@/components/ui/checkbox";
+ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+@@ -572,558 +572,127 @@ interface LabelDesignerDialogProps {
+   onOpenChange: (open: boolean) => void;
+ }
+ 
+-interface TemplateElement {
+-  id: string;
+-  type: string;
+-  label: string;
+-  x: number;
+-  y: number;
+-  fontSize: number;
+-  fontFamily?: string;
+-  barcodeType?: string;
+-  decimals?: number;
+-  visible: boolean;
+-  width?: number;
+-  height?: number;
+-}
+-
+ function LabelDesignerDialog({ open, onOpenChange }: LabelDesignerDialogProps) {
+   const { toast } = useToast();
+   const [templateName, setTemplateName] = useState("Default Template");
+-  const [labelWidth, setLabelWidth] = useState(50);
+-  const [labelHeight, setLabelHeight] = useState(25);
+-  const [isDefault, setIsDefault] = useState(false);
+-  const [labelsPerRow, setLabelsPerRow] = useState(2);
+-  const [marginTop, setMarginTop] = useState(10);
+-  const [marginBottom, setMarginBottom] = useState(10);
+-  const [gapHorizontal, setGapHorizontal] = useState(2);
+-  const [gapVertical, setGapVertical] = useState(2);
+-  const [zoomLevel, setZoomLevel] = useState(100);
+-  const [snapToGrid, setSnapToGrid] = useState(true);
+   const [prnProgram, setPrnProgram] = useState("");
+-  const [showPrnEditor, setShowPrnEditor] = useState(false);
+-  const scale = (6 * zoomLevel) / 100;
+-  
+-  const elementTemplates: TemplateElement[] = [
+-    { id: "barcode", type: "barcode", label: "Barcode", x: 2, y: 2, fontSize: 12, fontFamily: "Arial", barcodeType: "CODE128", visible: true, width: 46, height: 8 },
+-    { id: "itemName", type: "text", label: "Item Name", x: 2, y: 11, fontSize: 8, fontFamily: "Arial", visible: true },
+-    { id: "size", type: "text", label: "Size", x: 2, y: 14, fontSize: 8, fontFamily: "Arial", visible: true },
+-    { id: "rate", type: "text", label: "Selling Rate", x: 2, y: 17, fontSize: 10, fontFamily: "Arial", decimals: 0, visible: true },
+-    { id: "mrp", type: "text", label: "MRP", x: 25, y: 17, fontSize: 8, fontFamily: "Arial", decimals: 0, visible: true },
+-    { id: "brand", type: "text", label: "Brand", x: 2, y: 20, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "quality", type: "text", label: "Quality", x: 2, y: 22, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "cost", type: "text", label: "Cost", x: 15, y: 20, fontSize: 7, fontFamily: "Arial", visible: false },
+-    { id: "ncost", type: "text", label: "Net Cost", x: 2, y: 24, fontSize: 6, fontFamily: "Arial", decimals: 2, visible: false },
+-    { id: "lcost", type: "text", label: "Last Cost", x: 2, y: 26, fontSize: 6, fontFamily: "Arial", decimals: 2, visible: false },
+-    { id: "tax", type: "text", label: "Tax %", x: 2, y: 28, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "dno1", type: "text", label: "Design No", x: 2, y: 30, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "pattern", type: "text", label: "Pattern", x: 2, y: 32, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "sleeve", type: "text", label: "Sleeve", x: 2, y: 34, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "sizeCode", type: "text", label: "Size Code", x: 2, y: 36, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "serial", type: "text", label: "Serial", x: 2, y: 38, fontSize: 6, fontFamily: "Arial", visible: false },
+-    { id: "status", type: "text", label: "Status", x: 2, y: 40, fontSize: 6, fontFamily: "Arial", visible: false },
+-  ];
+-
+-  const sampleData = {
+-    barcode: "8901234567890",
+-    itname: "Sample Product",
+-    size: "M",
+-    rate: "499.00",
+-    mrp: "699.00",
+-    brand: "ABC Brand",
+-    quality: "Premium",
+-    cost: "350.00",
+-    ncost: "340.00",
+-    lcost: "345.00",
+-    tax: "12",
+-    dno1: "DN-001",
+-    pattern: "Striped",
+-    sleeve: "Half",
+-    sizeCode: "49",
+-    serial: "001",
+-    status: "Active",
+-  };
+-
+-  const [elements, setElements] = useState<TemplateElement[]>(elementTemplates);
+-  const [selectedElement, setSelectedElement] = useState<string | null>("barcode");
+-  const [dragging, setDragging] = useState<{ id: string; offsetX: number; offsetY: number; canvasRect: DOMRect } | null>(null);
++  const [isDefault, setIsDefault] = useState(false);
+ 
+-  const { data: templates, refetch: refetchTemplates } = useQuery({
++  const { data: templates } = useQuery({
+     queryKey: ["/api/barcode-label-templates"],
+-    enabled: open,
+   });
+ 
++  // Load existing default template on open
++  useEffect(() => {
++    if (open && templates && Array.isArray(templates)) {
++      const defaultTemplate = (templates as any[]).find((t: any) => t.isDefault) || (templates as any[])[0];
++      if (defaultTemplate) {
++        setTemplateName(defaultTemplate.name || "Default Template");
++        setPrnProgram(defaultTemplate.prnProgram || "");
++        setIsDefault(defaultTemplate.isDefault || false);
++      }
++    }
++  }, [open, templates]);
++
+   const saveMutation = useMutation({
+-    mutationFn: async (data: any) => {
+-      return (await apiRequest("POST", "/api/barcode-label-templates", data)).json();
+-    },
++    mutationFn: async (data: any) => (await apiRequest("POST", "/api/barcode-label-templates", data)).json(),
+     onSuccess: () => {
+-      toast({ title: "Success", description: "Template saved successfully" });
+-      refetchTemplates();
++      toast({ title: "Template Saved", description: "PRN template saved successfully." });
++      onOpenChange(false);
+     },
+     onError: () => {
+       toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
+     },
+   });
+ 
+-  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+-    e.preventDefault();
+-    setSelectedElement(elementId);
+-    const elementRect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+-    setDragging({
+-      id: elementId,
+-      offsetX: e.clientX - elementRect.left,
+-      offsetY: e.clientY - elementRect.top,
+-      canvasRect: null as any,
+-    });
+-  };
+-
+-  const handleMouseMove = (e: React.MouseEvent) => {
+-    if (!dragging) return;
+-    const canvasContainer = e.currentTarget as HTMLElement;
+-    const canvasInner = canvasContainer.querySelector('[data-canvas-inner]') as HTMLElement;
+-    if (!canvasInner) return;
+-    
+-    const canvasRect = canvasInner.getBoundingClientRect();
+-    const newXPixels = e.clientX - canvasRect.left - dragging.offsetX;
+-    const newYPixels = e.clientY - canvasRect.top - dragging.offsetY;
+-    let newX = Math.max(0, Math.min(newXPixels / scale, labelWidth - 2));
+-    let newY = Math.max(0, Math.min(newYPixels / scale, labelHeight - 2));
+-
+-    if (snapToGrid) {
+-      newX = Math.round(newX);
+-      newY = Math.round(newY);
+-    } else {
+-      newX = Math.round(newX * 10) / 10;
+-      newY = Math.round(newY * 10) / 10;
+-    }
+-
+-    setElements(
+-      elements.map((el) =>
+-        el.id === dragging.id ? { ...el, x: newX, y: newY } : el
+-      )
+-    );
+-  };
+-
+-  const handleMouseUp = () => {
+-    setDragging(null);
+-  };
+-
+-  const updateElement = (id: string, updates: Partial<TemplateElement>) => {
+-    setElements(elements.map((el) => (el.id === id ? { ...el, ...updates } : el)));
+-  };
+-
+   const handleSaveTemplate = () => {
+-    const config = JSON.stringify({ elements });
+     saveMutation.mutate({
+       name: templateName,
+-      labelWidth,
+-      labelHeight,
+-      labelsPerRow,
+-      labelsPerColumn: 10,
+-      marginTop,
+-      marginLeft: 5,
+-      gapHorizontal,
+-      gapVertical,
+-      config,
+-      prnProgram: prnProgram || null,
++      prnProgram,
+       isDefault,
++      labelWidth: 50,
++      labelHeight: 25,
++      labelsPerRow: 1,
++      elements: [],
+     });
+   };
+ 
+-  const selectedElConfig = elements.find((el) => el.id === selectedElement);
++  const defaultExample = `N
++q400
++Q200,24
++B50,20,0,1,2,7,80,B,"{barcode}"
++A50,110,0,2,1,1,N,"{itemName}"
++A50,135,0,2,1,1,N,"MRP: {mrp}  Rate: {sellingPrice}"
++A50,160,0,1,1,1,N,"HSN: {hsnCode}  Size: {size}"
++P1`;
+ 
+   return (
+     <Dialog open={open} onOpenChange={onOpenChange}>
+-      <DialogContent className="max-w-7xl max-h-[95vh] overflow-y-auto">
++      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+         <DialogHeader>
+-          <DialogTitle>Label Designer - Visual Template Editor</DialogTitle>
++          <DialogTitle>PRN Template Editor</DialogTitle>
++          <DialogDescription>
++            Enter your EPL2/ZPL program for Zebra label printers
++          </DialogDescription>
+         </DialogHeader>
+ 
+-        <div className="grid grid-cols-5 gap-4">
+-          {/* Preview - Left Side */}
+-          <div className="border rounded-lg p-3 bg-white flex flex-col">
+-            <div className="font-semibold text-sm mb-3">Preview</div>
+-            <div className="flex-1 border-2 border-dashed border-gray-300 rounded p-2 bg-gray-50 relative" style={{ aspectRatio: `${labelWidth}/${labelHeight}` }}>
+-              {elements.filter(el => el.visible).map((el) => {
+-                let value = "";
+-                if (el.id === "barcode") value = sampleData.barcode;
+-                else if (el.id === "itemName") value = sampleData.itname;
+-                else if (el.id === "size") value = sampleData.size;
+-                else if (el.id === "rate") value = "₹ " + parseFloat(sampleData.rate).toFixed(el.decimals ?? 2);
+-                else if (el.id === "mrp") value = "₹ " + parseFloat(sampleData.mrp).toFixed(el.decimals ?? 2);
+-                else if (el.id === "brand") value = sampleData.brand;
+-                else if (el.id === "quality") value = sampleData.quality;
+-                else if (el.id === "cost") value = parseFloat(sampleData.cost).toFixed(2);
+-                else if (el.id === "ncost") value = parseFloat(sampleData.ncost).toFixed(el.decimals ?? 2);
+-                else if (el.id === "lcost") value = parseFloat(sampleData.lcost).toFixed(el.decimals ?? 2);
+-                else if (el.id === "tax") value = sampleData.tax + "%";
+-                else if (el.id === "dno1") value = sampleData.dno1;
+-                else if (el.id === "pattern") value = sampleData.pattern;
+-                else if (el.id === "sleeve") value = sampleData.sleeve;
+-                else if (el.id === "sizeCode") value = sampleData.sizeCode;
+-                else if (el.id === "serial") value = sampleData.serial;
+-                else if (el.id === "status") value = sampleData.status;
+-
+-                const widthPercent = labelWidth > 0 ? (el.width || 20) / labelWidth * 100 : 100;
+-                const heightPercent = labelHeight > 0 ? (el.height || 5) / labelHeight * 100 : 100;
+-                const xPercent = labelWidth > 0 ? el.x / labelWidth * 100 : 0;
+-                const yPercent = labelHeight > 0 ? el.y / labelHeight * 100 : 0;
+-
+-                return (
+-                  <div key={el.id} style={{
+-                    position: "absolute",
+-                    left: `${xPercent}%`,
+-                    top: `${yPercent}%`,
+-                    width: `${widthPercent}%`,
+-                    height: `${heightPercent}%`,
+-                    fontSize: `${Math.max(6, el.fontSize * 0.6)}px`,
+-                    fontFamily: el.fontFamily || "Arial",
+-                    overflow: "hidden",
+-                    whiteSpace: "nowrap",
+-                    border: "0.5px solid #ddd",
+-                  }}>
+-                    <span className="text-gray-700">{value}</span>
+-                  </div>
+-                );
+-              })}
+-            </div>
++        <div className="space-y-4">
++          {/* Template Name */}
++          <div className="space-y-1">
++            <Label>Template Name</Label>
++            <Input
++              value={templateName}
++              onChange={(e) => setTemplateName(e.target.value)}
++              placeholder="My Label Template"
++            />
+           </div>
+ 
+-          {/* Canvas - Main Area */}
+-          <div className="col-span-3 border rounded-lg p-4 bg-gray-50">
+-            <div className="flex flex-col gap-2 mb-4">
+-              <Label>Template Name</Label>
+-              <Input value={templateName} onChange={(e) => setTemplateName(e.target.value)} placeholder="My Label Template" />
+-            </div>
+-
+-            <div className="flex gap-4 mb-4">
+-              <div className="flex-1">
+-                <Label className="text-xs">Width (mm)</Label>
+-                <Input type="number" value={labelWidth} onFocus={(e) => e.target.select()}
+-              onChange={(e) => setLabelWidth(Math.max(1, parseInt(e.target.value) || 50))} />
+-              </div>
+-              <div className="flex-1">
+-                <Label className="text-xs">Height (mm)</Label>
+-                <Input type="number" value={labelHeight} onFocus={(e) => e.target.select()}
+-              onChange={(e) => setLabelHeight(Math.max(1, parseInt(e.target.value) || 25))} />
+-              </div>
+-            </div>
+-
+-            <div className="grid grid-cols-4 gap-3 mb-4 p-3 bg-blue-50 rounded border border-blue-200">
+-              <div>
+-                <Label className="text-xs">Top Margin (mm)</Label>
+-                <Input type="number" value={marginTop} onFocus={(e) => e.target.select()}
+-              onChange={(e) => setMarginTop(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
+-              </div>
+-              <div>
+-                <Label className="text-xs">Bottom Margin (mm)</Label>
+-                <Input type="number" value={marginBottom} onFocus={(e) => e.target.select()}
+-              onChange={(e) => setMarginBottom(Math.max(0, parseInt(e.target.value) || 10))} className="text-xs" />
+-              </div>
+-              <div>
+-                <Label className="text-xs">Horizontal Gap (mm)</Label>
+-                <Input type="number" value={gapHorizontal} onFocus={(e) => e.target.select()}
+-              onChange={(e) => setGapHorizontal(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
+-              </div>
+-              <div>
+-                <Label className="text-xs">Vertical Gap (mm)</Label>
+-                <Input type="number" value={gapVertical} onFocus={(e) => e.target.select()}
+-              onChange={(e) => setGapVertical(Math.max(0, parseInt(e.target.value) || 2))} className="text-xs" />
+-              </div>
+-            </div>
+-
+-            <div className="mb-4">
+-              <Label className="text-xs font-semibold mb-2 block">Labels Per Row</Label>
+-              <div className="flex gap-2">
+-                {[2, 3, 4].map((num) => (
+-                  <Button
+-                    key={num}
+-                    size="sm"
+-                    variant={labelsPerRow === num ? "default" : "outline"}
+-                    onClick={() => setLabelsPerRow(num)}
+-                    data-testid={`button-labels-per-row-${num}`}
+-                    className="flex-1"
+-                  >
+-                    {num} Across
+-                  </Button>
+-                ))}
+-              </div>
+-            </div>
+-
+-            <div className="flex items-center justify-between mb-3">
+-              <p className="text-xs text-muted-foreground">Drag elements to position them on your label</p>
+-              <div className="flex items-center gap-2">
+-                <div className="flex items-center gap-1">
+-                  <Checkbox 
+-                    id="snapToGrid" 
+-                    checked={snapToGrid} 
+-                    onCheckedChange={(checked) => setSnapToGrid(checked as boolean)} 
+-                  />
+-                  <Label htmlFor="snapToGrid" className="text-xs">Snap to Grid</Label>
+-                </div>
+-                <div className="flex items-center gap-1 ml-3 border rounded px-2 py-1 bg-white">
+-                  <Button 
+-                    size="sm" 
+-                    variant="ghost" 
+-                    onClick={() => {
+-                      setDragging(null);
+-                      setZoomLevel(Math.max(50, zoomLevel - 25));
+-                    }}
+-                    disabled={zoomLevel <= 50}
+-                    data-testid="button-zoom-out"
+-                  >
+-                    <ZoomOut className="h-4 w-4" />
+-                  </Button>
+-                  <span className="text-xs font-mono w-10 text-center">{zoomLevel}%</span>
+-                  <Button 
+-                    size="sm" 
+-                    variant="ghost" 
+-                    onClick={() => {
+-                      setDragging(null);
+-                      setZoomLevel(Math.min(200, zoomLevel + 25));
+-                    }}
+-                    disabled={zoomLevel >= 200}
+-                    data-testid="button-zoom-in"
+-                  >
+-                    <ZoomIn className="h-4 w-4" />
+-                  </Button>
+-                </div>
+-              </div>
+-            </div>
+-
+-            {/* Canvas */}
+-            <div
+-              onMouseMove={handleMouseMove}
+-              onMouseUp={handleMouseUp}
+-              onMouseLeave={handleMouseUp}
+-              className="border-2 border-dashed border-gray-400 relative bg-white cursor-move overflow-auto flex items-center justify-center"
+-              style={{
+-                minWidth: `${labelWidth * scale + 20}px`,
+-                minHeight: `${labelHeight * scale + 20}px`,
+-                maxHeight: "550px",
+-              }}
+-            >
+-              <div
+-                data-canvas-inner
+-                style={{
+-                  width: `${labelWidth * scale}px`,
+-                  height: `${labelHeight * scale}px`,
+-                  position: "relative",
+-                }}
+-              >
+-                {/* Grid background */}
+-                <div
+-                  className="absolute inset-0 opacity-10 pointer-events-none"
+-                  style={{
+-                    backgroundImage: `
+-                      linear-gradient(0deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent),
+-                      linear-gradient(90deg, transparent 24%, rgba(0,0,0,.1) 25%, rgba(0,0,0,.1) 26%, transparent 27%, transparent 74%, rgba(0,0,0,.1) 75%, rgba(0,0,0,.1) 76%, transparent 77%, transparent)
+-                    `,
+-                    backgroundSize: `${5 * scale}px ${5 * scale}px`,
+-                  }}
+-                />
+-
+-                {elements
+-                  .filter((el) => el.visible)
+-                  .map((el) => (
+-                    <div
+-                      key={el.id}
+-                      onMouseDown={(e) => handleMouseDown(e, el.id)}
+-                      className={`absolute cursor-grab active:cursor-grabbing border transition-all ${
+-                        selectedElement === el.id ? "border-2 border-blue-500 bg-blue-50 shadow-lg" : "border border-gray-300 bg-white hover:bg-gray-100"
+-                      }`}
+-                      style={{
+-                        left: `${el.x * scale}px`,
+-                        top: `${el.y * scale}px`,
+-                        width: el.width ? `${el.width * scale}px` : "auto",
+-                        height: el.height ? `${el.height * scale}px` : "auto",
+-                        padding: "4px 6px",
+-                        fontSize: `${el.fontSize * 1.2}px`,
+-                        fontFamily: el.fontFamily || "Arial",
+-                        minWidth: "50px",
+-                        minHeight: "20px",
+-                        display: "flex",
+-                        alignItems: "center",
+-                        justifyContent: "center",
+-                      }}
+-                    >
+-                      <span className="text-xs font-semibold text-gray-600 truncate">{el.label}</span>
+-                    </div>
+-                  ))}
+-              </div>
+-            </div>
+-
+-            <div className="flex items-center space-x-2 mt-4">
+-              <Checkbox id="isDefault" checked={isDefault} onCheckedChange={(checked) => setIsDefault(checked as boolean)} />
+-              <Label htmlFor="isDefault" className="text-sm">
+-                Set as default template
+-              </Label>
+-            </div>
++          {/* PRN Program */}
++          <div className="space-y-1">
++            <Label>PRN Program (EPL2/ZPL)</Label>
++            <p className="text-xs text-muted-foreground">
++              Available placeholders: <code className="bg-muted px-1 rounded">{"{barcode}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{itemName}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{mrp}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{sellingPrice}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{hsnCode}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{size}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{sizeCode}"}</code>{" "}
++              <code className="bg-muted px-1 rounded">{"{cost}"}</code>
++            </p>
++            <textarea
++              className="w-full h-64 p-3 border rounded font-mono text-sm bg-gray-50 dark:bg-gray-900 resize-y"
++              placeholder={defaultExample}
++              value={prnProgram}
++              onChange={(e) => setPrnProgram(e.target.value)}
++            />
+           </div>
+ 
+-          {/* Properties Panel - Right Side */}
+-          <div className="border rounded-lg p-4 bg-gray-50 max-h-[550px] flex flex-col">
+-            <div className="font-semibold text-sm mb-4">Elements</div>
+-            <ScrollArea className="flex-1 pr-4 mb-4">
+-              <div className="space-y-2">
+-                {elements.map((el) => (
+-                  <div
+-                    key={el.id}
+-                    onClick={() => setSelectedElement(el.id)}
+-                    className={`p-2 rounded cursor-pointer border transition-all ${
+-                      selectedElement === el.id ? "border-blue-500 bg-blue-100" : "border-gray-200 bg-white hover:bg-gray-100"
+-                    }`}
+-                  >
+-                    <div className="flex items-center justify-between gap-2">
+-                      <Checkbox
+-                        checked={el.visible}
+-                        onCheckedChange={(checked) => updateElement(el.id, { visible: checked as boolean })}
+-                        onClick={(e) => e.stopPropagation()}
+-                      />
+-                      <span className="text-xs font-medium flex-1">{el.label}</span>
+-                    </div>
+-                  </div>
+-                ))}
+-              </div>
+-            </ScrollArea>
+-
+-            {selectedElConfig && (
+-              <div className="space-y-3 border-t pt-3">
+-                <div className="font-semibold text-sm">Properties</div>
+-                <div>
+-                  <Label className="text-xs">Position X (mm)</Label>
+-                  <Input
+-                    type="number"
+-                    step="0.5"
+-                    value={selectedElConfig.x}
+-                    onFocus={(e) => e.target.select()}
+-              onChange={(e) => updateElement(selectedElConfig.id, { x: parseFloat(e.target.value) || 0 })}
+-                    className="text-xs"
+-                  />
+-                </div>
+-                <div>
+-                  <Label className="text-xs">Position Y (mm)</Label>
+-                  <Input
+-                    type="number"
+-                    step="0.5"
+-                    value={selectedElConfig.y}
+-                    onFocus={(e) => e.target.select()}
+-              onChange={(e) => updateElement(selectedElConfig.id, { y: parseFloat(e.target.value) || 0 })}
+-                    className="text-xs"
+-                  />
+-                </div>
+-                <div>
+-                  <Label className="text-xs">Font Size</Label>
+-                  <Input
+-                    type="number"
+-                    value={selectedElConfig.fontSize}
+-                    onFocus={(e) => e.target.select()}
+-              onChange={(e) => updateElement(selectedElConfig.id, { fontSize: parseInt(e.target.value) || 8 })}
+-                    className="text-xs"
+-                  />
+-                </div>
+-                <div>
+-                  <Label className="text-xs">Font Family</Label>
+-                  <select
+-                    value={selectedElConfig.fontFamily || "Arial"}
+-                    onChange={(e) => updateElement(selectedElConfig.id, { fontFamily: e.target.value })}
+-                    className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+-                    data-testid="select-font-family"
+-                  >
+-                    <option value="Arial">Arial</option>
+-                    <option value="Helvetica">Helvetica</option>
+-                    <option value="Times New Roman">Times New Roman</option>
+-                    <option value="Courier New">Courier New</option>
+-                    <option value="Verdana">Verdana</option>
+-                    <option value="Georgia">Georgia</option>
+-                    <option value="Trebuchet MS">Trebuchet MS</option>
+-                    <option value="Monospace">Monospace</option>
+-                  </select>
+-                </div>
+-                {selectedElConfig.type === "barcode" && (
+-                  <div>
+-                    <Label className="text-xs">Barcode Type</Label>
+-                    <select
+-                      value={selectedElConfig.barcodeType || "CODE128"}
+-                      onChange={(e) => updateElement(selectedElConfig.id, { barcodeType: e.target.value })}
+-                      className="w-full px-2 py-1 border border-gray-300 rounded text-xs"
+-                      data-testid="select-barcode-type"
+-                    >
+-                      <option value="CODE128">CODE 128</option>
+-                      <option value="CODE39">CODE 39</option>
+-                      <option value="EAN13">EAN-13</option>
+-                      <option value="EAN8">EAN-8</option>
+-                      <option value="UPC">UPC-A</option>
+-                      <option value="QR">QR Code</option>
+-                      <option value="PDF417">PDF417</option>
+-                      <option value="DATAMATRIX">Data Matrix</option>
+-                    </select>
+-                  </div>
+-                )}
+-                {(selectedElConfig.id === "rate" || selectedElConfig.id === "mrp" || selectedElConfig.id === "cost") && (
+-                  <div>
+-                    <Label className="text-xs">Decimal Places</Label>
+-                    <Input
+-                      type="number"
+-                      min="0"
+-                      max="4"
+-                      value={selectedElConfig.decimals ?? 2}
+-                      onFocus={(e) => e.target.select()}
+-              onChange={(e) => updateElement(selectedElConfig.id, { decimals: parseInt(e.target.value) || 0 })}
+-                      className="text-xs"
+-                      data-testid="input-decimals"
+-                    />
+-                  </div>
+-                )}
+-              </div>
+-            )}
++          {/* Example */}
++          <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3 text-xs space-y-1">
++            <p className="font-semibold text-blue-700 dark:text-blue-300">EPL2 Example:</p>
++            <pre className="text-blue-600 dark:text-blue-400 whitespace-pre-wrap">{defaultExample}</pre>
+           </div>
+-        </div>
+ 
+-        {/* PRN Program Editor */}
+-        <div className="border rounded-lg p-4 bg-gray-50">
+-          <div className="flex items-center justify-between mb-2">
+-            <Label className="font-semibold">PRN Program (EPL2/ZPL for Zebra Printers)</Label>
+-            <Button 
+-              variant="outline" 
+-              size="sm"
+-              onClick={() => setShowPrnEditor(!showPrnEditor)}
+-              data-testid="button-toggle-prn-editor"
+-            >
+-              {showPrnEditor ? "Hide" : "Show"} PRN Editor
+-            </Button>
++          {/* Set as default */}
++          <div className="flex items-center gap-2">
++            <input
++              type="checkbox"
++              id="isDefault"
++              checked={isDefault}
++              onChange={(e) => setIsDefault(e.target.checked)}
++              className="h-4 w-4"
++            />
++            <Label htmlFor="isDefault">Set as default template</Label>
+           </div>
+-          {showPrnEditor && (
+-            <div className="space-y-2">
+-              <p className="text-xs text-muted-foreground">
+-                Enter your EPL2/ZPL program. Use placeholders: {"{barcode}"}, {"{itemName}"}, {"{mrp}"}, {"{sellingPrice}"}, {"{hsnCode}"}, {"{size}"}, {"{sizeCode}"}
+-              </p>
+-              <textarea
+-                className="w-full h-40 p-2 border rounded font-mono text-xs"
+-                placeholder={`Example EPL2 Program:
+-N
+-q400
+-Q200,24
+-B50,20,0,1,2,7,80,B,"{barcode}"
+-A50,110,0,2,1,1,N,"{itemName}"
+-A50,135,0,2,1,1,N,"MRP: {mrp}  Rate: {sellingPrice}"
+-A50,160,0,1,1,1,N,"HSN: {hsnCode}"
+-P1`}
+-                value={prnProgram}
+-                onChange={(e) => setPrnProgram(e.target.value)}
+-                data-testid="textarea-prn-program"
+-              />
+-            </div>
+-          )}
+         </div>
+ 
+-        <DialogFooter>
+-          <Button variant="outline" onClick={() => onOpenChange(false)}>
++        <DialogFooter className="mt-4">
++          <Button variant="outline" onClick={() => onOpenChange(false)} tabIndex={-1}>
+             Cancel
+           </Button>
+-          <Button onClick={handleSaveTemplate} disabled={saveMutation.isPending} data-testid="button-save-template">
+-            Save Template
++          <Button onClick={handleSaveTemplate} disabled={saveMutation.isPending}>
++            {saveMutation.isPending ? "Saving..." : "Save Template"}
+           </Button>
+         </DialogFooter>
+       </DialogContent>
+-- 
+2.43.0
+
