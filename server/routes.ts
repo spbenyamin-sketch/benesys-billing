@@ -574,8 +574,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         OpeningCredit: parseFloat(party.openingCredit) || 0,
       }));
       res.json(exportData);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to export parties" });
+    } catch (error: any) {
+      console.error("Export parties error:", error?.message || error);
+      res.status(500).json({ message: "Failed to export parties: " + (error?.message || "Unknown error") });
     }
   });
 
@@ -718,8 +719,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         Active: item.active ? "Yes" : "No",
       }));
       res.json(exportData);
-    } catch (error) {
-      res.status(500).json({ message: "Failed to export items" });
+    } catch (error: any) {
+      console.error("Export items error:", error?.message || error);
+      res.status(500).json({ message: "Failed to export items: " + (error?.message || "Unknown error") });
     }
   });
 

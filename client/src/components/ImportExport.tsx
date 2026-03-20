@@ -35,7 +35,10 @@ export function ImportExport({ type, queryKey }: ImportExportProps) {
     setExporting(true);
     try {
       const res = await fetch(`/api/${type}/export`, { credentials: "include" });
-      if (!res.ok) throw new Error("Export failed");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Export failed (" + res.status + ")");
+      }
       const data = await res.json();
       if (!data.length) {
         toast({ title: "No data", description: `No ${type} found to export.`, variant: "destructive" });
