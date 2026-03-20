@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Package } from "lucide-react";
+import { ImportExport } from "@/components/ImportExport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -215,7 +216,9 @@ export default function Items() {
             Manage your product catalog and pricing
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex flex-wrap items-center gap-2">
+          <ImportExport type="items" queryKey="/api/items" />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewItem} data-testid="button-add-item" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />

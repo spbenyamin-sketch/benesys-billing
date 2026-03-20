@@ -1,0 +1,515 @@
+From ba11c898f6d5082c3e2d0e92f8a6ecd8e8134849 Mon Sep 17 00:00:00 2001
+From: BeneSys Fix <fix@benesys.in>
+Date: Fri, 20 Mar 2026 10:37:36 +0000
+Subject: [PATCH] feat: Import/Export Excel for Items and Parties master pages
+
+Frontend (client/src/components/ImportExport.tsx):
+- Export button: downloads all records as formatted .xlsx
+- Import button: upload Excel/CSV to bulk create or update records
+- Template button: downloads blank template with sample data
+- Import result dialog: shows created/updated counts and any errors
+- Uses SheetJS (already in package.json) - no new dependency
+
+Backend (server/routes.ts):
+- GET /api/items/export - returns items as JSON for Excel
+- POST /api/items/import - bulk create/update items from Excel rows
+- GET /api/parties/export - returns parties as JSON for Excel
+- POST /api/parties/import - bulk create/update parties from Excel rows
+- Smart upsert: if Code matches existing record, updates it; else creates new
+
+Storage (server/storage.ts):
+- Added getItemByCode(code, companyId) for import deduplication
+- Added getPartyByCode(code, companyId) for import deduplication
+
+Pages:
+- items.tsx: ImportExport component added next to Add Item button
+- parties.tsx: ImportExport component added next to Add Customer button
+---
+ client/src/components/ImportExport.tsx | 238 +++++++++++++++++++++++++
+ client/src/pages/items.tsx             |   5 +-
+ client/src/pages/parties.tsx           |   5 +-
+ server/routes.ts                       | 131 ++++++++++++++
+ server/storage.ts                      |  14 ++
+ 5 files changed, 391 insertions(+), 2 deletions(-)
+ create mode 100644 client/src/components/ImportExport.tsx
+
+diff --git a/client/src/components/ImportExport.tsx b/client/src/components/ImportExport.tsx
+new file mode 100644
+index 0000000..3a10634
+--- /dev/null
++++ b/client/src/components/ImportExport.tsx
+@@ -0,0 +1,238 @@
++import { useRef, useState } from "react";
++import * as XLSX from "xlsx";
++import { Button } from "@/components/ui/button";
++import { useToast } from "@/hooks/use-toast";
++import { apiRequest, queryClient } from "@/lib/queryClient";
++import { Download, Upload, FileSpreadsheet, Loader2 } from "lucide-react";
++import {
++  Dialog,
++  DialogContent,
++  DialogHeader,
++  DialogTitle,
++  DialogDescription,
++} from "@/components/ui/dialog";
++import { Alert, AlertDescription } from "@/components/ui/alert";
++
++interface ImportExportProps {
++  type: "items" | "parties";
++  queryKey: string;
++}
++
++export function ImportExport({ type, queryKey }: ImportExportProps) {
++  const { toast } = useToast();
++  const fileInputRef = useRef<HTMLInputElement>(null);
++  const [importing, setImporting] = useState(false);
++  const [exporting, setExporting] = useState(false);
++  const [resultDialog, setResultDialog] = useState<{
++    open: boolean;
++    created: number;
++    updated: number;
++    errors: string[];
++  }>({ open: false, created: 0, updated: 0, errors: [] });
++
++  // ── EXPORT ──────────────────────────────────────────────────────────────
++  async function handleExport() {
++    setExporting(true);
++    try {
++      const res = await fetch(`/api/${type}/export`, { credentials: "include" });
++      if (!res.ok) throw new Error("Export failed");
++      const data = await res.json();
++      if (!data.length) {
++        toast({ title: "No data", description: `No ${type} found to export.`, variant: "destructive" });
++        return;
++      }
++
++      const ws = XLSX.utils.json_to_sheet(data);
++
++      // Style header row
++      const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
++      for (let c = range.s.c; c <= range.e.c; c++) {
++        const cell = XLSX.utils.encode_cell({ r: 0, c });
++        if (ws[cell]) {
++          ws[cell].s = {
++            font: { bold: true, color: { rgb: "FFFFFF" } },
++            fill: { fgColor: { rgb: "1D4ED8" } },
++            alignment: { horizontal: "center" },
++          };
++        }
++      }
++
++      // Auto column widths
++      const colWidths = Object.keys(data[0] || {}).map(key => ({
++        wch: Math.max(key.length, ...data.map((r: any) => String(r[key] || "").length)) + 2,
++      }));
++      ws["!cols"] = colWidths;
++
++      const wb = XLSX.utils.book_new();
++      XLSX.utils.book_append_sheet(wb, ws, type === "items" ? "Items" : "Parties");
++
++      // Add sample/template sheet
++      const templateData = type === "items"
++        ? [{ Code: "SAMPLE001", Name: "Sample Item", HSN: "6103", Category: "Saree", Floor: "Floor 1", PackType: "PCS", Type: "product", Cost: 100, MRP: 150, SellingPrice: 140, Tax: 5, Active: "Yes" }]
++        : [{ Code: "P001", Name: "Sample Party", City: "Mumbai", State: "Maharashtra", StateCode: "27", Address: "123 Main St", GSTNo: "27AAPFU0939F1ZV", Phone: "9876543210", OpeningDebit: 0, OpeningCredit: 0 }];
++      const ws2 = XLSX.utils.json_to_sheet(templateData);
++      XLSX.utils.book_append_sheet(wb, ws2, "Template");
++
++      XLSX.writeFile(wb, `benesys_${type}_${new Date().toISOString().slice(0, 10)}.xlsx`);
++      toast({ title: "Export Successful", description: `${data.length} ${type} exported to Excel.` });
++    } catch (err: any) {
++      toast({ title: "Export Failed", description: err.message, variant: "destructive" });
++    } finally {
++      setExporting(false);
++    }
++  }
++
++  // ── IMPORT ──────────────────────────────────────────────────────────────
++  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
++    const file = e.target.files?.[0];
++    if (!file) return;
++    if (fileInputRef.current) fileInputRef.current.value = "";
++
++    setImporting(true);
++    try {
++      const buffer = await file.arrayBuffer();
++      const wb = XLSX.read(buffer);
++      const ws = wb.Sheets[wb.SheetNames[0]];
++      const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
++
++      if (!rows.length) {
++        toast({ title: "Empty File", description: "No data rows found in the Excel file.", variant: "destructive" });
++        return;
++      }
++
++      const res = await apiRequest("POST", `/api/${type}/import`, { rows });
++      const result = await res.json();
++
++      setResultDialog({
++        open: true,
++        created: result.created || 0,
++        updated: result.updated || 0,
++        errors: result.errors || [],
++      });
++
++      queryClient.invalidateQueries({ queryKey: [queryKey] });
++    } catch (err: any) {
++      toast({ title: "Import Failed", description: err.message, variant: "destructive" });
++    } finally {
++      setImporting(false);
++    }
++  }
++
++  // ── DOWNLOAD TEMPLATE ───────────────────────────────────────────────────
++  function handleDownloadTemplate() {
++    const templateData = type === "items"
++      ? [
++          { Code: "", Name: "Item Name *", HSN: "6103", Category: "Saree", Floor: "Floor 1", PackType: "PCS", Type: "product", Cost: 100, MRP: 150, SellingPrice: 140, Tax: 5, Active: "Yes" },
++          { Code: "", Name: "Another Item", HSN: "5208", Category: "Fabric", Floor: "Floor 2", PackType: "MTR", Type: "product", Cost: 200, MRP: 280, SellingPrice: 260, Tax: 5, Active: "Yes" },
++        ]
++      : [
++          { Code: "", Name: "Party Name *", City: "Mumbai *", State: "Maharashtra", StateCode: "27", Address: "123 Main St", GSTNo: "27AAPFU0939F1ZV", Phone: "9876543210", OpeningDebit: 0, OpeningCredit: 0 },
++          { Code: "", Name: "Another Party", City: "Delhi", State: "Delhi", StateCode: "07", Address: "", GSTNo: "", Phone: "", OpeningDebit: 5000, OpeningCredit: 0 },
++        ];
++
++    const ws = XLSX.utils.json_to_sheet(templateData);
++
++    // Bold header
++    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
++    for (let c = range.s.c; c <= range.e.c; c++) {
++      const cell = XLSX.utils.encode_cell({ r: 0, c });
++      if (ws[cell]) ws[cell].s = { font: { bold: true }, fill: { fgColor: { rgb: "FEF3C7" } } };
++    }
++    const colWidths = Object.keys(templateData[0]).map(k => ({ wch: Math.max(k.length, 15) }));
++    ws["!cols"] = colWidths;
++
++    const wbOut = XLSX.utils.book_new();
++    XLSX.utils.book_append_sheet(wbOut, ws, "Template");
++    XLSX.writeFile(wbOut, `benesys_${type}_template.xlsx`);
++    toast({ title: "Template Downloaded", description: "Fill in the template and import it back." });
++  }
++
++  return (
++    <>
++      <div className="flex items-center gap-2">
++        {/* Export */}
++        <Button
++          variant="outline"
++          size="sm"
++          onClick={handleExport}
++          disabled={exporting}
++          tabIndex={-1}
++          className="gap-1.5"
++        >
++          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
++          <span className="hidden sm:inline">Export Excel</span>
++          <span className="sm:hidden">Export</span>
++        </Button>
++
++        {/* Import */}
++        <Button
++          variant="outline"
++          size="sm"
++          onClick={() => fileInputRef.current?.click()}
++          disabled={importing}
++          tabIndex={-1}
++          className="gap-1.5"
++        >
++          {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
++          <span className="hidden sm:inline">Import Excel</span>
++          <span className="sm:hidden">Import</span>
++        </Button>
++
++        {/* Template download */}
++        <Button
++          variant="ghost"
++          size="sm"
++          onClick={handleDownloadTemplate}
++          tabIndex={-1}
++          className="gap-1.5 text-muted-foreground"
++          title="Download blank template"
++        >
++          <FileSpreadsheet className="h-4 w-4" />
++          <span className="hidden sm:inline">Template</span>
++        </Button>
++
++        <input
++          ref={fileInputRef}
++          type="file"
++          accept=".xlsx,.xls,.csv"
++          onChange={handleFileChange}
++          className="hidden"
++        />
++      </div>
++
++      {/* Import Result Dialog */}
++      <Dialog open={resultDialog.open} onOpenChange={(o) => setResultDialog(r => ({ ...r, open: o }))}>
++        <DialogContent>
++          <DialogHeader>
++            <DialogTitle>Import Complete</DialogTitle>
++            <DialogDescription>
++              Results for {type} import
++            </DialogDescription>
++          </DialogHeader>
++          <div className="space-y-3">
++            <div className="grid grid-cols-2 gap-3">
++              <div className="bg-green-50 dark:bg-green-950 rounded-lg p-3 text-center">
++                <div className="text-2xl font-bold text-green-600">{resultDialog.created}</div>
++                <div className="text-sm text-muted-foreground">New Records Created</div>
++              </div>
++              <div className="bg-blue-50 dark:bg-blue-950 rounded-lg p-3 text-center">
++                <div className="text-2xl font-bold text-blue-600">{resultDialog.updated}</div>
++                <div className="text-sm text-muted-foreground">Existing Records Updated</div>
++              </div>
++            </div>
++            {resultDialog.errors.length > 0 && (
++              <Alert variant="destructive">
++                <AlertDescription>
++                  <div className="font-medium mb-1">{resultDialog.errors.length} rows had errors:</div>
++                  <ul className="text-xs space-y-0.5">
++                    {resultDialog.errors.map((e, i) => <li key={i}>• {e}</li>)}
++                  </ul>
++                </AlertDescription>
++              </Alert>
++            )}
++          </div>
++        </DialogContent>
++      </Dialog>
++    </>
++  );
++}
+diff --git a/client/src/pages/items.tsx b/client/src/pages/items.tsx
+index f0c4ea6..2c818b2 100644
+--- a/client/src/pages/items.tsx
++++ b/client/src/pages/items.tsx
+@@ -29,6 +29,7 @@ import {
+ } from "@/components/ui/select";
+ import { useToast } from "@/hooks/use-toast";
+ import { Plus, Search, Edit, Package } from "lucide-react";
++import { ImportExport } from "@/components/ImportExport";
+ import { Skeleton } from "@/components/ui/skeleton";
+ import { useForm } from "react-hook-form";
+ import { zodResolver } from "@hookform/resolvers/zod";
+@@ -215,7 +216,9 @@ export default function Items() {
+             Manage your product catalog and pricing
+           </p>
+         </div>
+-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
++        <div className="flex flex-wrap items-center gap-2">
++          <ImportExport type="items" queryKey="/api/items" />
++          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+           <DialogTrigger asChild>
+             <Button onClick={handleNewItem} data-testid="button-add-item" className="w-full sm:w-auto">
+               <Plus className="mr-2 h-4 w-4" />
+diff --git a/client/src/pages/parties.tsx b/client/src/pages/parties.tsx
+index d39abe1..d5c809b 100644
+--- a/client/src/pages/parties.tsx
++++ b/client/src/pages/parties.tsx
+@@ -29,6 +29,7 @@ import {
+ } from "@/components/ui/select";
+ import { useToast } from "@/hooks/use-toast";
+ import { Plus, Search, Edit, Users, ChevronDown, ChevronUp } from "lucide-react";
++import { ImportExport } from "@/components/ImportExport";
+ import { Skeleton } from "@/components/ui/skeleton";
+ import { useForm } from "react-hook-form";
+ import { zodResolver } from "@hookform/resolvers/zod";
+@@ -265,7 +266,9 @@ export default function Parties() {
+             Manage your customer and supplier database
+           </p>
+         </div>
+-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
++        <div className="flex flex-wrap items-center gap-2">
++          <ImportExport type="parties" queryKey="/api/parties" />
++          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+           <DialogTrigger asChild>
+             <Button onClick={handleNewParty} data-testid="button-add-customer" className="w-full sm:w-auto">
+               <Plus className="mr-2 h-4 w-4" />
+diff --git a/server/routes.ts b/server/routes.ts
+index 14868c2..ff88ba3 100644
+--- a/server/routes.ts
++++ b/server/routes.ts
+@@ -737,6 +737,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
+     }
+   });
+ 
++  // ==================== IMPORT / EXPORT ROUTES ====================
++
++  // Export Items to JSON
++  app.get("/api/items/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
++    try {
++      const items = await storage.getItems(req.companyId);
++      const exportData = items.map(item => ({
++        Code: item.code || "",
++        Name: item.name || "",
++        HSN: item.hsnCode || "",
++        Category: item.category || "",
++        Floor: item.floor || "",
++        PackType: item.packType || "PCS",
++        Type: item.type || "product",
++        Cost: parseFloat(item.cost) || 0,
++        MRP: parseFloat(item.mrp) || 0,
++        SellingPrice: parseFloat(item.sellingPrice) || 0,
++        Tax: parseFloat(item.tax) || 0,
++        Active: item.active ? "Yes" : "No",
++      }));
++      res.json(exportData);
++    } catch (error) {
++      res.status(500).json({ message: "Failed to export items" });
++    }
++  });
++
++  // Import Items from Excel
++  app.post("/api/items/import", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
++    try {
++      const { rows } = req.body;
++      if (!Array.isArray(rows) || rows.length === 0) {
++        return res.status(400).json({ message: "No data provided" });
++      }
++      const userId = req.user.id;
++      let created = 0, updated = 0;
++      const errors: string[] = [];
++      for (const row of rows) {
++        try {
++          const taxVal = parseFloat(row.Tax || row.tax || 0);
++          const itemData = {
++            code: String(row.Code || row.code || "").trim(),
++            name: String(row.Name || row.name || "").trim(),
++            hsnCode: String(row.HSN || row.hsnCode || "").trim(),
++            category: String(row.Category || row.category || "").trim(),
++            floor: String(row.Floor || row.floor || "").trim(),
++            packType: String(row.PackType || row.packType || "PCS").trim(),
++            type: String(row.Type || row.type || "product").trim().toLowerCase(),
++            cost: String(parseFloat(row.Cost || row.cost || 0)),
++            mrp: String(parseFloat(row.MRP || row.mrp || 0)),
++            sellingPrice: String(parseFloat(row.SellingPrice || row.sellingPrice || 0)),
++            tax: String(taxVal),
++            cgst: String(taxVal / 2),
++            sgst: String(taxVal / 2),
++            active: String(row.Active || "Yes").toLowerCase() !== "no",
++          };
++          if (!itemData.name) { errors.push("Row skipped: missing Name"); continue; }
++          if (itemData.code) {
++            const existing = await storage.getItemByCode(itemData.code, req.companyId);
++            if (existing) { await storage.updateItem(existing.id, itemData, req.companyId); updated++; continue; }
++          }
++          await storage.createItem(itemData, userId, req.companyId);
++          created++;
++        } catch (e: any) { errors.push(e.message); }
++      }
++      res.json({ message: "Import complete", created, updated, errors: errors.slice(0, 10) });
++    } catch (error) {
++      res.status(500).json({ message: "Failed to import items" });
++    }
++  });
++
++  // Export Parties to JSON
++  app.get("/api/parties/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
++    try {
++      const parties = await storage.getParties(req.companyId);
++      const exportData = parties.map(party => ({
++        Code: party.code || "",
++        Name: party.name || "",
++        City: party.city || "",
++        State: party.state || "",
++        StateCode: party.stateCode || "",
++        Address: party.address || "",
++        GSTNo: party.gstNo || "",
++        Phone: party.phone || "",
++        OpeningDebit: parseFloat(party.openingDebit) || 0,
++        OpeningCredit: parseFloat(party.openingCredit) || 0,
++      }));
++      res.json(exportData);
++    } catch (error) {
++      res.status(500).json({ message: "Failed to export parties" });
++    }
++  });
++
++  // Import Parties from Excel
++  app.post("/api/parties/import", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
++    try {
++      const { rows } = req.body;
++      if (!Array.isArray(rows) || rows.length === 0) {
++        return res.status(400).json({ message: "No data provided" });
++      }
++      const userId = req.user.id;
++      let created = 0, updated = 0;
++      const errors: string[] = [];
++      for (const row of rows) {
++        try {
++          const partyData = {
++            code: String(row.Code || row.code || "").trim(),
++            name: String(row.Name || row.name || "").trim(),
++            city: String(row.City || row.city || "N/A").trim() || "N/A",
++            state: String(row.State || row.state || "").trim(),
++            stateCode: String(row.StateCode || row.stateCode || "").trim(),
++            address: String(row.Address || row.address || "").trim(),
++            gstNo: String(row.GSTNo || row.gstNo || row.GST || "").trim(),
++            phone: String(row.Phone || row.phone || "").trim(),
++            openingDebit: String(parseFloat(row.OpeningDebit || row.openingDebit || 0)),
++            openingCredit: String(parseFloat(row.OpeningCredit || row.openingCredit || 0)),
++          };
++          if (!partyData.name) { errors.push("Row skipped: missing Name"); continue; }
++          if (partyData.code) {
++            const existing = await storage.getPartyByCode(partyData.code, req.companyId);
++            if (existing) { await storage.updateParty(existing.id, partyData, req.companyId); updated++; continue; }
++          }
++          await storage.createParty(partyData, userId, req.companyId);
++          created++;
++        } catch (e: any) { errors.push(e.message); }
++      }
++      res.json({ message: "Import complete", created, updated, errors: errors.slice(0, 10) });
++    } catch (error) {
++      res.status(500).json({ message: "Failed to import parties" });
++    }
++  });
++
+   // ==================== SALES ROUTES ====================
+   app.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+     try {
+diff --git a/server/storage.ts b/server/storage.ts
+index 3899792..fa25f72 100644
+--- a/server/storage.ts
++++ b/server/storage.ts
+@@ -97,12 +97,14 @@ export interface IStorage {
+   // Party operations
+   getParties(companyId: number): Promise<Party[]>;
+   getParty(id: number, companyId: number): Promise<Party | undefined>;
++  getPartyByCode(code: string, companyId: number): Promise<any | undefined>;
+   createParty(party: InsertParty, userId: string, companyId: number): Promise<Party>;
+   updateParty(id: number, party: InsertParty, companyId: number): Promise<Party>;
+ 
+   // Item operations
+   getItems(companyId: number): Promise<Item[]>;
+   getItem(id: number, companyId: number): Promise<Item | undefined>;
++  getItemByCode(code: string, companyId: number): Promise<Item | undefined>;
+   createItem(item: InsertItem, userId: string, companyId: number): Promise<Item>;
+   updateItem(id: number, item: InsertItem, companyId: number): Promise<Item>;
+ 
+@@ -703,6 +705,12 @@ export class DatabaseStorage implements IStorage {
+     return party;
+   }
+ 
++
++  async getPartyByCode(code: string, companyId: number): Promise<any | undefined> {
++    const [party] = await db.select().from(parties).where(and(eq(parties.code, code), eq(parties.companyId, companyId)));
++    return party;
++  }
++
+   async getNextPartyCode(companyId: number): Promise<string> {
+     const [result] = await db
+       .select({ maxCode: sql<number>`COALESCE(MAX(CAST(${parties.code} AS INTEGER)), 0)` })
+@@ -748,6 +756,12 @@ export class DatabaseStorage implements IStorage {
+     return item;
+   }
+ 
++
++  async getItemByCode(code: string, companyId: number): Promise<Item | undefined> {
++    const [item] = await db.select().from(items).where(and(eq(items.code, code), eq(items.companyId, companyId)));
++    return item;
++  }
++
+   async getNextItemCode(companyId: number): Promise<string> {
+     const [result] = await db
+       .select({ maxCode: sql<number>`COALESCE(MAX(CAST(${items.code} AS INTEGER)), 0)` })
+-- 
+2.43.0
+

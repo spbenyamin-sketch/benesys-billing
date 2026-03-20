@@ -97,12 +97,14 @@ export interface IStorage {
   // Party operations
   getParties(companyId: number): Promise<Party[]>;
   getParty(id: number, companyId: number): Promise<Party | undefined>;
+  getPartyByCode(code: string, companyId: number): Promise<any | undefined>;
   createParty(party: InsertParty, userId: string, companyId: number): Promise<Party>;
   updateParty(id: number, party: InsertParty, companyId: number): Promise<Party>;
 
   // Item operations
   getItems(companyId: number): Promise<Item[]>;
   getItem(id: number, companyId: number): Promise<Item | undefined>;
+  getItemByCode(code: string, companyId: number): Promise<Item | undefined>;
   createItem(item: InsertItem, userId: string, companyId: number): Promise<Item>;
   updateItem(id: number, item: InsertItem, companyId: number): Promise<Item>;
 
@@ -703,6 +705,12 @@ export class DatabaseStorage implements IStorage {
     return party;
   }
 
+
+  async getPartyByCode(code: string, companyId: number): Promise<any | undefined> {
+    const [party] = await db.select().from(parties).where(and(eq(parties.code, code), eq(parties.companyId, companyId)));
+    return party;
+  }
+
   async getNextPartyCode(companyId: number): Promise<string> {
     const [result] = await db
       .select({ maxCode: sql<number>`COALESCE(MAX(CAST(${parties.code} AS INTEGER)), 0)` })
@@ -745,6 +753,12 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(items)
       .where(and(eq(items.id, id), or(eq(items.companyId, companyId), eq(items.isShared, true))));
+    return item;
+  }
+
+
+  async getItemByCode(code: string, companyId: number): Promise<Item | undefined> {
+    const [item] = await db.select().from(items).where(and(eq(items.code, code), eq(items.companyId, companyId)));
     return item;
   }
 

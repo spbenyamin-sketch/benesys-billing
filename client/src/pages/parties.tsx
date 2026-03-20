@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Search, Edit, Users, ChevronDown, ChevronUp } from "lucide-react";
+import { ImportExport } from "@/components/ImportExport";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -265,7 +266,9 @@ export default function Parties() {
             Manage your customer and supplier database
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <div className="flex flex-wrap items-center gap-2">
+          <ImportExport type="parties" queryKey="/api/parties" />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleNewParty} data-testid="button-add-customer" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />

@@ -737,6 +737,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== IMPORT / EXPORT ROUTES ====================
+
+  // Export Items to JSON
+  app.get("/api/items/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const items = await storage.getItems(req.companyId);
+      const exportData = items.map(item => ({
+        Code: item.code || "",
+        Name: item.name || "",
+        HSN: item.hsnCode || "",
+        Category: item.category || "",
+        Floor: item.floor || "",
+        PackType: item.packType || "PCS",
+        Type: item.type || "product",
+        Cost: parseFloat(item.cost) || 0,
+        MRP: parseFloat(item.mrp) || 0,
+        SellingPrice: parseFloat(item.sellingPrice) || 0,
+        Tax: parseFloat(item.tax) || 0,
+        Active: item.active ? "Yes" : "No",
+      }));
+      res.json(exportData);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export items" });
+    }
+  });
+
+  // Import Items from Excel
+  app.post("/api/items/import", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { rows } = req.body;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ message: "No data provided" });
+      }
+      const userId = req.user.id;
+      let created = 0, updated = 0;
+      const errors: string[] = [];
+      for (const row of rows) {
+        try {
+          const taxVal = parseFloat(row.Tax || row.tax || 0);
+          const itemData = {
+            code: String(row.Code || row.code || "").trim(),
+            name: String(row.Name || row.name || "").trim(),
+            hsnCode: String(row.HSN || row.hsnCode || "").trim(),
+            category: String(row.Category || row.category || "").trim(),
+            floor: String(row.Floor || row.floor || "").trim(),
+            packType: String(row.PackType || row.packType || "PCS").trim(),
+            type: String(row.Type || row.type || "product").trim().toLowerCase(),
+            cost: String(parseFloat(row.Cost || row.cost || 0)),
+            mrp: String(parseFloat(row.MRP || row.mrp || 0)),
+            sellingPrice: String(parseFloat(row.SellingPrice || row.sellingPrice || 0)),
+            tax: String(taxVal),
+            cgst: String(taxVal / 2),
+            sgst: String(taxVal / 2),
+            active: String(row.Active || "Yes").toLowerCase() !== "no",
+          };
+          if (!itemData.name) { errors.push("Row skipped: missing Name"); continue; }
+          if (itemData.code) {
+            const existing = await storage.getItemByCode(itemData.code, req.companyId);
+            if (existing) { await storage.updateItem(existing.id, itemData, req.companyId); updated++; continue; }
+          }
+          await storage.createItem(itemData, userId, req.companyId);
+          created++;
+        } catch (e: any) { errors.push(e.message); }
+      }
+      res.json({ message: "Import complete", created, updated, errors: errors.slice(0, 10) });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to import items" });
+    }
+  });
+
+  // Export Parties to JSON
+  app.get("/api/parties/export", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const parties = await storage.getParties(req.companyId);
+      const exportData = parties.map(party => ({
+        Code: party.code || "",
+        Name: party.name || "",
+        City: party.city || "",
+        State: party.state || "",
+        StateCode: party.stateCode || "",
+        Address: party.address || "",
+        GSTNo: party.gstNo || "",
+        Phone: party.phone || "",
+        OpeningDebit: parseFloat(party.openingDebit) || 0,
+        OpeningCredit: parseFloat(party.openingCredit) || 0,
+      }));
+      res.json(exportData);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export parties" });
+    }
+  });
+
+  // Import Parties from Excel
+  app.post("/api/parties/import", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { rows } = req.body;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ message: "No data provided" });
+      }
+      const userId = req.user.id;
+      let created = 0, updated = 0;
+      const errors: string[] = [];
+      for (const row of rows) {
+        try {
+          const partyData = {
+            code: String(row.Code || row.code || "").trim(),
+            name: String(row.Name || row.name || "").trim(),
+            city: String(row.City || row.city || "N/A").trim() || "N/A",
+            state: String(row.State || row.state || "").trim(),
+            stateCode: String(row.StateCode || row.stateCode || "").trim(),
+            address: String(row.Address || row.address || "").trim(),
+            gstNo: String(row.GSTNo || row.gstNo || row.GST || "").trim(),
+            phone: String(row.Phone || row.phone || "").trim(),
+            openingDebit: String(parseFloat(row.OpeningDebit || row.openingDebit || 0)),
+            openingCredit: String(parseFloat(row.OpeningCredit || row.openingCredit || 0)),
+          };
+          if (!partyData.name) { errors.push("Row skipped: missing Name"); continue; }
+          if (partyData.code) {
+            const existing = await storage.getPartyByCode(partyData.code, req.companyId);
+            if (existing) { await storage.updateParty(existing.id, partyData, req.companyId); updated++; continue; }
+          }
+          await storage.createParty(partyData, userId, req.companyId);
+          created++;
+        } catch (e: any) { errors.push(e.message); }
+      }
+      res.json({ message: "Import complete", created, updated, errors: errors.slice(0, 10) });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to import parties" });
+    }
+  });
+
   // ==================== SALES ROUTES ====================
   app.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
