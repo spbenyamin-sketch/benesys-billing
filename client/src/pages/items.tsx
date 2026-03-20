@@ -432,6 +432,7 @@ export default function Items() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

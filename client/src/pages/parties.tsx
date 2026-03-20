@@ -603,6 +603,7 @@ export default function Parties() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
