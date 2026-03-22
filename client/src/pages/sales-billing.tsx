@@ -44,6 +44,7 @@ interface Item {
   name: string;
   hsnCode: string | null;
   cost: string;
+  sellingPrice: string;
   tax: string;
   cgst: string;
   sgst: string;
