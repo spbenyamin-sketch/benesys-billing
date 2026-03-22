@@ -44,6 +44,7 @@ interface Item {
   name: string;
   hsnCode: string | null;
   cost: string;
+  sellingPrice: string;
   tax: string;
   cgst: string;
   sgst: string;
@@ -227,7 +228,7 @@ export default function EditSale() {
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
-            updated.rate = parseFloat(selectedItem.cost);
+            updated.rate = Math.round(parseFloat(selectedItem.sellingPrice || selectedItem.cost));
             updated.taxRate = parseFloat(selectedItem.tax);
             updated.cgstRate = parseFloat(selectedItem.cgst);
             updated.sgstRate = parseFloat(selectedItem.sgst);

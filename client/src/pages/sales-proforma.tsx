@@ -52,6 +52,7 @@ interface Item {
   name: string;
   hsnCode: string | null;
   cost: string;
+  sellingPrice: string;
   tax: string;
   cgst: string;
   sgst: string;
@@ -193,7 +194,7 @@ export default function SalesProforma() {
       }
       
       // Get rate from barcode data - use mrp first, then rate (selling rate from stock inward)
-      const saleRate = parseFloat(data.mrp) || parseFloat(data.rate) || 0;
+      const saleRate = Math.round(parseFloat(data.rate) || parseFloat(data.mrp) || 0);
       
       const newItem: SaleLineItem = {
         tempId: Date.now().toString(),
@@ -336,7 +337,7 @@ export default function SalesProforma() {
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
-            updated.rate = parseFloat(selectedItem.cost);
+            updated.rate = Math.round(parseFloat(selectedItem.sellingPrice || selectedItem.cost));
             updated.taxRate = parseFloat(selectedItem.tax);
             updated.cgstRate = parseFloat(selectedItem.cgst);
             updated.sgstRate = parseFloat(selectedItem.sgst);

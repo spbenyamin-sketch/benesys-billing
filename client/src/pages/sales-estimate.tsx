@@ -45,6 +45,7 @@ interface Item {
   name: string;
   hsnCode: string | null;
   cost: string;
+  sellingPrice: string;
 }
 
 interface SaleLineItem {
@@ -205,7 +206,7 @@ export default function SalesEstimate() {
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
-            updated.rate = parseFloat(selectedItem.cost);
+            updated.rate = Math.round(parseFloat(selectedItem.sellingPrice || selectedItem.cost));
           }
         }
 
