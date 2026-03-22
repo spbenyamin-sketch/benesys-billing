@@ -133,7 +133,7 @@ export default function SalesEstimate() {
         itemName: data.itemName || "",
         hsnCode: data.hsnCode || "",
         quantity: 1,
-        rate: parseFloat(data.mrp) || parseFloat(data.rrate) || 0,
+        rate: Math.round(parseFloat(data.rate) || parseFloat(data.mrp) || 0),
         discount: 0,
         discountPercent: 0,
         amount: 0,

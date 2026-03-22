@@ -50,6 +50,7 @@ interface Item {
   name: string;
   hsnCode: string | null;
   cost: string;
+  sellingPrice: string;
   tax: string;
   cgst: string;
   sgst: string;
@@ -169,7 +170,7 @@ export default function CreditNote() {
         itemName: data.itemName || "",
         hsnCode: data.hsnCode || "",
         quantity: 1,
-        rate: inclusiveTax ? (parseFloat(data.rate) || parseFloat(data.mrp) || 0) : (parseFloat(data.rate) || parseFloat(data.mrp) || 0) / (1 + parseFloat(data.tax || "0") / 100),
+        rate: Math.round(inclusiveTax ? (parseFloat(data.rate) || parseFloat(data.mrp) || 0) : (parseFloat(data.rate) || parseFloat(data.mrp) || 0) / (1 + parseFloat(data.tax || "0") / 100)),
         mrp: parseFloat(data.mrp) || 0,
         discount: 0,
         discountPercent: 0,
@@ -282,7 +283,7 @@ export default function CreditNote() {
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
-            updated.rate = parseFloat(selectedItem.cost);
+            updated.rate = Math.round(parseFloat(selectedItem.sellingPrice || selectedItem.cost));
             updated.taxRate = parseFloat(selectedItem.tax);
             updated.cgstRate = parseFloat(selectedItem.cgst);
             updated.sgstRate = parseFloat(selectedItem.sgst);
