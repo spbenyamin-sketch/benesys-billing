@@ -972,7 +972,7 @@ var init_db = __esm({
       connectionString: process.env.DATABASE_URL,
       idleTimeoutMillis: 3e4,
       connectionTimeoutMillis: 5e3,
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+      ssl: process.env.NODE_ENV === "production" && !process.env.DATABASE_URL?.includes("localhost") && !process.env.DATABASE_URL?.includes("127.0.0.1") ? { rejectUnauthorized: false } : false
     });
     pool.on("error", (err) => {
       console.error("Unexpected error on idle client", err);
@@ -3121,11 +3121,13 @@ function getSession() {
   const secret = sessionSecret || "dev-insecure-secret-change-in-production";
   const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
   const pgStore = connectPg(session);
+  const isLocalDb = process.env.DATABASE_URL?.includes("localhost") || process.env.DATABASE_URL?.includes("127.0.0.1");
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
     ttl: sessionTtl,
-    tableName: "sessions"
+    tableName: "sessions",
+    ssl: !isLocalDb && process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
   });
   const shouldUseSecureCookies = process.env.NODE_ENV === "production";
   console.log("[SESSION] \u2705 Session initialized");

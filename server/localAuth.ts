@@ -44,11 +44,13 @@ export function getSession() {
   const secret = sessionSecret || "dev-insecure-secret-change-in-production";
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
+  const isLocalDb = process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1');
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
     createTableIfMissing: true,
     ttl: sessionTtl,
     tableName: "sessions",
+    ssl: (!isLocalDb && process.env.NODE_ENV === 'production') ? { rejectUnauthorized: false } : false,
   });
   // Enable secure cookies in production (HTTPS) automatically
   const shouldUseSecureCookies = process.env.NODE_ENV === 'production';
