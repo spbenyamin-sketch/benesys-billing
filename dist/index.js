@@ -3129,7 +3129,7 @@ function getSession() {
     tableName: "sessions",
     ssl: !isLocalDb && process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
   });
-  const shouldUseSecureCookies = process.env.NODE_ENV === "production";
+  const shouldUseSecureCookies = process.env.NODE_ENV === "production" && !isLocalDb;
   console.log("[SESSION] \u2705 Session initialized");
   console.log("[SESSION] Node environment:", process.env.NODE_ENV);
   console.log("[SESSION] Using secure cookies:", shouldUseSecureCookies);
