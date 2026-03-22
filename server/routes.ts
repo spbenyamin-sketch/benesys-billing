@@ -1527,6 +1527,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/purchase-items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const item = await storage.addPurchaseItem(req.body, req.companyId);
+      // Update item's sellingPrice and mrp from rrate/mrp
+      if (item.itemId && item.rrate) {
+        const sellingPrice = Math.round(parseFloat(item.rrate)).toString();
+        const mrp = item.mrp ? Math.round(parseFloat(item.mrp)).toString() : sellingPrice;
+        await storage.updateItemRates(item.itemId, sellingPrice, mrp, req.companyId);
+      }
       res.json(item);
     } catch (error) {
       console.error("Error adding purchase item:", error);
@@ -1539,6 +1545,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.updatePurchaseItem(id, req.body, req.companyId);
+      // Update item's sellingPrice and mrp from rrate/mrp
+      if (item.itemId && item.rrate) {
+        const sellingPrice = Math.round(parseFloat(item.rrate)).toString();
+        const mrp = item.mrp ? Math.round(parseFloat(item.mrp)).toString() : sellingPrice;
+        await storage.updateItemRates(item.itemId, sellingPrice, mrp, req.companyId);
+      }
       res.json(item);
     } catch (error) {
       console.error("Error updating purchase item:", error);

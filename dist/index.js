@@ -971,7 +971,8 @@ var init_db = __esm({
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       idleTimeoutMillis: 3e4,
-      connectionTimeoutMillis: 5e3
+      connectionTimeoutMillis: 5e3,
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
     });
     pool.on("error", (err) => {
       console.error("Unexpected error on idle client", err);
@@ -1101,10 +1102,10 @@ var DatabaseStorage = class {
     return results;
   }
   async assignUserToDefaultCompany(userId) {
-    let defaultCompany = await db.select().from(companies).where(eq(companies.id, 1)).limit(1);
-    if (defaultCompany.length === 0) {
+    let existingCompanies = await db.select().from(companies).limit(1);
+    let companyId;
+    if (existingCompanies.length === 0) {
       const newCompany = await db.insert(companies).values({
-        id: 1,
         name: "Default Company",
         address: "Default Address",
         city: "Default City",
@@ -1112,13 +1113,18 @@ var DatabaseStorage = class {
         gstNo: "DEFAULT-GST",
         createdBy: userId
       }).returning();
-      defaultCompany = newCompany;
+      companyId = newCompany[0].id;
+    } else {
+      companyId = existingCompanies[0].id;
     }
-    await db.insert(userCompanies).values({
-      userId,
-      companyId: 1,
-      isDefault: true
-    });
+    const existing = await db.select().from(userCompanies).where(and(eq(userCompanies.userId, userId), eq(userCompanies.companyId, companyId))).limit(1);
+    if (existing.length === 0) {
+      await db.insert(userCompanies).values({
+        userId,
+        companyId,
+        isDefault: true
+      });
+    }
   }
   async assignUserToCompany(userId, companyId, isDefault = false) {
     const existing = await db.select().from(userCompanies).where(and(eq(userCompanies.userId, userId), eq(userCompanies.companyId, companyId))).limit(1);
@@ -1260,6 +1266,10 @@ var DatabaseStorage = class {
     const [party] = await db.select().from(parties).where(and(eq(parties.id, id), or(eq(parties.companyId, companyId), eq(parties.isShared, true))));
     return party;
   }
+  async getPartyByCode(code, companyId) {
+    const [party] = await db.select().from(parties).where(and(eq(parties.code, code), eq(parties.companyId, companyId)));
+    return party;
+  }
   async getNextPartyCode(companyId) {
     const [result] = await db.select({ maxCode: sql2`COALESCE(MAX(CAST(${parties.code} AS INTEGER)), 0)` }).from(parties).where(eq(parties.companyId, companyId));
     return String((result?.maxCode || 0) + 1);
@@ -1279,6 +1289,10 @@ var DatabaseStorage = class {
   }
   async getItem(id, companyId) {
     const [item] = await db.select().from(items).where(and(eq(items.id, id), or(eq(items.companyId, companyId), eq(items.isShared, true))));
+    return item;
+  }
+  async getItemByCode(code, companyId) {
+    const [item] = await db.select().from(items).where(and(eq(items.code, code), eq(items.companyId, companyId)));
     return item;
   }
   async getNextItemCode(companyId) {
@@ -1316,6 +1330,9 @@ var DatabaseStorage = class {
       updatedAt: /* @__PURE__ */ new Date()
     }).where(and(eq(items.id, id), eq(items.companyId, companyId))).returning();
     return updated;
+  }
+  async updateItemRates(id, sellingPrice, mrp, companyId) {
+    await db.update(items).set({ sellingPrice, mrp, updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(items.id, id), eq(items.companyId, companyId)));
   }
   // ==================== SALES OPERATIONS ====================
   async getSales(companyId) {
@@ -3110,8 +3127,7 @@ function getSession() {
     ttl: sessionTtl,
     tableName: "sessions"
   });
-  const enableInternetAccess = process.env.ENABLE_INTERNET_ACCESS === "true";
-  const shouldUseSecureCookies = enableInternetAccess;
+  const shouldUseSecureCookies = process.env.NODE_ENV === "production";
   console.log("[SESSION] \u2705 Session initialized");
   console.log("[SESSION] Node environment:", process.env.NODE_ENV);
   console.log("[SESSION] Using secure cookies:", shouldUseSecureCookies);
@@ -3223,56 +3239,6 @@ async function setupAuth(app2) {
       }
       res.json({ message: "Logged out successfully" });
     });
-  });
-  app2.get("/api/check-setup", async (req, res) => {
-    try {
-      const needsSetup = await storage.needsInitialSetup();
-      res.json({ needsSetup });
-    } catch (error) {
-      res.status(500).json({ message: "Error checking setup status" });
-    }
-  });
-  app2.post("/api/setup", async (req, res) => {
-    try {
-      const needsSetup = await storage.needsInitialSetup();
-      if (!needsSetup) {
-        return res.status(400).json({ message: "Setup already completed" });
-      }
-      const { username, password } = req.body;
-      if (!username || !password) {
-        return res.status(400).json({ message: "Username and password required" });
-      }
-      const passwordHash = await bcrypt.hash(password, 10);
-      const user = await storage.createUser({
-        username,
-        passwordHash,
-        role: "superadmin",
-        firstName: "Super",
-        lastName: "Admin"
-      });
-      console.log("[SETUP] Created superadmin user with role:", user.role);
-      req.login(user, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Setup successful but login failed" });
-        }
-        return res.json({ user });
-      });
-    } catch (error) {
-      console.error("Setup error:", error);
-      res.status(500).json({ message: "Setup failed" });
-    }
-  });
-  app2.post("/api/reset-db", async (req, res) => {
-    try {
-      const { pool: pool2 } = await Promise.resolve().then(() => (init_db(), db_exports));
-      await pool2.query("DELETE FROM users;");
-      await pool2.query("DELETE FROM sessions;");
-      console.log("\u2705 Database reset - setup required");
-      res.json({ message: "Database reset successfully. Please run setup again." });
-    } catch (error) {
-      console.error("Reset error:", error);
-      res.status(500).json({ message: "Reset failed" });
-    }
   });
 }
 var isAuthenticated = async (req, res, next) => {
@@ -3972,6 +3938,27 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch parties" });
     }
   });
+  app2.get("/api/parties/export", isAuthenticated, validateCompanyAccess, async (req, res) => {
+    try {
+      const parties2 = await storage.getParties(req.companyId);
+      const exportData = parties2.map((party) => ({
+        Code: party.code || "",
+        Name: party.name || "",
+        City: party.city || "",
+        State: party.state || "",
+        StateCode: party.stateCode || "",
+        Address: party.address || "",
+        GSTNo: party.gstNo || "",
+        Phone: party.phone || "",
+        OpeningDebit: parseFloat(party.openingDebit) || 0,
+        OpeningCredit: parseFloat(party.openingCredit) || 0
+      }));
+      res.json(exportData);
+    } catch (error) {
+      console.error("Export parties error:", error?.message || error);
+      res.status(500).json({ message: "Failed to export parties: " + (error?.message || "Unknown error") });
+    }
+  });
   app2.get("/api/parties/:id", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -4081,6 +4068,29 @@ async function registerRoutes(app2) {
       res.status(500).json({ message: "Failed to fetch items" });
     }
   });
+  app2.get("/api/items/export", isAuthenticated, validateCompanyAccess, async (req, res) => {
+    try {
+      const items2 = await storage.getItems(req.companyId);
+      const exportData = items2.map((item) => ({
+        Code: item.code || "",
+        Name: item.name || "",
+        HSN: item.hsnCode || "",
+        Category: item.category || "",
+        Floor: item.floor || "",
+        PackType: item.packType || "PCS",
+        Type: item.type || "product",
+        Cost: parseFloat(item.cost) || 0,
+        MRP: parseFloat(item.mrp) || 0,
+        SellingPrice: parseFloat(item.sellingPrice) || 0,
+        Tax: parseFloat(item.tax) || 0,
+        Active: item.active ? "Yes" : "No"
+      }));
+      res.json(exportData);
+    } catch (error) {
+      console.error("Export items error:", error?.message || error);
+      res.status(500).json({ message: "Failed to export items: " + (error?.message || "Unknown error") });
+    }
+  });
   app2.get("/api/items/:id", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -4133,6 +4143,103 @@ async function registerRoutes(app2) {
       }
       console.error("Error fetching item history:", error);
       res.status(500).json({ message: "Failed to fetch item history" });
+    }
+  });
+  app2.post("/api/items/import", isAuthenticated, validateCompanyAccess, async (req, res) => {
+    try {
+      const { rows } = req.body;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ message: "No data provided" });
+      }
+      const userId = req.user.id;
+      let created = 0, updated = 0;
+      const errors = [];
+      for (const row of rows) {
+        try {
+          const taxVal = parseFloat(row.Tax || row.tax || 0);
+          const itemData = {
+            code: String(row.Code || row.code || "").trim(),
+            name: String(row.Name || row.name || "").trim(),
+            hsnCode: String(row.HSN || row.hsnCode || "").trim(),
+            category: String(row.Category || row.category || "").trim(),
+            floor: String(row.Floor || row.floor || "").trim(),
+            packType: String(row.PackType || row.packType || "PCS").trim(),
+            type: String(row.Type || row.type || "product").trim().toLowerCase(),
+            cost: String(parseFloat(row.Cost || row.cost || 0)),
+            mrp: String(parseFloat(row.MRP || row.mrp || 0)),
+            sellingPrice: String(parseFloat(row.SellingPrice || row.sellingPrice || 0)),
+            tax: String(taxVal),
+            cgst: String(taxVal / 2),
+            sgst: String(taxVal / 2),
+            active: String(row.Active || "Yes").toLowerCase() !== "no"
+          };
+          if (!itemData.name) {
+            errors.push("Row skipped: missing Name");
+            continue;
+          }
+          if (itemData.code) {
+            const existing = await storage.getItemByCode(itemData.code, req.companyId);
+            if (existing) {
+              await storage.updateItem(existing.id, itemData, req.companyId);
+              updated++;
+              continue;
+            }
+          }
+          await storage.createItem(itemData, userId, req.companyId);
+          created++;
+        } catch (e) {
+          errors.push(e.message);
+        }
+      }
+      res.json({ message: "Import complete", created, updated, errors: errors.slice(0, 10) });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to import items" });
+    }
+  });
+  app2.post("/api/parties/import", isAuthenticated, validateCompanyAccess, async (req, res) => {
+    try {
+      const { rows } = req.body;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ message: "No data provided" });
+      }
+      const userId = req.user.id;
+      let created = 0, updated = 0;
+      const errors = [];
+      for (const row of rows) {
+        try {
+          const partyData = {
+            code: String(row.Code || row.code || "").trim(),
+            name: String(row.Name || row.name || "").trim(),
+            city: String(row.City || row.city || "N/A").trim() || "N/A",
+            state: String(row.State || row.state || "").trim(),
+            stateCode: String(row.StateCode || row.stateCode || "").trim(),
+            address: String(row.Address || row.address || "").trim(),
+            gstNo: String(row.GSTNo || row.gstNo || row.GST || "").trim(),
+            phone: String(row.Phone || row.phone || "").trim(),
+            openingDebit: String(parseFloat(row.OpeningDebit || row.openingDebit || 0)),
+            openingCredit: String(parseFloat(row.OpeningCredit || row.openingCredit || 0))
+          };
+          if (!partyData.name) {
+            errors.push("Row skipped: missing Name");
+            continue;
+          }
+          if (partyData.code) {
+            const existing = await storage.getPartyByCode(partyData.code, req.companyId);
+            if (existing) {
+              await storage.updateParty(existing.id, partyData, req.companyId);
+              updated++;
+              continue;
+            }
+          }
+          await storage.createParty(partyData, userId, req.companyId);
+          created++;
+        } catch (e) {
+          errors.push(e.message);
+        }
+      }
+      res.json({ message: "Import complete", created, updated, errors: errors.slice(0, 10) });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to import parties" });
     }
   });
   app2.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req, res) => {
@@ -4699,6 +4806,11 @@ async function registerRoutes(app2) {
   app2.post("/api/purchase-items", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
       const item = await storage.addPurchaseItem(req.body, req.companyId);
+      if (item.itemId && item.rrate) {
+        const sellingPrice = Math.round(parseFloat(item.rrate)).toString();
+        const mrp = item.mrp ? Math.round(parseFloat(item.mrp)).toString() : sellingPrice;
+        await storage.updateItemRates(item.itemId, sellingPrice, mrp, req.companyId);
+      }
       res.json(item);
     } catch (error) {
       console.error("Error adding purchase item:", error);
@@ -4709,6 +4821,11 @@ async function registerRoutes(app2) {
     try {
       const id = parseInt(req.params.id);
       const item = await storage.updatePurchaseItem(id, req.body, req.companyId);
+      if (item.itemId && item.rrate) {
+        const sellingPrice = Math.round(parseFloat(item.rrate)).toString();
+        const mrp = item.mrp ? Math.round(parseFloat(item.mrp)).toString() : sellingPrice;
+        await storage.updateItemRates(item.itemId, sellingPrice, mrp, req.companyId);
+      }
       res.json(item);
     } catch (error) {
       console.error("Error updating purchase item:", error);

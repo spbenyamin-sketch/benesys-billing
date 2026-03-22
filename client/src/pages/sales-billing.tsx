@@ -152,7 +152,7 @@ export default function SalesBilling() {
             updated.itemCode = selectedItem.code;
             updated.itemName = selectedItem.name;
             updated.hsnCode = selectedItem.hsnCode || "";
-            updated.rate = parseFloat(selectedItem.cost);
+            updated.rate = parseFloat(selectedItem.sellingPrice || selectedItem.cost);
             updated.taxRate = parseFloat(selectedItem.tax);
             updated.cgstRate = parseFloat(selectedItem.cgst);
             updated.sgstRate = parseFloat(selectedItem.sgst);

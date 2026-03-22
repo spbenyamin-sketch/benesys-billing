@@ -107,6 +107,7 @@ export interface IStorage {
   getItemByCode(code: string, companyId: number): Promise<Item | undefined>;
   createItem(item: InsertItem, userId: string, companyId: number): Promise<Item>;
   updateItem(id: number, item: InsertItem, companyId: number): Promise<Item>;
+  updateItemRates(id: number, sellingPrice: string, mrp: string, companyId: number): Promise<void>;
 
   // Sales operations
   getSales(companyId: number): Promise<Sale[]>;
@@ -818,6 +819,13 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(items.id, id), eq(items.companyId, companyId)))
       .returning();
     return updated;
+  }
+
+  async updateItemRates(id: number, sellingPrice: string, mrp: string, companyId: number): Promise<void> {
+    await db
+      .update(items)
+      .set({ sellingPrice, mrp, updatedAt: new Date() })
+      .where(and(eq(items.id, id), eq(items.companyId, companyId)));
   }
 
   // ==================== SALES OPERATIONS ====================
