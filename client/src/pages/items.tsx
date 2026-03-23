@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,13 +97,24 @@ interface Item {
 
 export default function Items() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const LIMIT = 50;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const { toast } = useToast();
 
-  const { data: items, isLoading } = useQuery<Item[]>({
-    queryKey: ["/api/items"],
+  useEffect(() => { setPage(1); }, [searchQuery]);
+
+  const { data: itemsData, isLoading } = useQuery<{ data: Item[]; total: number; page: number; limit: number }>({
+    queryKey: ["/api/items", page, searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), search: searchQuery });
+      const res = await fetch(`/api/items?${params}`, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
+      if (!res.ok) throw new Error("Failed to fetch items");
+      return res.json();
+    },
   });
+  const items = itemsData?.data;
 
   const form = useForm<ItemFormValues>({
     resolver: zodResolver(itemFormSchema),
@@ -201,11 +212,7 @@ export default function Items() {
     setIsDialogOpen(true);
   };
 
-  const filteredItems = items?.filter((item) =>
-    item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.category?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredItems = items;
 
   return (
     <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
@@ -536,6 +543,17 @@ export default function Items() {
                   Add your first item to get started
                 </p>
               )}
+            </div>
+          )}
+          {itemsData && itemsData.total > LIMIT && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                {((page - 1) * LIMIT) + 1}–{Math.min(page * LIMIT, itemsData.total)} of {itemsData.total} items
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={page * LIMIT >= itemsData.total} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
             </div>
           )}
         </CardContent>

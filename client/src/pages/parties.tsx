@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,14 +102,25 @@ interface Agent {
 
 export default function Parties() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [page, setPage] = useState(1);
+  const LIMIT = 50;
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingParty, setEditingParty] = useState<Party | null>(null);
   const [shippingOpen, setShippingOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: parties, isLoading } = useQuery<Party[]>({
-    queryKey: ["/api/parties"],
+  useEffect(() => { setPage(1); }, [searchQuery]);
+
+  const { data: partiesData, isLoading } = useQuery<{ data: Party[]; total: number; page: number; limit: number }>({
+    queryKey: ["/api/parties", page, searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), search: searchQuery });
+      const res = await fetch(`/api/parties?${params}`, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
+      if (!res.ok) throw new Error("Failed to fetch parties");
+      return res.json();
+    },
   });
+  const parties = partiesData?.data;
 
   const { data: agents } = useQuery<Agent[]>({
     queryKey: ["/api/agents"],
@@ -249,11 +260,7 @@ export default function Parties() {
     setIsDialogOpen(true);
   };
 
-  const filteredParties = parties?.filter((party) =>
-    party.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    party.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    party.city?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredParties = parties;
 
   const activeAgents = agents?.filter(agent => agent.active) || [];
 
@@ -696,6 +703,17 @@ export default function Parties() {
               <p className="text-sm text-muted-foreground">
                 Get started by adding your first customer
               </p>
+            </div>
+          )}
+          {partiesData && partiesData.total > LIMIT && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                {((page - 1) * LIMIT) + 1}–{Math.min(page * LIMIT, partiesData.total)} of {partiesData.total} customers
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={page * LIMIT >= partiesData.total} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
             </div>
           )}
         </CardContent>

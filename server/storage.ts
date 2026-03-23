@@ -57,7 +57,7 @@ import {
   type InsertBillSequence,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne, inArray } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne, inArray, ilike, count } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -677,6 +677,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(parties.createdAt));
   }
 
+  async getPartiesPaginated(companyId: number, page: number, limit: number, search: string): Promise<{ data: Party[]; total: number; page: number; limit: number }> {
+    const base = or(eq(parties.companyId, companyId), eq(parties.isShared, true))!;
+    const conditions = search
+      ? and(base, or(ilike(parties.name, `%${search}%`), ilike(parties.code, `%${search}%`), ilike(parties.city, `%${search}%`))!)!
+      : base;
+    const [{ total }] = await db.select({ total: count() }).from(parties).where(conditions);
+    const data = await db.select().from(parties).where(conditions).orderBy(desc(parties.createdAt)).limit(limit).offset((page - 1) * limit);
+    return { data: data as Party[], total: Number(total), page, limit };
+  }
+
   async getParty(id: number, companyId: number): Promise<Party | undefined> {
     // Allow access to company-specific parties or shared parties
     const [party] = await db
@@ -716,6 +726,16 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(parties.id, id), eq(parties.companyId, companyId)))
       .returning();
     return updated;
+  }
+
+  async getItemsPaginated(companyId: number, page: number, limit: number, search: string): Promise<{ data: Item[]; total: number; page: number; limit: number }> {
+    const base = or(eq(items.companyId, companyId), eq(items.isShared, true))!;
+    const conditions = search
+      ? and(base, or(ilike(items.name, `%${search}%`), ilike(items.code, `%${search}%`), ilike(items.category, `%${search}%`))!)!
+      : base;
+    const [{ total }] = await db.select({ total: count() }).from(items).where(conditions);
+    const data = await db.select().from(items).where(conditions).orderBy(desc(items.createdAt)).limit(limit).offset((page - 1) * limit);
+    return { data: data as Item[], total: Number(total), page, limit };
   }
 
   // ==================== ITEM OPERATIONS ====================
@@ -815,6 +835,16 @@ export class DatabaseStorage implements IStorage {
       .from(sales)
       .where(eq(sales.companyId, companyId))
       .orderBy(desc(sales.date), desc(sales.id));
+  }
+
+  async getSalesPaginated(companyId: number, page: number, limit: number, search: string): Promise<{ data: Sale[]; total: number; page: number; limit: number }> {
+    const base = eq(sales.companyId, companyId);
+    const conditions = search
+      ? and(base, or(ilike(sales.partyName, `%${search}%`), sql`${sales.invoiceNo}::text ILIKE ${'%' + search + '%'}`)!)!
+      : base;
+    const [{ total }] = await db.select({ total: count() }).from(sales).where(conditions);
+    const data = await db.select().from(sales).where(conditions).orderBy(desc(sales.date), desc(sales.id)).limit(limit).offset((page - 1) * limit);
+    return { data: data as Sale[], total: Number(total), page, limit };
   }
 
   async getSale(id: number, companyId: number): Promise<Sale | undefined> {

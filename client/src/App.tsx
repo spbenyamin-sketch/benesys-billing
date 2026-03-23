@@ -56,6 +56,7 @@ import BarcodeLookup from "@/pages/barcode-lookup";
 import PurchaseDetails from "@/pages/purchase-details";
 import FinancialYears from "@/pages/financial-years";
 import { FinancialYearSwitcher } from "@/components/FinancialYearSwitcher";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function ProtectedRoute({ path, component: Component }: { path: string; component: any }) {
   const { canAccess } = usePermissions();
@@ -187,7 +188,9 @@ function AppContent() {
                 </div>
               </header>
               <main className="flex-1 overflow-y-auto overflow-x-hidden">
-                <Router />
+                <ErrorBoundary>
+                  <Router />
+                </ErrorBoundary>
               </main>
             </div>
           </div>

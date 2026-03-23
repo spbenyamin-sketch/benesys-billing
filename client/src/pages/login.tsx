@@ -13,16 +13,12 @@ import { LogIn, Loader2 } from "lucide-react";
 export default function Login() {
   const { toast } = useToast();
   const [username, setUsername] = useState(() => localStorage.getItem("savedUsername") || "");
-  const [password, setPassword] = useState(() => localStorage.getItem("savedPassword") || "");
+  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(() => localStorage.getItem("rememberMe") === "true");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const doLogin = async () => {
-    console.log("[LOGIN] ========== BUTTON CLICKED ==========");
-    console.log("[LOGIN] Username:", username);
-    console.log("[LOGIN] Password length:", password.length);
-
     setErrorMessage("");
 
     if (!username.trim()) {
@@ -35,16 +31,12 @@ export default function Login() {
     }
 
     setIsLoading(true);
-    console.log("[LOGIN] Starting fetch to /api/login...");
 
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
       
       const payload = { username: username.trim(), password };
-      console.log("[LOGIN] Sending fetch with payload:", JSON.stringify(payload));
-      console.log("[LOGIN] Current URL:", window.location.href);
-      console.log("[LOGIN] Request details - method: POST, path: /api/login, credentials: include");
 
       const response = await fetch("/api/login", {
         method: "POST",
@@ -58,29 +50,22 @@ export default function Login() {
       });
 
       clearTimeout(timeoutId);
-      console.log("[LOGIN] ✅ Fetch returned! Status:", response.status);
-      console.log("[LOGIN] Response headers - content-type:", response.headers.get("content-type"));
-      console.log("[LOGIN] Response cookies should be set (credentials: include)");
-
       const data = await response.json();
-      console.log("[LOGIN] Response data:", data);
 
       if (!response.ok) {
         throw new Error(data.message || `Login failed (${response.status})`);
       }
 
-      console.log("[LOGIN] SUCCESS! User:", data.user?.username);
-
-      // Handle remember me
+      // Handle remember me — only store username, NEVER password
       if (rememberMe) {
         localStorage.setItem("savedUsername", username);
-        localStorage.setItem("savedPassword", password);
         localStorage.setItem("rememberMe", "true");
       } else {
         localStorage.removeItem("savedUsername");
-        localStorage.removeItem("savedPassword");
         localStorage.removeItem("rememberMe");
       }
+      // Always clear any previously stored password (security cleanup)
+      localStorage.removeItem("savedPassword");
 
       // Clear storage and redirect
       sessionStorage.removeItem("hasSelectedCompany");

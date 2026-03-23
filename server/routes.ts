@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./localAuth";
 import { validateCompanyAccess } from "./companyMiddleware";
 import { runMigrations } from "./db";
+import { logger } from "./logger";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { readFileSync, existsSync } from "fs";
@@ -555,10 +556,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== PARTY ROUTES ====================
   app.get("/api/parties", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
+      const { page, limit, search } = req.query;
+      if (page !== undefined) {
+        const pageNum = Math.max(1, parseInt(String(page)) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit)) || 50));
+        const result = await storage.getPartiesPaginated(req.companyId, pageNum, limitNum, String(search || ""));
+        return res.json(result);
+      }
       const parties = await storage.getParties(req.companyId);
       res.json(parties);
     } catch (error) {
-      console.error("Error fetching parties:", error);
+      logger.error({ error }, "Error fetching parties");
       res.status(500).json({ message: "Failed to fetch parties" });
     }
   });
@@ -698,10 +706,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== ITEM ROUTES ====================
   app.get("/api/items", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
+      const { page, limit, search } = req.query;
+      if (page !== undefined) {
+        const pageNum = Math.max(1, parseInt(String(page)) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit)) || 50));
+        const result = await storage.getItemsPaginated(req.companyId, pageNum, limitNum, String(search || ""));
+        return res.json(result);
+      }
       const items = await storage.getItems(req.companyId);
       res.json(items);
     } catch (error) {
-      console.error("Error fetching items:", error);
+      logger.error({ error }, "Error fetching items");
       res.status(500).json({ message: "Failed to fetch items" });
     }
   });
@@ -880,10 +895,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== SALES ROUTES ====================
   app.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
+      const { page, limit, search } = req.query;
+      if (page !== undefined) {
+        const pageNum = Math.max(1, parseInt(String(page)) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit)) || 50));
+        const result = await storage.getSalesPaginated(req.companyId, pageNum, limitNum, String(search || ""));
+        return res.json(result);
+      }
       const sales = await storage.getSales(req.companyId);
       res.json(sales);
     } catch (error) {
-      console.error("Error fetching sales:", error);
+      logger.error({ error }, "Error fetching sales");
       res.status(500).json({ message: "Failed to fetch sales" });
     }
   });

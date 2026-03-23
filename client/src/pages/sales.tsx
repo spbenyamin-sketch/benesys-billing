@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,8 @@ export default function Sales() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("");
   const [saleTypeFilter, setSaleTypeFilter] = useState<string>("all");
+  const [page, setPage] = useState(1);
+  const LIMIT = 50;
   const [, setLocation] = useLocation();
   const printRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
@@ -76,9 +78,18 @@ export default function Sales() {
     qrCode: "",
   });
 
-  const { data: sales, isLoading } = useQuery<Sale[]>({
-    queryKey: ["/api/sales"],
+  useEffect(() => { setPage(1); }, [searchQuery, dateFilter, saleTypeFilter]);
+
+  const { data: salesData, isLoading } = useQuery<{ data: Sale[]; total: number; page: number; limit: number }>({
+    queryKey: ["/api/sales", page, searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT), search: searchQuery });
+      const res = await fetch(`/api/sales?${params}`, { credentials: "include", headers: { "X-Company-Id": localStorage.getItem("currentCompanyId") || "" } });
+      if (!res.ok) throw new Error("Failed to fetch sales");
+      return res.json();
+    },
   });
+  const sales = salesData?.data;
 
   const deleteMutation = useMutation({
     mutationFn: async (saleId: number) => {
@@ -91,7 +102,7 @@ export default function Sales() {
         title: "Success",
         description: "Sale deleted successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"], exact: false });
     },
     onError: () => {
       toast({
@@ -120,7 +131,7 @@ export default function Sales() {
         title: "Success",
         description: "E-Invoice details saved successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/sales"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sales"], exact: false });
       setEinvoiceDialogOpen(false);
       setSelectedSaleForEinvoice(null);
       setEinvoiceForm({ irn: "", ackNumber: "", ackDate: "", qrCode: "" });
@@ -188,17 +199,11 @@ export default function Sales() {
     });
   };
 
+  // Date and type filters applied client-side (server handles search)
   const filteredSales = sales?.filter((sale) => {
-    const matchesSearch = 
-      sale.invoiceNo.toString().includes(searchQuery) ||
-      sale.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sale.saleType?.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesDate = !dateFilter || sale.date === dateFilter;
-    
     const matchesSaleType = saleTypeFilter === "all" || sale.saleType === saleTypeFilter;
-    
-    return matchesSearch && matchesDate && matchesSaleType;
+    return matchesDate && matchesSaleType;
   });
 
   const totalAmount = filteredSales?.reduce((sum, sale) => sum + parseFloat(sale.grandTotal), 0) || 0;
@@ -411,6 +416,17 @@ export default function Sales() {
                   <Link href="/sales/new" data-testid="button-create-first-invoice">Create First Invoice</Link>
                 </Button>
               )}
+            </div>
+          )}
+          {salesData && salesData.total > LIMIT && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                {((page - 1) * LIMIT) + 1}–{Math.min(page * LIMIT, salesData.total)} of {salesData.total} sales
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                <Button variant="outline" size="sm" disabled={page * LIMIT >= salesData.total} onClick={() => setPage(p => p + 1)}>Next</Button>
+              </div>
             </div>
           )}
         </CardContent>
