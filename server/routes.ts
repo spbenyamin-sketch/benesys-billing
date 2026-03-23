@@ -936,6 +936,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user.id;
       const sale = await storage.createSale(saleData, saleItems, userId, req.companyId);
+      storage.createAuditLog({
+        userId,
+        companyId: req.companyId,
+        entityType: "sale",
+        entityId: sale.id,
+        action: "create",
+        newData: sale,
+        ipAddress: req.ip,
+      });
       res.json(sale);
     } catch (error) {
       console.error("Error creating sale:", error);
@@ -1006,9 +1015,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const sale = await storage.updateSale(parseInt(req.params.id), saleData, saleItems, req.companyId);
+      const saleId = parseInt(req.params.id);
+      const existingSale = await storage.getSale(saleId, req.companyId);
+      const sale = await storage.updateSale(saleId, saleData, saleItems, req.companyId);
+      storage.createAuditLog({
+        userId: req.user?.id,
+        companyId: req.companyId,
+        entityType: "sale",
+        entityId: saleId,
+        action: "update",
+        oldData: existingSale,
+        newData: sale,
+        ipAddress: req.ip,
+      });
       res.json(sale);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.status === 409) return res.status(409).json({ message: error.message });
       console.error("Error updating sale:", error);
       res.status(500).json({ message: "Failed to update sale" });
     }
@@ -1484,9 +1506,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.put("/api/purchase-entries/:id", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
+      const existing = await storage.getPurchase(id, req.companyId);
       const purchase = await storage.updatePurchase(id, req.body, req.companyId);
+      storage.createAuditLog({
+        userId: req.user?.id,
+        companyId: req.companyId,
+        entityType: "purchase",
+        entityId: id,
+        action: "update",
+        oldData: existing,
+        newData: purchase,
+        ipAddress: req.ip,
+      });
       res.json(purchase);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.status === 409) return res.status(409).json({ message: error.message });
       console.error("Error updating purchase entry:", error);
       res.status(500).json({ message: "Failed to update purchase entry" });
     }
@@ -2211,5 +2245,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ==================== AUDIT LOGS ====================
+
+  app.get("/api/audit-logs", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
+    try {
+      const { entityType, entityId, limit } = req.query;
+      const logs = await storage.getAuditLogs(req.companyId, {
+        entityType: entityType ? String(entityType) : undefined,
+        entityId: entityId ? parseInt(String(entityId)) : undefined,
+        limit: limit ? Math.min(500, parseInt(String(limit))) : 100,
+      });
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
+    }
+  });
+
   return httpServer;
 }

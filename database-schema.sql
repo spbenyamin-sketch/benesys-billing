@@ -521,6 +521,39 @@ CREATE INDEX IF NOT EXISTS idx_user_companies_user_id ON user_companies(user_id)
 CREATE INDEX IF NOT EXISTS idx_user_companies_company_id ON user_companies(company_id);
 
 -- ============================================================================
+-- FULL-TEXT SEARCH: pg_trgm GIN indexes for fast ILIKE queries
+-- ============================================================================
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+CREATE INDEX IF NOT EXISTS idx_parties_name_trgm ON parties USING GIN (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_parties_code_trgm ON parties USING GIN (code gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_parties_city_trgm ON parties USING GIN (city gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_items_name_trgm ON items USING GIN (name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_items_code_trgm ON items USING GIN (code gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_items_category_trgm ON items USING GIN (category gin_trgm_ops);
+
+-- ============================================================================
+-- AUDIT LOGS TABLE
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id serial PRIMARY KEY,
+  user_id varchar REFERENCES users(id),
+  company_id integer NOT NULL REFERENCES companies(id),
+  entity_type varchar(50) NOT NULL,
+  entity_id integer NOT NULL,
+  action varchar(20) NOT NULL,
+  old_data jsonb,
+  new_data jsonb,
+  ip_address varchar(45),
+  created_at timestamp DEFAULT NOW() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_company ON audit_logs(company_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(company_id, entity_type, entity_id);
+
+-- ============================================================================
 -- MIGRATION SCRIPTS FOR EXISTING INSTALLATIONS
 -- Run these to update schema if upgrading from an older version
 -- ============================================================================
@@ -533,10 +566,12 @@ ALTER TABLE companies ADD COLUMN IF NOT EXISTS fy_start_day integer DEFAULT 1;
 -- Add missing columns to sales table if not exists
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS financial_year_id integer REFERENCES financial_years(id);
 ALTER TABLE sales ADD COLUMN IF NOT EXISTS invoice_code varchar(50);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS version integer NOT NULL DEFAULT 1;
 
 -- Add missing columns to purchases table if not exists
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS financial_year_id integer REFERENCES financial_years(id);
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS purchase_code varchar(50);
+ALTER TABLE purchases ADD COLUMN IF NOT EXISTS version integer NOT NULL DEFAULT 1;
 
 -- Add missing columns to payments table if not exists
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS debit decimal(12,2) DEFAULT 0;

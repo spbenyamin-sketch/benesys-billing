@@ -368,6 +368,7 @@ export const sales = pgTable("sales", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
+  version: integer("version").default(1).notNull(),
 });
 
 export const insertSaleSchema = createInsertSchema(sales).omit({
@@ -474,6 +475,7 @@ export const purchases = pgTable("purchases", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   createdBy: varchar("created_by").references(() => users.id),
+  version: integer("version").default(1).notNull(),
 });
 
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({
@@ -916,3 +918,22 @@ export const stockRelations = relations(stock, ({ one }) => ({
     references: [items.id],
   }),
 }));
+
+// ============================================================================
+// AUDIT LOGS
+// ============================================================================
+
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // sale, purchase, payment, party, item
+  entityId: integer("entity_id").notNull(),
+  action: varchar("action", { length: 20 }).notNull(), // create, update, delete
+  oldData: jsonb("old_data"),
+  newData: jsonb("new_data"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type AuditLog = typeof auditLogs.$inferSelect;

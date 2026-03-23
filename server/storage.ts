@@ -55,6 +55,8 @@ import {
   type InsertFinancialYear,
   type BillSequence,
   type InsertBillSequence,
+  auditLogs,
+  type AuditLog,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne, inArray, ilike, count } from "drizzle-orm";
@@ -961,6 +963,13 @@ export class DatabaseStorage implements IStorage {
     if (!existingSale) {
       throw new Error("Sale not found");
     }
+
+    // Optimistic locking: reject stale updates
+    if (saleData.version !== undefined && existingSale.version !== saleData.version) {
+      const err = new Error("Sale was modified by another user. Please refresh and try again.");
+      (err as any).status = 409;
+      throw err;
+    }
     const existingItems = await this.getSaleItems(id, companyId);
 
     // SECURITY: Validate all new items belong to this company
@@ -1030,11 +1039,14 @@ export class DatabaseStorage implements IStorage {
     };
 
     // Update sale (keep same invoice number and creation metadata)
+    const { version: _v, ...mergedSaleDataNoVersion } = mergedSaleData as any;
     const [updatedSale] = await db
       .update(sales)
       .set({
-        ...mergedSaleData,
+        ...mergedSaleDataNoVersion,
         invoiceNo: existingSale.invoiceNo,
+        version: sql`${sales.version} + 1`,
+        updatedAt: new Date(),
       })
       .where(and(eq(sales.id, id), eq(sales.companyId, companyId)))
       .returning();
@@ -2942,10 +2954,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updatePurchase(id: number, purchaseData: Partial<InsertPurchase>, companyId: number): Promise<Purchase> {
+    // Optimistic locking: reject stale updates
+    if (purchaseData.version !== undefined) {
+      const existing = await this.getPurchase(id, companyId);
+      if (!existing) throw new Error("Purchase not found");
+      if (existing.version !== purchaseData.version) {
+        const err = new Error("Purchase was modified by another user. Please refresh and try again.");
+        (err as any).status = 409;
+        throw err;
+      }
+    }
+    const { version: _v, ...dataNoVersion } = purchaseData as any;
     const [updated] = await db
       .update(purchases)
       .set({
-        ...purchaseData,
+        ...dataNoVersion,
+        version: sql`${purchases.version} + 1`,
         updatedAt: new Date(),
       })
       .where(and(eq(purchases.id, id), eq(purchases.companyId, companyId)))
@@ -3405,6 +3429,46 @@ export class DatabaseStorage implements IStorage {
       .from(stockInwardItems)
       .leftJoin(items, eq(stockInwardItems.itemId, items.id))
       .where(inArray(stockInwardItems.id, ids));
+  }
+
+  // ==================== AUDIT LOGS ====================
+
+  async createAuditLog(entry: {
+    userId?: string;
+    companyId: number;
+    entityType: string;
+    entityId: number;
+    action: string;
+    oldData?: any;
+    newData?: any;
+    ipAddress?: string;
+  }): Promise<void> {
+    try {
+      await db.insert(auditLogs).values({
+        userId: entry.userId ?? null,
+        companyId: entry.companyId,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        action: entry.action,
+        oldData: entry.oldData ?? null,
+        newData: entry.newData ?? null,
+        ipAddress: entry.ipAddress ?? null,
+      });
+    } catch {
+      // Audit log failures must never break the main operation
+    }
+  }
+
+  async getAuditLogs(companyId: number, filters?: { entityType?: string; entityId?: number; limit?: number }): Promise<AuditLog[]> {
+    const conditions: any[] = [eq(auditLogs.companyId, companyId)];
+    if (filters?.entityType) conditions.push(eq(auditLogs.entityType, filters.entityType));
+    if (filters?.entityId) conditions.push(eq(auditLogs.entityId, filters.entityId));
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(and(...conditions))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(filters?.limit ?? 500);
   }
 }
 
