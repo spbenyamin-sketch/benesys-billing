@@ -9,6 +9,38 @@ import express, {
   NextFunction,
 } from "express";
 
+// ── CSRF protection ───────────────────────────────────────────────────────────
+// Verifies that mutating requests (POST/PUT/PATCH/DELETE) originate from the
+// same host.  Cross-origin requests from malicious sites carry a different
+// Origin header, so this blocks forged submissions without any token round-trip.
+function csrfProtection(req: Request, res: Response, next: NextFunction) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+
+  // Public endpoints that must work before a session exists
+  const publicPaths = ["/api/login", "/api/logout", "/api/health", "/api/check-setup", "/api/setup"];
+  if (publicPaths.some(p => req.path === p || req.path.startsWith("/api/setup"))) return next();
+
+  const host = req.headers.host;
+  if (!host) return next(); // can't validate — allow (no host = internal request)
+
+  const origin = req.headers.origin as string | undefined;
+  const referer = req.headers.referer as string | undefined;
+
+  let reqHost: string | null = null;
+  if (origin) {
+    try { reqHost = new URL(origin).host; } catch { /* ignore */ }
+  } else if (referer) {
+    try { reqHost = new URL(referer).host; } catch { /* ignore */ }
+  }
+
+  // If we can determine the request host and it doesn't match — reject
+  if (reqHost && reqHost !== host) {
+    return res.status(403).json({ message: "Invalid request origin" });
+  }
+
+  next();
+}
+
 import { registerRoutes } from "./routes";
 
 export function log(message: string, source = "express") {
@@ -61,6 +93,7 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+app.use(csrfProtection);
 
 app.use((req, res, next) => {
   const start = Date.now();

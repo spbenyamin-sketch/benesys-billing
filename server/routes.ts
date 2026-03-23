@@ -1,5 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+
+// ── Password policy ───────────────────────────────────────────────────────────
+// Min 10 chars, at least one uppercase, one lowercase, one digit.
+function validatePassword(password: string): string | null {
+  if (!password || password.length < 10) return "Password must be at least 10 characters";
+  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
+  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
+  if (!/[0-9]/.test(password)) return "Password must contain at least one number";
+  return null; // valid
+}
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./localAuth";
@@ -82,9 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Username and password are required" });
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
+      const pwError = validatePassword(password);
+      if (pwError) return res.status(400).json({ message: pwError });
 
       // Check if username already exists
       const existingUser = await storage.getUserByUsername(username);
@@ -220,9 +229,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only super admin can update passwords" });
       }
       const { password } = req.body;
-      if (!password || password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
+      const pwError = validatePassword(password);
+      if (pwError) return res.status(400).json({ message: pwError });
       const passwordHash = await bcrypt.hash(password, 10);
       const user = await storage.updateUserPassword(req.params.id, passwordHash);
       res.json(user);
@@ -241,7 +249,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const createUserSchema = z.object({
         username: z.string().min(1, "Username is required"),
-        password: z.string().min(6, "Password must be at least 6 characters"),
+        password: z.string().refine(p => validatePassword(p) === null, { message: "Password must be 10+ chars with uppercase, lowercase, and a number" }),
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         email: z.string().email().optional().or(z.literal("")),

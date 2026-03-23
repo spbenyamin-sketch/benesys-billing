@@ -52,7 +52,7 @@ export function getSession() {
   }
   
   const secret = sessionSecret || "dev-insecure-secret-change-in-production";
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 8 * 60 * 60 * 1000; // 8 hours
   const pgStore = connectPg(session);
   const isLocalDb = process.env.DATABASE_URL?.includes('localhost') || process.env.DATABASE_URL?.includes('127.0.0.1');
   const sessionStore = new pgStore({
