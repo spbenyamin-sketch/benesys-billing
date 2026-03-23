@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import pg from 'pg';
 import * as schema from "@shared/schema";
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { logger } from "./logger";
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -22,7 +23,7 @@ export const pool = new Pool({
 
 // Handle pool connection errors
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+  logger.error({ err }, 'Unexpected error on idle DB client');
 });
 
 export const db = drizzle({ client: pool, schema });
@@ -37,24 +38,21 @@ export async function runMigrations() {
     const migrationsFolderExists = fs.existsSync(migrationsPath);
     
     if (!migrationsFolderExists) {
-      console.log('📝 No migrations folder found - database schema will be created on first use');
-      // Just verify database connection
+      logger.info('No migrations folder found — schema created on first use');
       try {
         await db.execute('SELECT 1');
-        console.log('✅ Database connection verified');
+        logger.info('Database connection verified');
       } catch (dbError) {
-        console.error('❌ Database connection failed:', dbError);
+        logger.error({ err: dbError }, 'Database connection failed');
         throw dbError;
       }
       return;
     }
-    
-    console.log('🔄 Running database migrations...');
+
+    logger.info('Running database migrations...');
     await migrate(db, { migrationsFolder: './migrations' });
-    console.log('✅ Migrations completed successfully');
+    logger.info('Migrations completed successfully');
   } catch (error: any) {
-    console.error('⚠️  Migration warning:', error.message);
-    // Don't fail startup for migration issues - schema will be created on first use
-    console.log('✅ Continuing startup - schema will be created as needed');
+    logger.warn({ msg: error.message }, 'Migration warning — continuing startup');
   }
 }

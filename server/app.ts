@@ -64,7 +64,8 @@ declare module 'http' {
 const isProd = process.env.NODE_ENV === "production";
 
 if (isProd && !process.env.SESSION_SECRET) {
-  console.error("FATAL: SESSION_SECRET env var is not set in production. Exiting.");
+  // Must use process.stderr before logger is wired up
+  process.stderr.write("FATAL: SESSION_SECRET env var is not set in production. Exiting.\n");
   process.exit(1);
 }
 

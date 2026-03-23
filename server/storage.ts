@@ -59,6 +59,7 @@ import {
   type AuditLog,
 } from "@shared/schema";
 import { db } from "./db";
+import { logger } from "./logger";
 import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne, inArray, ilike, count } from "drizzle-orm";
 
 export interface IStorage {
@@ -307,27 +308,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(user: Partial<UpsertUser>): Promise<User> {
-    console.log('[STORAGE] createUser called with:', { 
-      username: user.username, 
-      role: user.role,
-      firstName: user.firstName 
-    });
-    
     const results = await db.insert(users).values({
       username: user.username,
       passwordHash: user.passwordHash,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role || 'user', // Ensure role is explicitly set
+      role: user.role || 'user',
       pagePermissions: user.pagePermissions || [],
     }).returning();
-    
-    console.log('[STORAGE] createUser result:', { 
-      id: results[0]?.id, 
-      username: results[0]?.username,
-      role: results[0]?.role 
-    });
+
+    logger.debug({ username: results[0]?.username, role: results[0]?.role }, 'User created');
     
     return results[0];
   }
@@ -358,7 +349,7 @@ export class DatabaseStorage implements IStorage {
       // Setup is needed if no superadmin with password exists
       return superadminUsers.length === 0;
     } catch (error) {
-      console.error("Error checking setup status:", error);
+      logger.error("Error checking setup status:", error);
       // If database is unavailable, assume setup is needed
       return true;
     }
@@ -3416,7 +3407,7 @@ export class DatabaseStorage implements IStorage {
         };
       });
     } catch (error) {
-      console.error("Error fetching agent commission report:", error);
+      logger.error("Error fetching agent commission report:", error);
       return [];
     }
   }
