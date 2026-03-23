@@ -62,6 +62,9 @@ declare module 'http' {
   }
 }
 const isProd = process.env.NODE_ENV === "production";
+// Set SECURE_COOKIES=true when running behind an HTTPS proxy (web server).
+// Leave unset for plain HTTP local deployments.
+const isHttps = process.env.SECURE_COOKIES === "true";
 
 if (isProd && !process.env.SESSION_SECRET) {
   // Must use process.stderr before logger is wired up
@@ -83,9 +86,16 @@ app.use(helmet({
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
           frameAncestors: ["'none'"],
+          // upgrade-insecure-requests: enabled on HTTPS web, disabled on HTTP local
+          ...(isHttps ? {} : { upgradeInsecureRequests: null }),
         },
       }
     : false, // dev: CSP off for Vite HMR
+  // HSTS: enabled on HTTPS web (1 year), disabled on HTTP local
+  strictTransportSecurity: isHttps
+    ? { maxAge: 31536000, includeSubDomains: true }
+    : false,
+  crossOriginOpenerPolicy: false, // disable COOP — causes browser warnings over plain HTTP
 }));
 app.use(compression());
 app.use(express.json({

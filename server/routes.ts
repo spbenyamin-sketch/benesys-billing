@@ -12,6 +12,7 @@ function validatePassword(password: string): string | null {
   return null; // valid
 }
 import { WebSocketServer, WebSocket } from "ws";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./localAuth";
 import { validateCompanyAccess } from "./companyMiddleware";
@@ -40,6 +41,25 @@ import { ObjectStorageService } from "./objectStorage";
 
 // Store connected print clients
 const printClients: Map<string, WebSocket> = new Map();
+
+// ── Rate limiters ──────────────────────────────────────────────────────────────
+// Setup endpoint: 5 attempts per hour (prevents superadmin creation brute-force)
+const setupRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { message: "Too many setup attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// User creation: 20 per hour per IP (prevents account creation abuse)
+const createUserRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { message: "Too many account creation attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Helper function to check if user has admin privileges
 function isAdminRole(role: string | undefined | null): boolean {
@@ -74,7 +94,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/setup', async (req: any, res) => {
+  app.post('/api/setup', setupRateLimit, async (req: any, res) => {
     try {
       logger.info('[SETUP] Setup POST request initiated');
       
@@ -146,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       logger.error("[SETUP] Error during setup:", error);
-      res.status(500).json({ message: "Failed to complete setup: " + (error instanceof Error ? error.message : "Unknown error") });
+      res.status(500).json({ message: "Failed to complete setup" });
     }
   });
 
@@ -198,6 +218,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid role" });
       }
       const user = await storage.updateUserRole(req.params.id, role);
+      storage.createAuditLog({
+        userId: req.user.id,
+        companyId: 0,
+        action: "UPDATE",
+        entityType: "user_role",
+        entityId: parseInt(req.params.id) || 0,
+        newData: { role },
+        ipAddress: req.ip,
+      }).catch(() => {});
       res.json(user);
     } catch (error) {
       logger.error("Error updating user role:", error);
@@ -234,6 +263,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (pwError) return res.status(400).json({ message: pwError });
       const passwordHash = await bcrypt.hash(password, 10);
       const user = await storage.updateUserPassword(req.params.id, passwordHash);
+      storage.createAuditLog({
+        userId: req.user.id,
+        companyId: 0,
+        action: "UPDATE",
+        entityType: "user_password",
+        entityId: parseInt(req.params.id) || 0,
+        ipAddress: req.ip,
+      }).catch(() => {});
       res.json(user);
     } catch (error) {
       logger.error("Error updating user password:", error);
@@ -241,7 +278,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/users/create', isAuthenticated, async (req: any, res) => {
+  app.post('/api/users/create', isAuthenticated, createUserRateLimit, async (req: any, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
       if (!isAdminRole(currentUser?.role)) {
@@ -317,6 +354,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
       await storage.deleteUser(req.params.id);
+      storage.createAuditLog({
+        userId: req.user.id,
+        companyId: 0,
+        action: "DELETE",
+        entityType: "user",
+        entityId: parseInt(req.params.id) || 0,
+        oldData: { deletedUserId: req.params.id },
+        ipAddress: req.ip,
+      }).catch(() => {});
       res.json({ message: "User deleted successfully" });
     } catch (error) {
       logger.error("Error deleting user:", error);
@@ -558,7 +604,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, message: "Financial year deleted successfully" });
     } catch (error: any) {
       logger.error("Error deleting financial year:", error);
-      res.status(500).json({ message: error.message || "Failed to delete financial year" });
+      res.status(500).json({ message: "Failed to delete financial year" });
     }
   });
 
@@ -1387,7 +1433,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json([eInvoiceJSON]);
     } catch (error: any) {
       logger.error("Error generating e-Invoice JSON:", error);
-      res.status(400).json({ message: error.message || "Failed to generate e-Invoice JSON" });
+      res.status(400).json({ message: "Failed to generate e-Invoice JSON" });
     }
   });
 
@@ -1409,7 +1455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(updatedSale);
     } catch (error: any) {
       logger.error("Error updating e-Invoice details:", error);
-      res.status(400).json({ message: error.message || "Failed to update e-Invoice details" });
+      res.status(400).json({ message: "Failed to update e-Invoice details" });
     }
   });
 
@@ -2065,15 +2111,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return;
     }
     
-    // Find company with this token in database
+    // Validate token against database and resolve companyId
     let companyId: number | null = null;
     try {
-      // This is a simplified approach - in production you might want a dedicated method
-      // For now, we validate by checking if WebSocket messages include company context
-      // The token itself is stored with companyId in the database
-      companyId = null; // Will be set after validation
+      const printToken = await storage.getPrintTokenByValue(token);
+      if (!printToken) {
+        logger.info("Print client rejected: token not found in database");
+        ws.close(4001, "Invalid or missing authentication token");
+        return;
+      }
+      // Token expiry: reject tokens older than 30 days
+      const TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+      if (Date.now() - new Date(printToken.createdAt).getTime() > TOKEN_MAX_AGE_MS) {
+        logger.info(`Print client rejected: token expired (created ${printToken.createdAt})`);
+        ws.close(4001, "Token expired — please regenerate a new token");
+        return;
+      }
+      companyId = printToken.companyId;
     } catch (error) {
-      logger.info("Print client rejected: token validation error");
+      logger.error("Print client rejected: token validation error", error);
       ws.close(4001, "Token validation failed");
       return;
     }
@@ -2124,7 +2180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   logger.info("WebSocket print server initialized on /ws/print");
   
   // ==================== FILE DOWNLOADS ====================
-  app.get('/api/download/benesys_print_service.py', (req, res) => {
+  app.get('/api/download/benesys_print_service.py', isAuthenticated, (req, res) => {
     try {
       const filePath = join(process.cwd(), 'attached_assets', 'benesys_print_service.py');
       const fileContent = readFileSync(filePath, 'utf-8');
@@ -2137,7 +2193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/download/install_dependencies.bat', (req, res) => {
+  app.get('/api/download/install_dependencies.bat', isAuthenticated, (req, res) => {
     try {
       const filePath = join(process.cwd(), 'attached_assets', 'install_dependencies.bat');
       const fileContent = readFileSync(filePath, 'utf-8');
@@ -2150,7 +2206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/download/benesys-setup-complete.zip', (req, res) => {
+  app.get('/api/download/benesys-setup-complete.zip', isAuthenticated, (req, res) => {
     try {
       const assetsDir = join(process.cwd(), 'attached_assets');
       const files = [

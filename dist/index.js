@@ -12,6 +12,7 @@ var __export = (target, all) => {
 var schema_exports = {};
 __export(schema_exports, {
   agents: () => agents,
+  auditLogs: () => auditLogs,
   barcodeLabelTemplates: () => barcodeLabelTemplates,
   billSequences: () => billSequences,
   billTemplates: () => billTemplates,
@@ -77,7 +78,7 @@ import {
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-var sessions, users, companies, printSettings, insertCompanySchema, userCompanies, financialYears, insertFinancialYearSchema, billSequences, insertBillSequenceSchema, parties, insertPartySchema, agents, insertAgentSchema, items, insertItemSchema, stock, insertStockSchema, sales, insertSaleSchema, saleItems, insertSaleItemSchema, purchases, insertPurchaseSchema, purchaseItems, insertPurchaseItemSchema, stockInwardItems, insertStockInwardItemSchema, sizeMaster, payments, insertPaymentSchema, billTemplates, insertBillTemplateSchema, billTemplatesAutoPrintSchema, printTokens, insertPrintTokenSchema, barcodeLabelTemplates, insertBarcodeLabelTemplateSchema, updateStockInwardItemSchema, partiesRelations, itemsRelations, salesRelations, saleItemsRelations, purchasesRelations, purchaseItemsRelations, stockInwardItemsRelations, paymentsRelations, stockRelations;
+var sessions, users, companies, printSettings, insertCompanySchema, userCompanies, financialYears, insertFinancialYearSchema, billSequences, insertBillSequenceSchema, parties, GSTIN_REGEX, insertPartySchema, agents, insertAgentSchema, items, insertItemSchema, stock, insertStockSchema, sales, insertSaleSchema, saleItems, insertSaleItemSchema, purchases, insertPurchaseSchema, purchaseItems, insertPurchaseItemSchema, stockInwardItems, insertStockInwardItemSchema, sizeMaster, payments, insertPaymentSchema, billTemplates, insertBillTemplateSchema, billTemplatesAutoPrintSchema, printTokens, insertPrintTokenSchema, barcodeLabelTemplates, insertBarcodeLabelTemplateSchema, updateStockInwardItemSchema, partiesRelations, itemsRelations, salesRelations, saleItemsRelations, purchasesRelations, purchaseItemsRelations, stockInwardItemsRelations, paymentsRelations, stockRelations, auditLogs;
 var init_schema = __esm({
   "shared/schema.ts"() {
     "use strict";
@@ -240,6 +241,7 @@ var init_schema = __esm({
       updatedAt: timestamp("updated_at").defaultNow().notNull(),
       createdBy: varchar("created_by").references(() => users.id)
     });
+    GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
     insertPartySchema = createInsertSchema(parties).omit({
       id: true,
       companyId: true,
@@ -248,6 +250,11 @@ var init_schema = __esm({
       createdAt: true,
       updatedAt: true,
       createdBy: true
+    }).extend({
+      // Optional field — but if provided and non-empty, must be a valid 15-char GSTIN
+      gstNo: z.string().refine((val) => !val || GSTIN_REGEX.test(val), {
+        message: "Invalid GSTIN \u2014 must be 15 characters, e.g. 29AAAAA0000A1Z5"
+      }).optional().nullable()
     });
     agents = pgTable("agents", {
       id: serial("id").primaryKey(),
@@ -391,7 +398,8 @@ var init_schema = __esm({
       // Signed invoice JSON from portal
       createdAt: timestamp("created_at").defaultNow().notNull(),
       updatedAt: timestamp("updated_at").defaultNow().notNull(),
-      createdBy: varchar("created_by").references(() => users.id)
+      createdBy: varchar("created_by").references(() => users.id),
+      version: integer("version").default(1).notNull()
     });
     insertSaleSchema = createInsertSchema(sales).omit({
       id: true,
@@ -497,7 +505,8 @@ var init_schema = __esm({
       details: text("details"),
       createdAt: timestamp("created_at").defaultNow().notNull(),
       updatedAt: timestamp("updated_at").defaultNow().notNull(),
-      createdBy: varchar("created_by").references(() => users.id)
+      createdBy: varchar("created_by").references(() => users.id),
+      version: integer("version").default(1).notNull()
     });
     insertPurchaseSchema = createInsertSchema(purchases).omit({
       id: true,
@@ -918,6 +927,33 @@ var init_schema = __esm({
         references: [items.id]
       })
     }));
+    auditLogs = pgTable("audit_logs", {
+      id: serial("id").primaryKey(),
+      userId: varchar("user_id").references(() => users.id),
+      companyId: integer("company_id").references(() => companies.id).notNull(),
+      entityType: varchar("entity_type", { length: 50 }).notNull(),
+      // sale, purchase, payment, party, item
+      entityId: integer("entity_id").notNull(),
+      action: varchar("action", { length: 20 }).notNull(),
+      // create, update, delete
+      oldData: jsonb("old_data"),
+      newData: jsonb("new_data"),
+      ipAddress: varchar("ip_address", { length: 45 }),
+      createdAt: timestamp("created_at").defaultNow().notNull()
+    });
+  }
+});
+
+// server/logger.ts
+import pino from "pino";
+var isDev, logger;
+var init_logger = __esm({
+  "server/logger.ts"() {
+    "use strict";
+    isDev = process.env.NODE_ENV !== "production";
+    logger = pino(
+      isDev ? { level: "debug", transport: { target: "pino-pretty", options: { colorize: true, ignore: "pid,hostname" } } } : { level: "info" }
+    );
   }
 });
 
@@ -939,22 +975,21 @@ async function runMigrations() {
     const migrationsPath = path2.resolve(process.cwd(), "./migrations");
     const migrationsFolderExists = fs2.existsSync(migrationsPath);
     if (!migrationsFolderExists) {
-      console.log("\u{1F4DD} No migrations folder found - database schema will be created on first use");
+      logger.info("No migrations folder found \u2014 schema created on first use");
       try {
         await db.execute("SELECT 1");
-        console.log("\u2705 Database connection verified");
+        logger.info("Database connection verified");
       } catch (dbError) {
-        console.error("\u274C Database connection failed:", dbError);
+        logger.error({ err: dbError }, "Database connection failed");
         throw dbError;
       }
       return;
     }
-    console.log("\u{1F504} Running database migrations...");
+    logger.info("Running database migrations...");
     await migrate(db, { migrationsFolder: "./migrations" });
-    console.log("\u2705 Migrations completed successfully");
+    logger.info("Migrations completed successfully");
   } catch (error) {
-    console.error("\u26A0\uFE0F  Migration warning:", error.message);
-    console.log("\u2705 Continuing startup - schema will be created as needed");
+    logger.warn({ msg: error.message }, "Migration warning \u2014 continuing startup");
   }
 }
 var Pool, pool, db;
@@ -962,6 +997,7 @@ var init_db = __esm({
   "server/db.ts"() {
     "use strict";
     init_schema();
+    init_logger();
     if (!process.env.DATABASE_URL) {
       throw new Error(
         "DATABASE_URL must be set. Did you forget to provision a database?"
@@ -970,12 +1006,14 @@ var init_db = __esm({
     ({ Pool } = pg);
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
+      max: 50,
+      // max concurrent connections
       idleTimeoutMillis: 3e4,
       connectionTimeoutMillis: 5e3,
       ssl: process.env.NODE_ENV === "production" && !process.env.DATABASE_URL?.includes("localhost") && !process.env.DATABASE_URL?.includes("127.0.0.1") ? { rejectUnauthorized: false } : false
     });
     pool.on("error", (err) => {
-      console.error("Unexpected error on idle client", err);
+      logger.error({ err }, "Unexpected error on idle DB client");
     });
     db = drizzle({ client: pool, schema: schema_exports });
   }
@@ -988,16 +1026,55 @@ import path from "node:path";
 import express2 from "express";
 
 // server/app.ts
+import compression from "compression";
+import helmet from "helmet";
 import express from "express";
 
 // server/routes.ts
 import { createServer } from "http";
+
+// server/cache.ts
+var MemoryCache = class {
+  store = /* @__PURE__ */ new Map();
+  get(key) {
+    const entry = this.store.get(key);
+    if (!entry) return void 0;
+    if (Date.now() > entry.expiresAt) {
+      this.store.delete(key);
+      return void 0;
+    }
+    return entry.value;
+  }
+  set(key, value, ttlMs) {
+    this.store.set(key, { value, expiresAt: Date.now() + ttlMs });
+  }
+  del(key) {
+    this.store.delete(key);
+  }
+  /** Invalidate all keys that start with the given prefix */
+  delPrefix(prefix) {
+    for (const key of this.store.keys()) {
+      if (key.startsWith(prefix)) this.store.delete(key);
+    }
+  }
+};
+var appCache = new MemoryCache();
+var TTL = {
+  DASHBOARD: 6e4,
+  // 60 s  — metrics refresh every minute
+  OUTSTANDING: 3e4
+  // 30 s  — outstanding balances refresh every 30 s
+};
+
+// server/routes.ts
 import { WebSocketServer, WebSocket } from "ws";
+import rateLimit2 from "express-rate-limit";
 
 // server/storage.ts
 init_schema();
 init_db();
-import { eq, and, desc, gte, lte, lt, sql as sql2, or, isNotNull, ne } from "drizzle-orm";
+init_logger();
+import { eq, and, desc, gte, lte, lt, sql as sql2, or, isNotNull, ne, inArray, ilike, count } from "drizzle-orm";
 var DatabaseStorage = class {
   // ==================== USER OPERATIONS ====================
   async getUser(id) {
@@ -1051,11 +1128,6 @@ var DatabaseStorage = class {
     return results[0];
   }
   async createUser(user) {
-    console.log("[STORAGE] createUser called with:", {
-      username: user.username,
-      role: user.role,
-      firstName: user.firstName
-    });
     const results = await db.insert(users).values({
       username: user.username,
       passwordHash: user.passwordHash,
@@ -1063,14 +1135,9 @@ var DatabaseStorage = class {
       firstName: user.firstName,
       lastName: user.lastName,
       role: user.role || "user",
-      // Ensure role is explicitly set
       pagePermissions: user.pagePermissions || []
     }).returning();
-    console.log("[STORAGE] createUser result:", {
-      id: results[0]?.id,
-      username: results[0]?.username,
-      role: results[0]?.role
-    });
+    logger.debug({ username: results[0]?.username, role: results[0]?.role }, "User created");
     return results[0];
   }
   async updateUser(id, user) {
@@ -1087,7 +1154,7 @@ var DatabaseStorage = class {
       ).limit(1);
       return superadminUsers.length === 0;
     } catch (error) {
-      console.error("Error checking setup status:", error);
+      logger.error("Error checking setup status:", error);
       return true;
     }
   }
@@ -1237,30 +1304,29 @@ var DatabaseStorage = class {
     await db.delete(financialYears).where(and(eq(financialYears.id, id), eq(financialYears.companyId, companyId)));
   }
   async getNextBillNumber(companyId, financialYearId, billType) {
-    let [sequence] = await db.select().from(billSequences).where(and(
-      eq(billSequences.companyId, companyId),
-      eq(billSequences.financialYearId, financialYearId),
-      eq(billSequences.billType, billType)
-    ));
-    if (!sequence) {
-      [sequence] = await db.insert(billSequences).values({
-        companyId,
-        financialYearId,
-        billType,
-        nextNumber: 1
-      }).returning();
-    }
-    const currentNumber = sequence.nextNumber;
-    await db.update(billSequences).set({ nextNumber: currentNumber + 1, updatedAt: /* @__PURE__ */ new Date() }).where(eq(billSequences.id, sequence.id));
+    const result = await db.execute(sql2`
+      INSERT INTO bill_sequences (company_id, financial_year_id, bill_type, next_number, created_at, updated_at)
+      VALUES (${companyId}, ${financialYearId}, ${billType}, 2, NOW(), NOW())
+      ON CONFLICT (company_id, financial_year_id, bill_type)
+      DO UPDATE SET next_number = bill_sequences.next_number + 1, updated_at = NOW()
+      RETURNING next_number - 1 AS current_number
+    `);
+    const currentNumber = parseInt(String(result.rows?.[0]?.current_number ?? 1));
     const fy = await this.getFinancialYear(financialYearId, companyId);
     const fyLabel = fy?.label || "";
-    const prefix = sequence.prefix || billType;
-    const code = `${prefix}-${fyLabel}-${String(currentNumber).padStart(4, "0")}`;
+    const code = `${billType}-${fyLabel}-${String(currentNumber).padStart(4, "0")}`;
     return { number: currentNumber, code };
   }
   // ==================== PARTY OPERATIONS ====================
   async getParties(companyId) {
     return await db.select().from(parties).where(or(eq(parties.companyId, companyId), eq(parties.isShared, true))).orderBy(desc(parties.createdAt));
+  }
+  async getPartiesPaginated(companyId, page, limit, search) {
+    const base = or(eq(parties.companyId, companyId), eq(parties.isShared, true));
+    const conditions = search ? and(base, or(ilike(parties.name, `%${search}%`), ilike(parties.code, `%${search}%`), ilike(parties.city, `%${search}%`))) : base;
+    const [{ total }] = await db.select({ total: count() }).from(parties).where(conditions);
+    const data = await db.select().from(parties).where(conditions).orderBy(desc(parties.createdAt)).limit(limit).offset((page - 1) * limit);
+    return { data, total: Number(total), page, limit };
   }
   async getParty(id, companyId) {
     const [party] = await db.select().from(parties).where(and(eq(parties.id, id), or(eq(parties.companyId, companyId), eq(parties.isShared, true))));
@@ -1282,6 +1348,13 @@ var DatabaseStorage = class {
   async updateParty(id, party, companyId) {
     const [updated] = await db.update(parties).set({ ...party, updatedAt: /* @__PURE__ */ new Date() }).where(and(eq(parties.id, id), eq(parties.companyId, companyId))).returning();
     return updated;
+  }
+  async getItemsPaginated(companyId, page, limit, search) {
+    const base = or(eq(items.companyId, companyId), eq(items.isShared, true));
+    const conditions = search ? and(base, or(ilike(items.name, `%${search}%`), ilike(items.code, `%${search}%`), ilike(items.category, `%${search}%`))) : base;
+    const [{ total }] = await db.select({ total: count() }).from(items).where(conditions);
+    const data = await db.select().from(items).where(conditions).orderBy(desc(items.createdAt)).limit(limit).offset((page - 1) * limit);
+    return { data, total: Number(total), page, limit };
   }
   // ==================== ITEM OPERATIONS ====================
   async getItems(companyId) {
@@ -1338,17 +1411,20 @@ var DatabaseStorage = class {
   async getSales(companyId) {
     return await db.select().from(sales).where(eq(sales.companyId, companyId)).orderBy(desc(sales.date), desc(sales.id));
   }
+  async getSalesPaginated(companyId, page, limit, search) {
+    const base = eq(sales.companyId, companyId);
+    const conditions = search ? and(base, or(ilike(sales.partyName, `%${search}%`), sql2`${sales.invoiceNo}::text ILIKE ${"%" + search + "%"}`)) : base;
+    const [{ total }] = await db.select({ total: count() }).from(sales).where(conditions);
+    const data = await db.select().from(sales).where(conditions).orderBy(desc(sales.date), desc(sales.id)).limit(limit).offset((page - 1) * limit);
+    return { data, total: Number(total), page, limit };
+  }
   async getSale(id, companyId) {
     const [sale] = await db.select().from(sales).where(and(eq(sales.id, id), eq(sales.companyId, companyId)));
     return sale;
   }
   async getSaleItems(saleId, companyId) {
-    const sale = await this.getSale(saleId, companyId);
-    if (!sale) {
-      return [];
-    }
-    const items2 = await db.select().from(saleItems).where(eq(saleItems.saleId, saleId));
-    return items2;
+    const items2 = await db.select({ item: saleItems }).from(saleItems).innerJoin(sales, and(eq(saleItems.saleId, sales.id), eq(sales.companyId, companyId))).where(eq(saleItems.saleId, saleId));
+    return items2.map((r) => r.item);
   }
   async getNextInvoiceNumber(saleType, companyId) {
     const result = await db.select({ maxNo: sql2`COALESCE(MAX(${sales.invoiceNo}), 0)` }).from(sales).where(and(eq(sales.saleType, saleType), eq(sales.companyId, companyId)));
@@ -1369,43 +1445,47 @@ var DatabaseStorage = class {
         }
       }
     }
-    const [newSale] = await db.insert(sales).values({
-      ...saleData,
-      invoiceNo,
-      invoiceCode,
-      financialYearId: activeFY.id,
-      time: (/* @__PURE__ */ new Date()).toTimeString().substring(0, 8),
-      createdBy: userId,
-      companyId
-    }).returning();
-    for (const item of saleItemsData) {
-      const saleItem = await db.insert(saleItems).values({
-        ...item,
-        saleId: newSale.id
+    return await db.transaction(async (trx) => {
+      const [newSale] = await trx.insert(sales).values({
+        ...saleData,
+        invoiceNo,
+        invoiceCode,
+        financialYearId: activeFY.id,
+        time: (/* @__PURE__ */ new Date()).toTimeString().substring(0, 8),
+        createdBy: userId,
+        companyId
       }).returning();
-      if (item.stockInwardId) {
-        const [barcode] = await db.select().from(stockInwardItems).where(eq(stockInwardItems.id, item.stockInwardId));
-        if (barcode) {
-          const currentQty = parseFloat(barcode.qty?.toString() || "1");
-          const soldQty = parseFloat(item.quantity.toString());
-          const remainingQty = currentQty - soldQty;
-          if (remainingQty > 0) {
-            await db.update(stockInwardItems).set({ qty: remainingQty.toString(), saleId: newSale.id, soldAt: /* @__PURE__ */ new Date() }).where(eq(stockInwardItems.id, item.stockInwardId));
-          } else {
-            await db.update(stockInwardItems).set({ status: "sold", qty: "0", saleId: newSale.id, soldAt: /* @__PURE__ */ new Date() }).where(eq(stockInwardItems.id, item.stockInwardId));
+      for (const item of saleItemsData) {
+        await trx.insert(saleItems).values({ ...item, saleId: newSale.id });
+        if (item.stockInwardId) {
+          const [barcode] = await trx.select().from(stockInwardItems).where(eq(stockInwardItems.id, item.stockInwardId));
+          if (barcode) {
+            const currentQty = parseFloat(barcode.qty?.toString() || "1");
+            const soldQty = parseFloat(item.quantity.toString());
+            const remainingQty = currentQty - soldQty;
+            if (remainingQty > 0) {
+              await trx.update(stockInwardItems).set({ qty: remainingQty.toString(), saleId: newSale.id, soldAt: /* @__PURE__ */ new Date() }).where(eq(stockInwardItems.id, item.stockInwardId));
+            } else {
+              await trx.update(stockInwardItems).set({ status: "sold", qty: "0", saleId: newSale.id, soldAt: /* @__PURE__ */ new Date() }).where(eq(stockInwardItems.id, item.stockInwardId));
+            }
           }
         }
+        if (item.itemId) {
+          await trx.update(stock).set({ quantity: sql2`${stock.quantity} + ${-parseFloat(item.quantity.toString())}`, lastUpdated: /* @__PURE__ */ new Date() }).where(and(eq(stock.itemId, item.itemId), eq(stock.companyId, companyId)));
+        }
       }
-      if (item.itemId) {
-        await this.updateStock(item.itemId, -parseFloat(item.quantity.toString()), companyId);
-      }
-    }
-    return newSale;
+      return newSale;
+    });
   }
   async updateSale(id, saleData, saleItemsData, companyId) {
     const existingSale = await this.getSale(id, companyId);
     if (!existingSale) {
       throw new Error("Sale not found");
+    }
+    if (saleData.version !== void 0 && existingSale.version !== saleData.version) {
+      const err = new Error("Sale was modified by another user. Please refresh and try again.");
+      err.status = 409;
+      throw err;
     }
     const existingItems = await this.getSaleItems(id, companyId);
     for (const item of saleItemsData) {
@@ -1456,9 +1536,12 @@ var DatabaseStorage = class {
       byCash: saleData.byCash ?? existingSale.byCash,
       byCard: saleData.byCard ?? existingSale.byCard
     };
+    const { version: _v, ...mergedSaleDataNoVersion } = mergedSaleData;
     const [updatedSale] = await db.update(sales).set({
-      ...mergedSaleData,
-      invoiceNo: existingSale.invoiceNo
+      ...mergedSaleDataNoVersion,
+      invoiceNo: existingSale.invoiceNo,
+      version: sql2`${sales.version} + 1`,
+      updatedAt: /* @__PURE__ */ new Date()
     }).where(and(eq(sales.id, id), eq(sales.companyId, companyId))).returning();
     for (const item of saleItemsData) {
       await db.insert(saleItems).values({
@@ -1503,73 +1586,78 @@ var DatabaseStorage = class {
   // ==================== PURCHASE OPERATIONS ====================
   async getPurchases(companyId) {
     const allPurchases = await db.select().from(purchases).where(eq(purchases.companyId, companyId)).orderBy(desc(purchases.date), desc(purchases.id));
-    const purchasesWithTallyStatus = await Promise.all(
-      allPurchases.map(async (purchase) => {
-        const items2 = await db.select().from(purchaseItems).where(eq(purchaseItems.purchaseId, purchase.id));
-        const itemTotalQty = items2.reduce((sum, item) => sum + parseFloat(item.qty.toString()), 0);
-        const itemTotalAmount = items2.reduce((sum, item) => {
-          const cost = parseFloat(item.cost.toString());
-          const qty = parseFloat(item.qty.toString());
-          const tax = parseFloat((item.tax || 0).toString());
-          return sum + cost * qty + cost * qty * tax / 100;
-        }, 0);
-        const purchaseTotalQty = parseFloat(purchase.totalQty.toString());
-        const purchaseTotalAmount = parseFloat(purchase.amount.toString());
-        const qtyMatch = Math.abs(itemTotalQty - purchaseTotalQty) < 0.01;
-        const amountMatch = Math.abs(itemTotalAmount - purchaseTotalAmount) < 0.01;
-        const isTallied = qtyMatch && amountMatch;
-        return {
-          id: purchase.id,
-          companyId: purchase.companyId,
-          purchaseNo: purchase.purchaseNo,
-          date: purchase.date,
-          invoiceNo: purchase.invoiceNo,
-          partyId: purchase.partyId,
-          partyName: purchase.partyName,
-          city: purchase.city,
-          state: purchase.state,
-          gstNo: purchase.gstNo,
-          phone: purchase.phone,
-          address: purchase.address,
-          totalQty: purchase.totalQty,
-          amount: purchase.amount,
-          beforeTaxAmount: purchase.beforeTaxAmount,
-          billTotalAmount: purchase.billTotalAmount,
-          cgst: purchase.cgst,
-          sgst: purchase.sgst,
-          igst: purchase.igst,
-          cess: purchase.cess,
-          gstType: purchase.gstType,
-          val0: purchase.val0,
-          val5: purchase.val5,
-          val12: purchase.val12,
-          val18: purchase.val18,
-          val28: purchase.val28,
-          ctax0: purchase.ctax0,
-          ctax5: purchase.ctax5,
-          ctax12: purchase.ctax12,
-          ctax18: purchase.ctax18,
-          ctax28: purchase.ctax28,
-          stax0: purchase.stax0,
-          stax5: purchase.stax5,
-          stax12: purchase.stax12,
-          stax18: purchase.stax18,
-          stax28: purchase.stax28,
-          itax0: purchase.itax0,
-          itax5: purchase.itax5,
-          itax12: purchase.itax12,
-          itax18: purchase.itax18,
-          itax28: purchase.itax28,
-          remarks: purchase.remarks,
-          status: purchase.status,
-          stockInwardCompleted: purchase.stockInwardCompleted,
-          createdBy: purchase.createdBy,
-          createdAt: purchase.createdAt,
-          updatedAt: purchase.updatedAt,
-          isTallied
-        };
-      })
-    );
+    if (allPurchases.length === 0) return [];
+    const allItems = await db.select().from(purchaseItems).where(inArray(purchaseItems.purchaseId, allPurchases.map((p) => p.id)));
+    const itemsByPurchaseId = /* @__PURE__ */ new Map();
+    for (const item of allItems) {
+      if (!itemsByPurchaseId.has(item.purchaseId)) itemsByPurchaseId.set(item.purchaseId, []);
+      itemsByPurchaseId.get(item.purchaseId).push(item);
+    }
+    const purchasesWithTallyStatus = allPurchases.map((purchase) => {
+      const items2 = itemsByPurchaseId.get(purchase.id) || [];
+      const itemTotalQty = items2.reduce((sum, item) => sum + parseFloat(item.qty.toString()), 0);
+      const itemTotalAmount = items2.reduce((sum, item) => {
+        const cost = parseFloat(item.cost.toString());
+        const qty = parseFloat(item.qty.toString());
+        const tax = parseFloat((item.tax || 0).toString());
+        return sum + cost * qty + cost * qty * tax / 100;
+      }, 0);
+      const purchaseTotalQty = parseFloat(purchase.totalQty.toString());
+      const purchaseTotalAmount = parseFloat(purchase.amount.toString());
+      const qtyMatch = Math.abs(itemTotalQty - purchaseTotalQty) < 0.01;
+      const amountMatch = Math.abs(itemTotalAmount - purchaseTotalAmount) < 0.01;
+      const isTallied = qtyMatch && amountMatch;
+      return {
+        id: purchase.id,
+        companyId: purchase.companyId,
+        purchaseNo: purchase.purchaseNo,
+        date: purchase.date,
+        invoiceNo: purchase.invoiceNo,
+        partyId: purchase.partyId,
+        partyName: purchase.partyName,
+        city: purchase.city,
+        state: purchase.state,
+        gstNo: purchase.gstNo,
+        phone: purchase.phone,
+        address: purchase.address,
+        totalQty: purchase.totalQty,
+        amount: purchase.amount,
+        beforeTaxAmount: purchase.beforeTaxAmount,
+        billTotalAmount: purchase.billTotalAmount,
+        cgst: purchase.cgst,
+        sgst: purchase.sgst,
+        igst: purchase.igst,
+        cess: purchase.cess,
+        gstType: purchase.gstType,
+        val0: purchase.val0,
+        val5: purchase.val5,
+        val12: purchase.val12,
+        val18: purchase.val18,
+        val28: purchase.val28,
+        ctax0: purchase.ctax0,
+        ctax5: purchase.ctax5,
+        ctax12: purchase.ctax12,
+        ctax18: purchase.ctax18,
+        ctax28: purchase.ctax28,
+        stax0: purchase.stax0,
+        stax5: purchase.stax5,
+        stax12: purchase.stax12,
+        stax18: purchase.stax18,
+        stax28: purchase.stax28,
+        itax0: purchase.itax0,
+        itax5: purchase.itax5,
+        itax12: purchase.itax12,
+        itax18: purchase.itax18,
+        itax28: purchase.itax28,
+        remarks: purchase.remarks,
+        status: purchase.status,
+        stockInwardCompleted: purchase.stockInwardCompleted,
+        createdBy: purchase.createdBy,
+        createdAt: purchase.createdAt,
+        updatedAt: purchase.updatedAt,
+        isTallied
+      };
+    });
     return purchasesWithTallyStatus;
   }
   async getPurchase(id, companyId) {
@@ -1621,42 +1709,44 @@ var DatabaseStorage = class {
         taxBreakdown.stax28 += taxAmount / 2;
       }
     }
-    const [newPurchase] = await db.insert(purchases).values({
-      ...purchaseData,
-      purchaseNo,
-      totalQty: totalQty.toString(),
-      amount: totalAmount.toString(),
-      val0: taxBreakdown.val0.toString(),
-      val5: taxBreakdown.val5.toString(),
-      val12: taxBreakdown.val12.toString(),
-      val18: taxBreakdown.val18.toString(),
-      val28: taxBreakdown.val28.toString(),
-      ctax0: taxBreakdown.ctax0.toString(),
-      ctax5: taxBreakdown.ctax5.toString(),
-      ctax12: taxBreakdown.ctax12.toString(),
-      ctax18: taxBreakdown.ctax18.toString(),
-      ctax28: taxBreakdown.ctax28.toString(),
-      stax0: taxBreakdown.stax0.toString(),
-      stax5: taxBreakdown.stax5.toString(),
-      stax12: taxBreakdown.stax12.toString(),
-      stax18: taxBreakdown.stax18.toString(),
-      stax28: taxBreakdown.stax28.toString(),
-      createdBy: userId,
-      companyId
-    }).returning();
-    for (const item of itemsData) {
-      const qty = parseFloat(item.qty.toString());
-      const stockQty = qty - parseFloat((item.dqty || 0).toString());
-      await db.insert(purchaseItems).values({
-        ...item,
-        purchaseId: newPurchase.id,
-        stockqty: stockQty.toString()
-      });
-      if (item.itemId) {
-        await this.updateStock(item.itemId, qty, companyId);
+    return await db.transaction(async (trx) => {
+      const [newPurchase] = await trx.insert(purchases).values({
+        ...purchaseData,
+        purchaseNo,
+        totalQty: totalQty.toString(),
+        amount: totalAmount.toString(),
+        val0: taxBreakdown.val0.toString(),
+        val5: taxBreakdown.val5.toString(),
+        val12: taxBreakdown.val12.toString(),
+        val18: taxBreakdown.val18.toString(),
+        val28: taxBreakdown.val28.toString(),
+        ctax0: taxBreakdown.ctax0.toString(),
+        ctax5: taxBreakdown.ctax5.toString(),
+        ctax12: taxBreakdown.ctax12.toString(),
+        ctax18: taxBreakdown.ctax18.toString(),
+        ctax28: taxBreakdown.ctax28.toString(),
+        stax0: taxBreakdown.stax0.toString(),
+        stax5: taxBreakdown.stax5.toString(),
+        stax12: taxBreakdown.stax12.toString(),
+        stax18: taxBreakdown.stax18.toString(),
+        stax28: taxBreakdown.stax28.toString(),
+        createdBy: userId,
+        companyId
+      }).returning();
+      for (const item of itemsData) {
+        const qty = parseFloat(item.qty.toString());
+        const stockQty = qty - parseFloat((item.dqty || 0).toString());
+        await trx.insert(purchaseItems).values({
+          ...item,
+          purchaseId: newPurchase.id,
+          stockqty: stockQty.toString()
+        });
+        if (item.itemId) {
+          await trx.update(stock).set({ quantity: sql2`${stock.quantity} + ${qty}`, lastUpdated: /* @__PURE__ */ new Date() }).where(and(eq(stock.itemId, item.itemId), eq(stock.companyId, companyId)));
+        }
       }
-    }
-    return newPurchase;
+      return newPurchase;
+    });
   }
   // ==================== PAYMENT OPERATIONS ====================
   async getPayments(companyId) {
@@ -1865,20 +1955,22 @@ var DatabaseStorage = class {
       date2.setDate(date2.getDate() - i);
       last7Days.push(date2.toISOString().split("T")[0]);
     }
-    const salesTrend = await Promise.all(
-      last7Days.map(async (date2) => {
-        const [result] = await db.select({ total: sql2`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` }).from(sales).where(and(
-          eq(sales.date, date2),
-          eq(sales.companyId, companyId),
-          ne(sales.saleType, "PROFORMA")
-        ));
-        return {
-          date: date2,
-          day: new Date(date2).toLocaleDateString("en-US", { weekday: "short" }),
-          amount: parseFloat(result?.total?.toString() || "0")
-        };
-      })
+    const trendStart = last7Days[0];
+    const trendEnd = last7Days[6];
+    const trendRows = await db.execute(sql2`
+      SELECT date::text, COALESCE(SUM(CASE WHEN sale_type = 'CREDIT_NOTE' THEN -grand_total::numeric ELSE grand_total::numeric END), 0) AS total
+      FROM sales
+      WHERE company_id = ${companyId} AND date >= ${trendStart} AND date <= ${trendEnd} AND sale_type != 'PROFORMA'
+      GROUP BY date
+    `);
+    const trendByDate = new Map(
+      trendRows.rows.map((r) => [r.date, parseFloat(r.total)])
     );
+    const salesTrend = last7Days.map((date2) => ({
+      date: date2,
+      day: (/* @__PURE__ */ new Date(date2 + "T00:00:00")).toLocaleDateString("en-US", { weekday: "short" }),
+      amount: trendByDate.get(date2) ?? 0
+    }));
     const salesByType = await db.select({
       saleType: sales.saleType,
       total: sql2`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)`,
@@ -1949,36 +2041,58 @@ var DatabaseStorage = class {
     };
   }
   async getOutstanding(companyId) {
-    const allParties = await db.select({
-      partyId: parties.id,
-      partyCode: parties.code,
-      partyName: parties.name,
-      partyCity: parties.city,
-      openingDebit: parties.openingDebit,
-      openingCredit: parties.openingCredit
-    }).from(parties).where(eq(parties.companyId, companyId));
-    const result = await Promise.all(allParties.map(async (party) => {
-      const [salesResult] = await db.select({ total: sql2`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` }).from(sales).where(and(eq(sales.partyId, party.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")));
-      const [purchasesResult] = await db.select({ total: sql2`COALESCE(SUM(${purchases.amount}), 0)` }).from(purchases).where(and(eq(purchases.partyId, party.partyId), eq(purchases.companyId, companyId)));
-      const [paymentsResult] = await db.select({
-        totalCredit: sql2`COALESCE(SUM(${payments.credit}), 0)`,
-        totalDebit: sql2`COALESCE(SUM(${payments.debit}), 0)`
-      }).from(payments).where(and(eq(payments.partyId, party.partyId), eq(payments.companyId, companyId)));
-      const openingBal = parseFloat(party.openingDebit) - parseFloat(party.openingCredit);
-      const salesAmt = parseFloat(salesResult?.total || "0");
-      const purchasesAmt = parseFloat(purchasesResult?.total || "0");
-      const paymentsCredit = parseFloat(paymentsResult?.totalCredit || "0");
-      const paymentsDebit = parseFloat(paymentsResult?.totalDebit || "0");
+    const rows = await db.execute(sql2`
+      SELECT
+        p.id               AS party_id,
+        p.code             AS party_code,
+        p.name             AS party_name,
+        p.city             AS party_city,
+        p.opening_debit    AS opening_debit,
+        p.opening_credit   AS opening_credit,
+        COALESCE((
+          SELECT SUM(CASE WHEN s.sale_type = 'CREDIT_NOTE' THEN -s.grand_total::numeric ELSE s.grand_total::numeric END)
+          FROM sales s
+          WHERE s.party_id = p.id AND s.company_id = ${companyId} AND s.sale_type != 'PROFORMA'
+        ), 0) AS total_sales,
+        COALESCE((
+          SELECT SUM(pur.amount::numeric)
+          FROM purchases pur
+          WHERE pur.party_id = p.id AND pur.company_id = ${companyId}
+        ), 0) AS total_purchases,
+        COALESCE((
+          SELECT SUM(pay.credit::numeric)
+          FROM payments pay
+          WHERE pay.party_id = p.id AND pay.company_id = ${companyId}
+        ), 0) AS total_payments_credit,
+        COALESCE((
+          SELECT SUM(pay.debit::numeric)
+          FROM payments pay
+          WHERE pay.party_id = p.id AND pay.company_id = ${companyId}
+        ), 0) AS total_payments_debit
+      FROM parties p
+      WHERE p.company_id = ${companyId}
+    `);
+    const result = rows.rows.map((party) => {
+      const openingBal = parseFloat(party.opening_debit) - parseFloat(party.opening_credit);
+      const salesAmt = parseFloat(party.total_sales);
+      const purchasesAmt = parseFloat(party.total_purchases);
+      const paymentsCredit = parseFloat(party.total_payments_credit);
+      const paymentsDebit = parseFloat(party.total_payments_debit);
       const balance = openingBal + salesAmt - purchasesAmt - paymentsCredit + paymentsDebit;
       return {
-        ...party,
+        partyId: party.party_id,
+        partyCode: party.party_code,
+        partyName: party.party_name,
+        partyCity: party.party_city,
+        openingDebit: party.opening_debit,
+        openingCredit: party.opening_credit,
         totalSales: salesAmt,
         totalPurchases: purchasesAmt,
         totalPaymentsCredit: paymentsCredit,
         totalPaymentsDebit: paymentsDebit,
         balance
       };
-    }));
+    });
     return result;
   }
   async getSalesReport(companyId, startDate, endDate, saleType, itemId) {
@@ -2803,8 +2917,19 @@ var DatabaseStorage = class {
     return detailed;
   }
   async updatePurchase(id, purchaseData, companyId) {
+    if (purchaseData.version !== void 0) {
+      const existing = await this.getPurchase(id, companyId);
+      if (!existing) throw new Error("Purchase not found");
+      if (existing.version !== purchaseData.version) {
+        const err = new Error("Purchase was modified by another user. Please refresh and try again.");
+        err.status = 409;
+        throw err;
+      }
+    }
+    const { version: _v, ...dataNoVersion } = purchaseData;
     const [updated] = await db.update(purchases).set({
-      ...purchaseData,
+      ...dataNoVersion,
+      version: sql2`${purchases.version} + 1`,
       updatedAt: /* @__PURE__ */ new Date()
     }).where(and(eq(purchases.id, id), eq(purchases.companyId, companyId))).returning();
     return updated;
@@ -3020,6 +3145,10 @@ var DatabaseStorage = class {
     const [token] = await db.select().from(printTokens).where(eq(printTokens.companyId, companyId));
     return token;
   }
+  async getPrintTokenByValue(token) {
+    const [result] = await db.select().from(printTokens).where(eq(printTokens.token, token));
+    return result;
+  }
   async createOrUpdatePrintToken(companyId, token) {
     await db.delete(printTokens).where(eq(printTokens.companyId, companyId));
     const [newToken] = await db.insert(printTokens).values({ companyId, token }).returning();
@@ -3045,10 +3174,10 @@ var DatabaseStorage = class {
   }
   async getAgentCommissionReport(companyId) {
     try {
-      const agentsData = await db.select().from(agentsTable).where(eq(agentsTable.companyId, companyId));
-      const salesData = await db.select().from(salesTable).where(eq(salesTable.companyId, companyId));
-      const paymentsData = await db.select().from(paymentsTable).where(eq(paymentsTable.companyId, companyId));
-      const partiesData = await db.select().from(partiesTable).where(eq(partiesTable.companyId, companyId));
+      const agentsData = await db.select().from(agentsTable).where(eq(agentsTable.companyId, companyId)).limit(1e3);
+      const salesData = await db.select().from(salesTable).where(eq(salesTable.companyId, companyId)).limit(5e3);
+      const paymentsData = await db.select().from(paymentsTable).where(eq(paymentsTable.companyId, companyId)).limit(5e3);
+      const partiesData = await db.select().from(partiesTable).where(eq(partiesTable.companyId, companyId)).limit(1e3);
       return agentsData.map((agent) => {
         const agentParties = partiesData.filter((p) => p.agentId === agent.id);
         const agentPartyIds = agentParties.map((p) => p.id);
@@ -3066,7 +3195,7 @@ var DatabaseStorage = class {
         };
       });
     } catch (error) {
-      console.error("Error fetching agent commission report:", error);
+      logger.error("Error fetching agent commission report:", error);
       return [];
     }
   }
@@ -3081,6 +3210,28 @@ var DatabaseStorage = class {
       hsnCode: items.hsnCode
     }).from(stockInwardItems).leftJoin(items, eq(stockInwardItems.itemId, items.id)).where(inArray(stockInwardItems.id, ids));
   }
+  // ==================== AUDIT LOGS ====================
+  async createAuditLog(entry) {
+    try {
+      await db.insert(auditLogs).values({
+        userId: entry.userId ?? null,
+        companyId: entry.companyId,
+        entityType: entry.entityType,
+        entityId: entry.entityId,
+        action: entry.action,
+        oldData: entry.oldData ?? null,
+        newData: entry.newData ?? null,
+        ipAddress: entry.ipAddress ?? null
+      });
+    } catch {
+    }
+  }
+  async getAuditLogs(companyId, filters) {
+    const conditions = [eq(auditLogs.companyId, companyId)];
+    if (filters?.entityType) conditions.push(eq(auditLogs.entityType, filters.entityType));
+    if (filters?.entityId) conditions.push(eq(auditLogs.entityId, filters.entityId));
+    return await db.select().from(auditLogs).where(and(...conditions)).orderBy(desc(auditLogs.createdAt)).limit(filters?.limit ?? 500);
+  }
 };
 var storage = new DatabaseStorage();
 
@@ -3090,6 +3241,15 @@ import { Strategy as LocalStrategy } from "passport-local";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
+init_logger();
+var loginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1e3,
+  max: 10,
+  message: { message: "Too many login attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 async function ensureSessionsTable() {
   try {
     const { pool: pool2 } = await Promise.resolve().then(() => (init_db(), db_exports));
@@ -3103,23 +3263,22 @@ async function ensureSessionsTable() {
       
       CREATE INDEX IF NOT EXISTS "IDX_sessions_expire" on "sessions" ("expire");
     `);
-    console.log("\u2705 Sessions table ready");
+    logger.info("Sessions table ready");
   } catch (error) {
-    console.error("\u26A0\uFE0F  Warning: Could not ensure sessions table:", error);
+    logger.warn({ error }, "Could not ensure sessions table");
   }
 }
 function getSession() {
   const sessionSecret = process.env.SESSION_SECRET;
   if (!sessionSecret) {
     if (process.env.NODE_ENV === "production") {
-      console.error("FATAL: SESSION_SECRET environment variable is required in production");
+      logger.fatal("SESSION_SECRET env var is not set in production \u2014 exiting");
       process.exit(1);
     }
-    console.warn("\u26A0\uFE0F  WARNING: SESSION_SECRET not set. Using insecure fallback for development only.");
-    console.warn("\u26A0\uFE0F  Set SESSION_SECRET environment variable for production deployment.");
+    logger.warn("SESSION_SECRET not set \u2014 using insecure dev fallback. Set it for production.");
   }
   const secret = sessionSecret || "dev-insecure-secret-change-in-production";
-  const sessionTtl = 7 * 24 * 60 * 60 * 1e3;
+  const sessionTtl = 8 * 60 * 60 * 1e3;
   const pgStore = connectPg(session);
   const isLocalDb = process.env.DATABASE_URL?.includes("localhost") || process.env.DATABASE_URL?.includes("127.0.0.1");
   const sessionStore = new pgStore({
@@ -3129,11 +3288,8 @@ function getSession() {
     tableName: "sessions",
     ssl: !isLocalDb && process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
   });
-  const shouldUseSecureCookies = process.env.NODE_ENV === "production" && !isLocalDb;
-  console.log("[SESSION] \u2705 Session initialized");
-  console.log("[SESSION] Node environment:", process.env.NODE_ENV);
-  console.log("[SESSION] Using secure cookies:", shouldUseSecureCookies);
-  console.log("[SESSION] Session path: /");
+  const shouldUseSecureCookies = process.env.SECURE_COOKIES === "true" || process.env.NODE_ENV === "production" && !isLocalDb;
+  logger.info({ env: process.env.NODE_ENV, secureCookies: shouldUseSecureCookies }, "Session initialized");
   return session({
     secret,
     store: sessionStore,
@@ -3185,25 +3341,17 @@ async function setupAuth(app2) {
       done(null, false);
     }
   });
-  app2.post("/api/login", (req, res, next) => {
-    console.log("[AUTH] ========== LOGIN REQUEST RECEIVED ==========");
-    console.log("[AUTH] Body:", JSON.stringify(req.body));
-    console.log("[AUTH] Username:", req.body?.username);
+  app2.post("/api/login", loginRateLimit, (req, res, next) => {
     if (!req.body?.username || !req.body?.password) {
-      console.log("[AUTH] Missing username or password");
       return res.status(400).json({ message: "Username and password required" });
     }
     passport.authenticate("local", async (err, user, info) => {
-      console.log("[AUTH] Passport authenticate callback");
-      console.log("[AUTH] Error:", err);
-      console.log("[AUTH] User found:", !!user);
-      console.log("[AUTH] Info:", info);
       if (err) {
-        console.error("[AUTH] Authentication error:", err);
+        logger.error({ err }, "Authentication error");
         return res.status(500).json({ message: "Login error" });
       }
       if (!user) {
-        console.log("[AUTH] No user found - invalid credentials");
+        logger.debug({ username: req.body?.username }, "Login failed \u2014 invalid credentials");
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
       if (user.role !== "superadmin") {
@@ -3215,21 +3363,20 @@ async function setupAuth(app2) {
             return expiryDate > now;
           });
           if (!hasValidCompany) {
-            console.log("[AUTH] Non-superadmin user login denied - all companies expired");
+            logger.info({ username: user.username }, "Login denied \u2014 company license expired");
             return res.status(403).json({ message: "Company license has expired. Please recharge to login." });
           }
         } catch (error) {
-          console.error("[AUTH] Error checking company expiry:", error);
+          logger.error({ error }, "Error checking company expiry during login");
           return res.status(500).json({ message: "Error checking company status" });
         }
       }
-      console.log("[AUTH] User authenticated, creating session...");
       req.login(user, (err2) => {
         if (err2) {
-          console.error("[AUTH] Session creation error:", err2);
+          logger.error({ err: err2 }, "Session creation error");
           return res.status(500).json({ message: "Login error" });
         }
-        console.log("[AUTH] \u2705 LOGIN SUCCESSFUL! User:", user.username);
+        logger.info({ username: user.username }, "Login successful");
         return res.json({ user });
       });
     })(req, res, next);
@@ -3246,7 +3393,6 @@ async function setupAuth(app2) {
 var isAuthenticated = async (req, res, next) => {
   const isAuth = req.isAuthenticated();
   if (!isAuth) {
-    console.log("[AUTH] Unauthorized request to:", req.path, "Session:", !!req.session, "User:", !!req.user);
     return res.status(401).json({ message: "Unauthorized" });
   }
   const user = req.user;
@@ -3259,10 +3405,10 @@ var isAuthenticated = async (req, res, next) => {
         return expiryDate > now;
       });
       if (!hasValidCompany) {
-        console.log("[AUTH] Session expiry check: Company expired for user", user.username);
+        logger.info({ username: user.username }, "Session rejected \u2014 company license expired");
         req.logout((err) => {
           if (err) {
-            console.error("[AUTH] Error logging out expired user:", err);
+            logger.error({ err }, "Error logging out expired user");
           }
           return res.status(403).json({
             message: "Company license has expired. Please recharge to login.",
@@ -3272,7 +3418,7 @@ var isAuthenticated = async (req, res, next) => {
         return;
       }
     } catch (error) {
-      console.error("[AUTH] Error checking company expiry:", error);
+      logger.error({ error }, "Error checking company expiry in session middleware");
       return next();
     }
   }
@@ -3328,6 +3474,7 @@ async function validateCompanyAccess(req, res, next) {
 
 // server/routes.ts
 init_db();
+init_logger();
 init_schema();
 import { z as z2 } from "zod";
 import bcrypt2 from "bcryptjs";
@@ -3336,6 +3483,7 @@ import { join } from "path";
 import archiver from "archiver";
 
 // server/objectStorage.ts
+init_logger();
 import { Storage } from "@google-cloud/storage";
 import { randomUUID } from "crypto";
 var REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
@@ -3399,14 +3547,14 @@ var ObjectStorageService = class {
       });
       const stream = file.createReadStream();
       stream.on("error", (err) => {
-        console.error("Stream error:", err);
+        logger.error({ err }, "Object storage stream error");
         if (!res.headersSent) {
           res.status(500).json({ error: "Error streaming file" });
         }
       });
       stream.pipe(res);
     } catch (error) {
-      console.error("Error downloading file:", error);
+      logger.error({ error }, "Error downloading file from object storage");
       if (!res.headersSent) {
         res.status(500).json({ error: "Error downloading file" });
       }
@@ -3491,7 +3639,28 @@ async function signObjectURL({
 }
 
 // server/routes.ts
+function validatePassword(password) {
+  if (!password || password.length < 10) return "Password must be at least 10 characters";
+  if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter";
+  if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter";
+  if (!/[0-9]/.test(password)) return "Password must contain at least one number";
+  return null;
+}
 var printClients = /* @__PURE__ */ new Map();
+var setupRateLimit = rateLimit2({
+  windowMs: 60 * 60 * 1e3,
+  max: 5,
+  message: { message: "Too many setup attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+var createUserRateLimit = rateLimit2({
+  windowMs: 60 * 60 * 1e3,
+  max: 20,
+  message: { message: "Too many account creation attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 function isAdminRole(role) {
   return role === "admin" || role === "superadmin";
 }
@@ -3499,24 +3668,27 @@ async function registerRoutes(app2) {
   try {
     await runMigrations();
   } catch (error) {
-    console.error("Failed to run migrations:", error);
+    logger.error("Failed to run migrations:", error);
     process.exit(1);
   }
   await setupAuth(app2);
+  app2.get("/api/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
   app2.get("/api/check-setup", async (req, res) => {
     try {
       const needsSetup = await storage.needsInitialSetup();
       res.json({ needsSetup });
     } catch (error) {
-      console.error("Error checking setup:", error);
+      logger.error("Error checking setup:", error);
       res.status(500).json({ message: "Failed to check setup status" });
     }
   });
-  app2.post("/api/setup", async (req, res) => {
+  app2.post("/api/setup", setupRateLimit, async (req, res) => {
     try {
-      console.log("[SETUP] Setup POST request initiated");
+      logger.info("[SETUP] Setup POST request initiated");
       const needsSetup = await storage.needsInitialSetup();
-      console.log("[SETUP] Needs setup check:", needsSetup);
+      logger.info("[SETUP] Needs setup check:", needsSetup);
       if (!needsSetup) {
         return res.status(400).json({ message: "System is already set up" });
       }
@@ -3524,9 +3696,8 @@ async function registerRoutes(app2) {
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
-      if (password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
+      const pwError = validatePassword(password);
+      if (pwError) return res.status(400).json({ message: pwError });
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
         return res.status(400).json({ message: "Username already exists" });
@@ -3535,7 +3706,7 @@ async function registerRoutes(app2) {
       const userRole = "superadmin";
       const userFirstName = "Super";
       const userLastName = "Admin";
-      console.log("[SETUP] Creating superadmin with role:", userRole, "username:", username);
+      logger.info("[SETUP] Creating superadmin with role:", userRole, "username:", username);
       const user = await storage.createUser({
         username,
         passwordHash,
@@ -3543,17 +3714,17 @@ async function registerRoutes(app2) {
         firstName: userFirstName,
         lastName: userLastName
       });
-      console.log("[SETUP] User created:", { id: user.id, username: user.username, role: user.role });
+      logger.info("[SETUP] User created:", { id: user.id, username: user.username, role: user.role });
       req.logIn(user, async (err) => {
         if (err) {
-          console.error("[SETUP] Error logging in user:", err);
+          logger.error("[SETUP] Error logging in user:", err);
           return res.status(500).json({ message: "User created but login failed: " + err.message });
         }
         try {
           await storage.assignUserToDefaultCompany(user.id);
-          console.log("[SETUP] User assigned to default company");
+          logger.info("[SETUP] User assigned to default company");
         } catch (companyErr) {
-          console.error("[SETUP] Error assigning company:", companyErr);
+          logger.error("[SETUP] Error assigning company:", companyErr);
         }
         res.json({
           message: "Setup complete! Super admin account created successfully.",
@@ -3565,8 +3736,8 @@ async function registerRoutes(app2) {
         });
       });
     } catch (error) {
-      console.error("[SETUP] Error during setup:", error);
-      res.status(500).json({ message: "Failed to complete setup: " + (error instanceof Error ? error.message : "Unknown error") });
+      logger.error("[SETUP] Error during setup:", error);
+      res.status(500).json({ message: "Failed to complete setup" });
     }
   });
   app2.get("/api/auth/user", isAuthenticated, async (req, res) => {
@@ -3574,7 +3745,7 @@ async function registerRoutes(app2) {
       const user = req.user;
       res.json(user);
     } catch (error) {
-      console.error("Error fetching user:", error);
+      logger.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
@@ -3591,7 +3762,7 @@ async function registerRoutes(app2) {
       }
       res.json(filteredUsers);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      logger.error("Error fetching users:", error);
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
@@ -3606,9 +3777,19 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "Invalid role" });
       }
       const user = await storage.updateUserRole(req.params.id, role);
+      storage.createAuditLog({
+        userId: req.user.id,
+        companyId: 0,
+        action: "UPDATE",
+        entityType: "user_role",
+        entityId: parseInt(req.params.id) || 0,
+        newData: { role },
+        ipAddress: req.ip
+      }).catch(() => {
+      });
       res.json(user);
     } catch (error) {
-      console.error("Error updating user role:", error);
+      logger.error("Error updating user role:", error);
       res.status(500).json({ message: "Failed to update user role" });
     }
   });
@@ -3625,7 +3806,7 @@ async function registerRoutes(app2) {
       const user = await storage.updateUserPermissions(req.params.id, role, pagePermissions);
       res.json(user);
     } catch (error) {
-      console.error("Error updating user permissions:", error);
+      logger.error("Error updating user permissions:", error);
       res.status(500).json({ message: "Failed to update user permissions" });
     }
   });
@@ -3636,18 +3817,26 @@ async function registerRoutes(app2) {
         return res.status(403).json({ message: "Only super admin can update passwords" });
       }
       const { password } = req.body;
-      if (!password || password.length < 6) {
-        return res.status(400).json({ message: "Password must be at least 6 characters" });
-      }
+      const pwError = validatePassword(password);
+      if (pwError) return res.status(400).json({ message: pwError });
       const passwordHash = await bcrypt2.hash(password, 10);
       const user = await storage.updateUserPassword(req.params.id, passwordHash);
+      storage.createAuditLog({
+        userId: req.user.id,
+        companyId: 0,
+        action: "UPDATE",
+        entityType: "user_password",
+        entityId: parseInt(req.params.id) || 0,
+        ipAddress: req.ip
+      }).catch(() => {
+      });
       res.json(user);
     } catch (error) {
-      console.error("Error updating user password:", error);
+      logger.error("Error updating user password:", error);
       res.status(500).json({ message: "Failed to update user password" });
     }
   });
-  app2.post("/api/users/create", isAuthenticated, async (req, res) => {
+  app2.post("/api/users/create", isAuthenticated, createUserRateLimit, async (req, res) => {
     try {
       const currentUser = await storage.getUser(req.user.id);
       if (!isAdminRole(currentUser?.role)) {
@@ -3655,7 +3844,7 @@ async function registerRoutes(app2) {
       }
       const createUserSchema = z2.object({
         username: z2.string().min(1, "Username is required"),
-        password: z2.string().min(6, "Password must be at least 6 characters"),
+        password: z2.string().refine((p) => validatePassword(p) === null, { message: "Password must be 10+ chars with uppercase, lowercase, and a number" }),
         firstName: z2.string().optional(),
         lastName: z2.string().optional(),
         email: z2.string().email().optional().or(z2.literal("")),
@@ -3695,7 +3884,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating user:", error);
+      logger.error("Error creating user:", error);
       res.status(500).json({ message: "Failed to create user" });
     }
   });
@@ -3709,9 +3898,19 @@ async function registerRoutes(app2) {
         return res.status(400).json({ message: "Cannot delete your own account" });
       }
       await storage.deleteUser(req.params.id);
+      storage.createAuditLog({
+        userId: req.user.id,
+        companyId: 0,
+        action: "DELETE",
+        entityType: "user",
+        entityId: parseInt(req.params.id) || 0,
+        oldData: { deletedUserId: req.params.id },
+        ipAddress: req.ip
+      }).catch(() => {
+      });
       res.json({ message: "User deleted successfully" });
     } catch (error) {
-      console.error("Error deleting user:", error);
+      logger.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
     }
   });
@@ -3722,7 +3921,7 @@ async function registerRoutes(app2) {
       res.set("Cache-Control", "no-cache, no-store, must-revalidate");
       res.json(userCompanies2);
     } catch (error) {
-      console.error("Error fetching user companies:", error);
+      logger.error("Error fetching user companies:", error);
       res.status(500).json({ message: "Failed to fetch user companies" });
     }
   });
@@ -3735,7 +3934,7 @@ async function registerRoutes(app2) {
       const userCompanies2 = await storage.getUserCompanies(req.params.id);
       res.json(userCompanies2);
     } catch (error) {
-      console.error("Error fetching user companies:", error);
+      logger.error("Error fetching user companies:", error);
       res.status(500).json({ message: "Failed to fetch user companies" });
     }
   });
@@ -3749,7 +3948,7 @@ async function registerRoutes(app2) {
       await storage.assignUserToCompany(req.params.id, companyId, isDefault);
       res.json({ message: "Company assigned successfully" });
     } catch (error) {
-      console.error("Error assigning company:", error);
+      logger.error("Error assigning company:", error);
       res.status(500).json({ message: "Failed to assign company" });
     }
   });
@@ -3762,7 +3961,7 @@ async function registerRoutes(app2) {
       await storage.removeUserFromCompany(req.params.id, parseInt(req.params.companyId));
       res.json({ message: "Company removed successfully" });
     } catch (error) {
-      console.error("Error removing company:", error);
+      logger.error("Error removing company:", error);
       res.status(500).json({ message: "Failed to remove company" });
     }
   });
@@ -3775,7 +3974,7 @@ async function registerRoutes(app2) {
       const companies2 = await storage.getCompanies();
       res.json(companies2);
     } catch (error) {
-      console.error("Error fetching companies:", error);
+      logger.error("Error fetching companies:", error);
       res.status(500).json({ message: "Failed to fetch companies" });
     }
   });
@@ -3798,7 +3997,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating company:", error);
+      logger.error("Error creating company:", error);
       res.status(500).json({ message: "Failed to create company" });
     }
   });
@@ -3816,7 +4015,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating company:", error);
+      logger.error("Error updating company:", error);
       res.status(500).json({ message: "Failed to update company" });
     }
   });
@@ -3830,7 +4029,7 @@ async function registerRoutes(app2) {
       await storage.deleteCompany(id);
       res.json({ message: "Company deleted successfully" });
     } catch (error) {
-      console.error("Error deleting company:", error);
+      logger.error("Error deleting company:", error);
       res.status(500).json({ message: "Failed to delete company" });
     }
   });
@@ -3839,7 +4038,7 @@ async function registerRoutes(app2) {
       const financialYears2 = await storage.getFinancialYears(req.companyId);
       res.json(financialYears2);
     } catch (error) {
-      console.error("Error fetching financial years:", error);
+      logger.error("Error fetching financial years:", error);
       res.status(500).json({ message: "Failed to fetch financial years" });
     }
   });
@@ -3848,7 +4047,7 @@ async function registerRoutes(app2) {
       const activeFY = await storage.getActiveFinancialYear(req.companyId);
       res.json(activeFY || null);
     } catch (error) {
-      console.error("Error fetching active financial year:", error);
+      logger.error("Error fetching active financial year:", error);
       res.status(500).json({ message: "Failed to fetch active financial year" });
     }
   });
@@ -3861,7 +4060,7 @@ async function registerRoutes(app2) {
       }
       res.json(fy);
     } catch (error) {
-      console.error("Error fetching financial year:", error);
+      logger.error("Error fetching financial year:", error);
       res.status(500).json({ message: "Failed to fetch financial year" });
     }
   });
@@ -3881,7 +4080,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating financial year:", error);
+      logger.error("Error creating financial year:", error);
       res.status(500).json({ message: "Failed to create financial year" });
     }
   });
@@ -3899,7 +4098,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating financial year:", error);
+      logger.error("Error updating financial year:", error);
       res.status(500).json({ message: "Failed to update financial year" });
     }
   });
@@ -3913,7 +4112,7 @@ async function registerRoutes(app2) {
       const fy = await storage.setActiveFinancialYear(id, req.companyId);
       res.json(fy);
     } catch (error) {
-      console.error("Error activating financial year:", error);
+      logger.error("Error activating financial year:", error);
       res.status(500).json({ message: "Failed to activate financial year" });
     }
   });
@@ -3927,16 +4126,23 @@ async function registerRoutes(app2) {
       await storage.deleteFinancialYear(id, req.companyId);
       res.json({ success: true, message: "Financial year deleted successfully" });
     } catch (error) {
-      console.error("Error deleting financial year:", error);
-      res.status(500).json({ message: error.message || "Failed to delete financial year" });
+      logger.error("Error deleting financial year:", error);
+      res.status(500).json({ message: "Failed to delete financial year" });
     }
   });
   app2.get("/api/parties", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
+      const { page, limit, search } = req.query;
+      if (page !== void 0) {
+        const pageNum = Math.max(1, parseInt(String(page)) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit)) || 50));
+        const result = await storage.getPartiesPaginated(req.companyId, pageNum, limitNum, String(search || ""));
+        return res.json(result);
+      }
       const parties2 = await storage.getParties(req.companyId);
       res.json(parties2);
     } catch (error) {
-      console.error("Error fetching parties:", error);
+      logger.error({ error }, "Error fetching parties");
       res.status(500).json({ message: "Failed to fetch parties" });
     }
   });
@@ -3957,7 +4163,7 @@ async function registerRoutes(app2) {
       }));
       res.json(exportData);
     } catch (error) {
-      console.error("Export parties error:", error?.message || error);
+      logger.error("Export parties error:", error?.message || error);
       res.status(500).json({ message: "Failed to export parties: " + (error?.message || "Unknown error") });
     }
   });
@@ -3970,7 +4176,7 @@ async function registerRoutes(app2) {
       }
       res.json(party);
     } catch (error) {
-      console.error("Error fetching party:", error);
+      logger.error("Error fetching party:", error);
       res.status(500).json({ message: "Failed to fetch party" });
     }
   });
@@ -3984,7 +4190,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating party:", error);
+      logger.error("Error creating party:", error);
       res.status(500).json({ message: "Failed to create party" });
     }
   });
@@ -3998,7 +4204,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating party:", error);
+      logger.error("Error updating party:", error);
       res.status(500).json({ message: "Failed to update party" });
     }
   });
@@ -4007,7 +4213,7 @@ async function registerRoutes(app2) {
       const agents2 = await storage.getAgents(req.companyId);
       res.json(agents2);
     } catch (error) {
-      console.error("Error fetching agents:", error);
+      logger.error("Error fetching agents:", error);
       res.status(500).json({ message: "Failed to fetch agents" });
     }
   });
@@ -4016,7 +4222,7 @@ async function registerRoutes(app2) {
       const nextCode = await storage.getNextAgentCode(req.companyId);
       res.json({ nextCode });
     } catch (error) {
-      console.error("Error fetching next agent code:", error);
+      logger.error("Error fetching next agent code:", error);
       res.status(500).json({ message: "Failed to fetch next agent code" });
     }
   });
@@ -4029,7 +4235,7 @@ async function registerRoutes(app2) {
       }
       res.json(agent);
     } catch (error) {
-      console.error("Error fetching agent:", error);
+      logger.error("Error fetching agent:", error);
       res.status(500).json({ message: "Failed to fetch agent" });
     }
   });
@@ -4043,7 +4249,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating agent:", error);
+      logger.error("Error creating agent:", error);
       res.status(500).json({ message: "Failed to create agent" });
     }
   });
@@ -4057,16 +4263,23 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating agent:", error);
+      logger.error("Error updating agent:", error);
       res.status(500).json({ message: "Failed to update agent" });
     }
   });
   app2.get("/api/items", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
+      const { page, limit, search } = req.query;
+      if (page !== void 0) {
+        const pageNum = Math.max(1, parseInt(String(page)) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit)) || 50));
+        const result = await storage.getItemsPaginated(req.companyId, pageNum, limitNum, String(search || ""));
+        return res.json(result);
+      }
       const items2 = await storage.getItems(req.companyId);
       res.json(items2);
     } catch (error) {
-      console.error("Error fetching items:", error);
+      logger.error({ error }, "Error fetching items");
       res.status(500).json({ message: "Failed to fetch items" });
     }
   });
@@ -4089,7 +4302,7 @@ async function registerRoutes(app2) {
       }));
       res.json(exportData);
     } catch (error) {
-      console.error("Export items error:", error?.message || error);
+      logger.error("Export items error:", error?.message || error);
       res.status(500).json({ message: "Failed to export items: " + (error?.message || "Unknown error") });
     }
   });
@@ -4102,7 +4315,7 @@ async function registerRoutes(app2) {
       }
       res.json(item);
     } catch (error) {
-      console.error("Error fetching item:", error);
+      logger.error("Error fetching item:", error);
       res.status(500).json({ message: "Failed to fetch item" });
     }
   });
@@ -4116,7 +4329,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating item:", error);
+      logger.error("Error creating item:", error);
       res.status(500).json({ message: "Failed to create item" });
     }
   });
@@ -4130,7 +4343,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating item:", error);
+      logger.error("Error updating item:", error);
       res.status(500).json({ message: "Failed to update item" });
     }
   });
@@ -4143,7 +4356,7 @@ async function registerRoutes(app2) {
       if (error.message === "Item not found") {
         return res.status(404).json({ message: "Item not found" });
       }
-      console.error("Error fetching item history:", error);
+      logger.error("Error fetching item history:", error);
       res.status(500).json({ message: "Failed to fetch item history" });
     }
   });
@@ -4246,10 +4459,17 @@ async function registerRoutes(app2) {
   });
   app2.get("/api/sales", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
+      const { page, limit, search } = req.query;
+      if (page !== void 0) {
+        const pageNum = Math.max(1, parseInt(String(page)) || 1);
+        const limitNum = Math.min(200, Math.max(1, parseInt(String(limit)) || 50));
+        const result = await storage.getSalesPaginated(req.companyId, pageNum, limitNum, String(search || ""));
+        return res.json(result);
+      }
       const sales2 = await storage.getSales(req.companyId);
       res.json(sales2);
     } catch (error) {
-      console.error("Error fetching sales:", error);
+      logger.error({ error }, "Error fetching sales");
       res.status(500).json({ message: "Failed to fetch sales" });
     }
   });
@@ -4273,9 +4493,20 @@ async function registerRoutes(app2) {
       }
       const userId = req.user.id;
       const sale = await storage.createSale(saleData, saleItems2, userId, req.companyId);
+      appCache.delPrefix(`dashboard:${req.companyId}`);
+      appCache.delPrefix(`outstanding:${req.companyId}`);
+      storage.createAuditLog({
+        userId,
+        companyId: req.companyId,
+        entityType: "sale",
+        entityId: sale.id,
+        action: "create",
+        newData: sale,
+        ipAddress: req.ip
+      });
       res.json(sale);
     } catch (error) {
-      console.error("Error creating sale:", error);
+      logger.error("Error creating sale:", error);
       res.status(500).json({ message: "Failed to create sale" });
     }
   });
@@ -4287,7 +4518,7 @@ async function registerRoutes(app2) {
       }
       res.json(sale);
     } catch (error) {
-      console.error("Error fetching sale:", error);
+      logger.error("Error fetching sale:", error);
       res.status(500).json({ message: "Failed to fetch sale" });
     }
   });
@@ -4296,7 +4527,7 @@ async function registerRoutes(app2) {
       const items2 = await storage.getSaleItems(parseInt(req.params.id), req.companyId);
       res.json(items2);
     } catch (error) {
-      console.error("Error fetching sale items:", error);
+      logger.error("Error fetching sale items:", error);
       res.status(500).json({ message: "Failed to fetch sale items" });
     }
   });
@@ -4329,10 +4560,25 @@ async function registerRoutes(app2) {
           return res.status(400).json({ message: "Rate must be a non-negative number" });
         }
       }
-      const sale = await storage.updateSale(parseInt(req.params.id), saleData, saleItems2, req.companyId);
+      const saleId = parseInt(req.params.id);
+      const existingSale = await storage.getSale(saleId, req.companyId);
+      const sale = await storage.updateSale(saleId, saleData, saleItems2, req.companyId);
+      appCache.delPrefix(`dashboard:${req.companyId}`);
+      appCache.delPrefix(`outstanding:${req.companyId}`);
+      storage.createAuditLog({
+        userId: req.user?.id,
+        companyId: req.companyId,
+        entityType: "sale",
+        entityId: saleId,
+        action: "update",
+        oldData: existingSale,
+        newData: sale,
+        ipAddress: req.ip
+      });
       res.json(sale);
     } catch (error) {
-      console.error("Error updating sale:", error);
+      if (error.status === 409) return res.status(409).json({ message: error.message });
+      logger.error("Error updating sale:", error);
       res.status(500).json({ message: "Failed to update sale" });
     }
   });
@@ -4341,7 +4587,7 @@ async function registerRoutes(app2) {
       const purchases2 = await storage.getPurchases(req.companyId);
       res.json(purchases2);
     } catch (error) {
-      console.error("Error fetching purchases:", error);
+      logger.error("Error fetching purchases:", error);
       res.status(500).json({ message: "Failed to fetch purchases" });
     }
   });
@@ -4353,7 +4599,7 @@ async function registerRoutes(app2) {
       }
       res.json(purchase);
     } catch (error) {
-      console.error("Error fetching purchase:", error);
+      logger.error("Error fetching purchase:", error);
       res.status(500).json({ message: "Failed to fetch purchase" });
     }
   });
@@ -4362,7 +4608,7 @@ async function registerRoutes(app2) {
       const nextSerial = await storage.getNextSerial(req.companyId);
       res.json({ serial: nextSerial });
     } catch (error) {
-      console.error("Error fetching next serial:", error);
+      logger.error("Error fetching next serial:", error);
       res.status(500).json({ message: "Failed to fetch next serial" });
     }
   });
@@ -4375,12 +4621,13 @@ async function registerRoutes(app2) {
       const validatedPurchase = insertPurchaseSchema.parse(purchase);
       const userId = req.user.id;
       const newPurchase = await storage.createPurchase(validatedPurchase, items2, userId, req.companyId);
+      appCache.delPrefix(`dashboard:${req.companyId}`);
       res.json(newPurchase);
     } catch (error) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating purchase:", error);
+      logger.error("Error creating purchase:", error);
       res.status(500).json({ message: "Failed to create purchase" });
     }
   });
@@ -4389,7 +4636,7 @@ async function registerRoutes(app2) {
       const payments2 = await storage.getPayments(req.companyId);
       res.json(payments2);
     } catch (error) {
-      console.error("Error fetching payments:", error);
+      logger.error("Error fetching payments:", error);
       res.status(500).json({ message: "Failed to fetch payments" });
     }
   });
@@ -4398,12 +4645,13 @@ async function registerRoutes(app2) {
       const validated = insertPaymentSchema.parse(req.body);
       const userId = req.user.id;
       const payment = await storage.createPayment(validated, userId, req.companyId);
+      appCache.delPrefix(`outstanding:${req.companyId}`);
       res.json(payment);
     } catch (error) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating payment:", error);
+      logger.error("Error creating payment:", error);
       res.status(500).json({ message: "Failed to create payment" });
     }
   });
@@ -4417,7 +4665,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating payment:", error);
+      logger.error("Error updating payment:", error);
       res.status(500).json({ message: "Failed to update payment" });
     }
   });
@@ -4427,7 +4675,7 @@ async function registerRoutes(app2) {
       await storage.deletePayment(id, req.companyId);
       res.json({ message: "Payment deleted successfully" });
     } catch (error) {
-      console.error("Error deleting payment:", error);
+      logger.error("Error deleting payment:", error);
       res.status(500).json({ message: "Failed to delete payment" });
     }
   });
@@ -4441,7 +4689,7 @@ async function registerRoutes(app2) {
       );
       res.json(stock2);
     } catch (error) {
-      console.error("Error fetching stock:", error);
+      logger.error("Error fetching stock:", error);
       res.status(500).json({ message: "Failed to fetch stock" });
     }
   });
@@ -4450,7 +4698,7 @@ async function registerRoutes(app2) {
       const stockInfo = await storage.getStockInfoForBillEntry(req.companyId);
       res.json(stockInfo);
     } catch (error) {
-      console.error("Error fetching stock info:", error);
+      logger.error("Error fetching stock info:", error);
       res.status(500).json({ message: "Failed to fetch stock info" });
     }
   });
@@ -4463,7 +4711,7 @@ async function registerRoutes(app2) {
       }
       res.json(inventoryItem);
     } catch (error) {
-      console.error("Error fetching inventory by barcode:", error);
+      logger.error("Error fetching inventory by barcode:", error);
       res.status(500).json({ message: "Failed to fetch inventory by barcode" });
     }
   });
@@ -4473,25 +4721,33 @@ async function registerRoutes(app2) {
       const outstanding = await storage.getPartyOutstanding(partyId, req.companyId);
       res.json({ partyId, outstanding });
     } catch (error) {
-      console.error("Error fetching party outstanding:", error);
+      logger.error("Error fetching party outstanding:", error);
       res.status(500).json({ message: "Failed to fetch party outstanding" });
     }
   });
   app2.get("/api/dashboard/metrics", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
+      const cacheKey = `dashboard:${req.companyId}`;
+      const cached = appCache.get(cacheKey);
+      if (cached) return res.json(cached);
       const metrics = await storage.getDashboardMetrics(req.companyId);
+      appCache.set(cacheKey, metrics, TTL.DASHBOARD);
       res.json(metrics);
     } catch (error) {
-      console.error("Error fetching dashboard metrics:", error);
+      logger.error("Error fetching dashboard metrics:", error);
       res.status(500).json({ message: "Failed to fetch metrics" });
     }
   });
   app2.get("/api/reports/outstanding", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
+      const cacheKey = `outstanding:${req.companyId}`;
+      const cached = appCache.get(cacheKey);
+      if (cached) return res.json(cached);
       const outstanding = await storage.getOutstanding(req.companyId);
+      appCache.set(cacheKey, outstanding, TTL.OUTSTANDING);
       res.json(outstanding);
     } catch (error) {
-      console.error("Error fetching outstanding:", error);
+      logger.error("Error fetching outstanding:", error);
       res.status(500).json({ message: "Failed to fetch outstanding" });
     }
   });
@@ -4507,7 +4763,7 @@ async function registerRoutes(app2) {
       );
       res.json(salesData);
     } catch (error) {
-      console.error("Error fetching sales report:", error);
+      logger.error("Error fetching sales report:", error);
       res.status(500).json({ message: "Failed to fetch sales report" });
     }
   });
@@ -4521,7 +4777,7 @@ async function registerRoutes(app2) {
       );
       res.json(purchasesData);
     } catch (error) {
-      console.error("Error fetching purchases report:", error);
+      logger.error("Error fetching purchases report:", error);
       res.status(500).json({ message: "Failed to fetch purchases report" });
     }
   });
@@ -4538,7 +4794,7 @@ async function registerRoutes(app2) {
       );
       res.json(items2);
     } catch (error) {
-      console.error("Error fetching items report:", error);
+      logger.error("Error fetching items report:", error);
       res.status(500).json({ message: "Failed to fetch items report" });
     }
   });
@@ -4553,7 +4809,7 @@ async function registerRoutes(app2) {
       );
       res.json(categories);
     } catch (error) {
-      console.error("Error fetching categories report:", error);
+      logger.error("Error fetching categories report:", error);
       res.status(500).json({ message: "Failed to fetch categories report" });
     }
   });
@@ -4568,7 +4824,7 @@ async function registerRoutes(app2) {
       );
       res.json(paymentsData);
     } catch (error) {
-      console.error("Error fetching payments report:", error);
+      logger.error("Error fetching payments report:", error);
       res.status(500).json({ message: "Failed to fetch payments report" });
     }
   });
@@ -4583,25 +4839,25 @@ async function registerRoutes(app2) {
       );
       res.json(reportData);
     } catch (error) {
-      console.error("Error fetching sales total report:", error);
+      logger.error("Error fetching sales total report:", error);
       res.status(500).json({ message: "Failed to fetch sales total report" });
     }
   });
   app2.get("/api/reports/gstr1", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
-      console.log("[GSTR1] User:", req.user?.id, "Company:", req.companyId);
+      logger.info("[GSTR1] User:", req.user?.id, "Company:", req.companyId);
       const { startDate, endDate, saleType } = req.query;
-      console.log("[GSTR1] Params:", { startDate, endDate, saleType });
+      logger.info("[GSTR1] Params:", { startDate, endDate, saleType });
       const gstrData = await storage.getGSTR1Data(
         req.companyId,
         startDate,
         endDate,
         saleType
       );
-      console.log("[GSTR1] Data count:", gstrData?.length);
+      logger.info("[GSTR1] Data count:", gstrData?.length);
       res.json(gstrData);
     } catch (error) {
-      console.error("Error fetching GSTR1 data:", error);
+      logger.error("Error fetching GSTR1 data:", error);
       res.status(500).json({ message: "Failed to fetch GSTR1 data" });
     }
   });
@@ -4616,7 +4872,7 @@ async function registerRoutes(app2) {
       );
       res.json(hsnData);
     } catch (error) {
-      console.error("Error fetching HSN summary data:", error);
+      logger.error("Error fetching HSN summary data:", error);
       res.status(500).json({ message: "Failed to fetch HSN summary data" });
     }
   });
@@ -4628,8 +4884,8 @@ async function registerRoutes(app2) {
       res.setHeader("Content-Disposition", `attachment; filename="einvoice-${saleId}.json"`);
       res.json([eInvoiceJSON]);
     } catch (error) {
-      console.error("Error generating e-Invoice JSON:", error);
-      res.status(400).json({ message: error.message || "Failed to generate e-Invoice JSON" });
+      logger.error("Error generating e-Invoice JSON:", error);
+      res.status(400).json({ message: "Failed to generate e-Invoice JSON" });
     }
   });
   app2.patch("/api/sales/:id/einvoice", isAuthenticated, validateCompanyAccess, async (req, res) => {
@@ -4646,8 +4902,8 @@ async function registerRoutes(app2) {
       });
       res.json(updatedSale);
     } catch (error) {
-      console.error("Error updating e-Invoice details:", error);
-      res.status(400).json({ message: error.message || "Failed to update e-Invoice details" });
+      logger.error("Error updating e-Invoice details:", error);
+      res.status(400).json({ message: "Failed to update e-Invoice details" });
     }
   });
   app2.get("/api/reports/ledger/:partyId", isAuthenticated, validateCompanyAccess, async (req, res) => {
@@ -4665,7 +4921,7 @@ async function registerRoutes(app2) {
       }
       res.json(ledger);
     } catch (error) {
-      console.error("Error fetching party ledger:", error);
+      logger.error("Error fetching party ledger:", error);
       res.status(500).json({ message: "Failed to fetch party ledger" });
     }
   });
@@ -4674,7 +4930,7 @@ async function registerRoutes(app2) {
       const templates = await storage.getBillTemplates(req.companyId);
       res.json(templates);
     } catch (error) {
-      console.error("Error fetching bill templates:", error);
+      logger.error("Error fetching bill templates:", error);
       res.status(500).json({ message: "Failed to fetch bill templates" });
     }
   });
@@ -4684,7 +4940,7 @@ async function registerRoutes(app2) {
       const template = await storage.getBillTemplateByAssignment(type, req.companyId);
       res.json(template || null);
     } catch (error) {
-      console.error("Error fetching assigned bill template:", error);
+      logger.error("Error fetching assigned bill template:", error);
       res.status(500).json({ message: "Failed to fetch bill template" });
     }
   });
@@ -4701,7 +4957,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating bill template:", error);
+      logger.error("Error creating bill template:", error);
       res.status(500).json({ message: "Failed to create bill template" });
     }
   });
@@ -4718,7 +4974,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating bill template:", error);
+      logger.error("Error updating bill template:", error);
       res.status(500).json({ message: "Failed to update bill template" });
     }
   });
@@ -4731,7 +4987,7 @@ async function registerRoutes(app2) {
       await storage.deleteBillTemplate(parseInt(req.params.id), req.companyId);
       res.json({ message: "Bill template deleted successfully" });
     } catch (error) {
-      console.error("Error deleting bill template:", error);
+      logger.error("Error deleting bill template:", error);
       res.status(500).json({ message: "Failed to delete bill template" });
     }
   });
@@ -4745,17 +5001,29 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating purchase entry:", error);
+      logger.error("Error creating purchase entry:", error);
       res.status(500).json({ message: "Failed to create purchase entry" });
     }
   });
   app2.put("/api/purchase-entries/:id", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      const existing = await storage.getPurchase(id, req.companyId);
       const purchase = await storage.updatePurchase(id, req.body, req.companyId);
+      storage.createAuditLog({
+        userId: req.user?.id,
+        companyId: req.companyId,
+        entityType: "purchase",
+        entityId: id,
+        action: "update",
+        oldData: existing,
+        newData: purchase,
+        ipAddress: req.ip
+      });
       res.json(purchase);
     } catch (error) {
-      console.error("Error updating purchase entry:", error);
+      if (error.status === 409) return res.status(409).json({ message: error.message });
+      logger.error("Error updating purchase entry:", error);
       res.status(500).json({ message: "Failed to update purchase entry" });
     }
   });
@@ -4764,7 +5032,7 @@ async function registerRoutes(app2) {
       const purchases2 = await storage.getPendingPurchases(req.companyId);
       res.json(purchases2);
     } catch (error) {
-      console.error("Error fetching pending purchases:", error);
+      logger.error("Error fetching pending purchases:", error);
       res.status(500).json({ message: "Failed to fetch pending purchases" });
     }
   });
@@ -4773,7 +5041,7 @@ async function registerRoutes(app2) {
       const tallyStatus = await storage.getPurchaseTallyStatus(req.companyId);
       res.json(tallyStatus);
     } catch (error) {
-      console.error("Error fetching purchase tally status:", error);
+      logger.error("Error fetching purchase tally status:", error);
       res.status(500).json({ message: "Failed to fetch purchase tally status" });
     }
   });
@@ -4782,7 +5050,7 @@ async function registerRoutes(app2) {
       const sizes = await storage.getSizeMaster();
       res.json(sizes);
     } catch (error) {
-      console.error("Error fetching size master:", error);
+      logger.error("Error fetching size master:", error);
       res.status(500).json({ message: "Failed to fetch size master" });
     }
   });
@@ -4791,7 +5059,7 @@ async function registerRoutes(app2) {
       const serial2 = await storage.getNextGlobalSerial(req.companyId);
       res.json({ serial: serial2 });
     } catch (error) {
-      console.error("Error fetching next global serial:", error);
+      logger.error("Error fetching next global serial:", error);
       res.status(500).json({ message: "Failed to fetch next global serial" });
     }
   });
@@ -4801,7 +5069,7 @@ async function registerRoutes(app2) {
       const items2 = await storage.getPurchaseItems(purchaseId, req.companyId);
       res.json(items2);
     } catch (error) {
-      console.error("Error fetching purchase items:", error);
+      logger.error("Error fetching purchase items:", error);
       res.status(500).json({ message: "Failed to fetch purchase items" });
     }
   });
@@ -4815,7 +5083,7 @@ async function registerRoutes(app2) {
       }
       res.json(item);
     } catch (error) {
-      console.error("Error adding purchase item:", error);
+      logger.error("Error adding purchase item:", error);
       res.status(500).json({ message: "Failed to add purchase item" });
     }
   });
@@ -4830,7 +5098,7 @@ async function registerRoutes(app2) {
       }
       res.json(item);
     } catch (error) {
-      console.error("Error updating purchase item:", error);
+      logger.error("Error updating purchase item:", error);
       res.status(500).json({ message: "Failed to update purchase item" });
     }
   });
@@ -4840,7 +5108,7 @@ async function registerRoutes(app2) {
       await storage.deletePurchaseItem(id, req.companyId);
       res.json({ message: "Purchase item deleted successfully" });
     } catch (error) {
-      console.error("Error deleting purchase item:", error);
+      logger.error("Error deleting purchase item:", error);
       res.status(500).json({ message: "Failed to delete purchase item" });
     }
   });
@@ -4854,7 +5122,7 @@ async function registerRoutes(app2) {
       const createdItems = await storage.createStockInwardItems(purchaseItemId, items2, req.companyId);
       res.json(createdItems);
     } catch (error) {
-      console.error("Error generating barcodes:", error);
+      logger.error("Error generating barcodes:", error);
       res.status(500).json({ message: "Failed to generate barcodes" });
     }
   });
@@ -4864,7 +5132,7 @@ async function registerRoutes(app2) {
       const items2 = await storage.getStockInwardItems(purchaseItemId, req.companyId);
       res.json(items2);
     } catch (error) {
-      console.error("Error fetching stock inward items:", error);
+      logger.error("Error fetching stock inward items:", error);
       res.status(500).json({ message: "Failed to fetch stock inward items" });
     }
   });
@@ -4874,7 +5142,7 @@ async function registerRoutes(app2) {
       await storage.completePurchase(purchaseId, req.companyId);
       res.json({ message: "Purchase completed successfully" });
     } catch (error) {
-      console.error("Error completing purchase:", error);
+      logger.error("Error completing purchase:", error);
       res.status(500).json({ message: "Failed to complete purchase" });
     }
   });
@@ -4887,7 +5155,7 @@ async function registerRoutes(app2) {
       const items2 = await storage.getAllStockInwardItems(req.companyId, filters);
       res.json(items2);
     } catch (error) {
-      console.error("Error fetching stock inward items:", error);
+      logger.error("Error fetching stock inward items:", error);
       res.status(500).json({ message: "Failed to fetch stock inward items" });
     }
   });
@@ -4900,7 +5168,7 @@ async function registerRoutes(app2) {
       }
       res.json(item);
     } catch (error) {
-      console.error("Error fetching stock inward item:", error);
+      logger.error("Error fetching stock inward item:", error);
       res.status(500).json({ message: "Failed to fetch stock inward item" });
     }
   });
@@ -4914,7 +5182,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error updating stock inward item:", error);
+      logger.error("Error updating stock inward item:", error);
       res.status(500).json({ message: "Failed to update stock inward item" });
     }
   });
@@ -4924,7 +5192,7 @@ async function registerRoutes(app2) {
       await storage.deleteStockInwardItem(id, req.companyId);
       res.json({ message: "Barcode deleted successfully" });
     } catch (error) {
-      console.error("Error deleting stock inward item:", error);
+      logger.error("Error deleting stock inward item:", error);
       res.status(500).json({ message: "Failed to delete barcode" });
     }
   });
@@ -4937,7 +5205,7 @@ async function registerRoutes(app2) {
       await storage.bulkDeleteStockInwardItems(ids, req.companyId);
       res.json({ message: `${ids.length} barcodes deleted successfully` });
     } catch (error) {
-      console.error("Error bulk deleting stock inward items:", error);
+      logger.error("Error bulk deleting stock inward items:", error);
       res.status(500).json({ message: "Failed to delete barcodes" });
     }
   });
@@ -4961,7 +5229,7 @@ async function registerRoutes(app2) {
       );
       res.json(createdItems);
     } catch (error) {
-      console.error("Error generating bulk barcodes:", error);
+      logger.error("Error generating bulk barcodes:", error);
       res.status(500).json({ message: "Failed to generate bulk barcodes" });
     }
   });
@@ -4970,7 +5238,7 @@ async function registerRoutes(app2) {
       const templates = await storage.getBarcodeLabelTemplates(req.companyId);
       res.json(templates);
     } catch (error) {
-      console.error("Error fetching barcode label templates:", error);
+      logger.error("Error fetching barcode label templates:", error);
       res.status(500).json({ message: "Failed to fetch barcode label templates" });
     }
   });
@@ -4979,7 +5247,7 @@ async function registerRoutes(app2) {
       const template = await storage.getDefaultBarcodeLabelTemplate(req.companyId);
       res.json(template || null);
     } catch (error) {
-      console.error("Error fetching default barcode label template:", error);
+      logger.error("Error fetching default barcode label template:", error);
       res.status(500).json({ message: "Failed to fetch default barcode label template" });
     }
   });
@@ -4992,7 +5260,7 @@ async function registerRoutes(app2) {
       if (error instanceof z2.ZodError) {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
       }
-      console.error("Error creating barcode label template:", error);
+      logger.error("Error creating barcode label template:", error);
       res.status(500).json({ message: "Failed to create barcode label template" });
     }
   });
@@ -5002,7 +5270,7 @@ async function registerRoutes(app2) {
       const template = await storage.updateBarcodeLabelTemplate(id, req.body, req.companyId);
       res.json(template);
     } catch (error) {
-      console.error("Error updating barcode label template:", error);
+      logger.error("Error updating barcode label template:", error);
       res.status(500).json({ message: "Failed to update barcode label template" });
     }
   });
@@ -5012,7 +5280,7 @@ async function registerRoutes(app2) {
       await storage.deleteBarcodeLabelTemplate(id, req.companyId);
       res.json({ message: "Template deleted successfully" });
     } catch (error) {
-      console.error("Error deleting barcode label template:", error);
+      logger.error("Error deleting barcode label template:", error);
       res.status(500).json({ message: "Failed to delete barcode label template" });
     }
   });
@@ -5022,7 +5290,7 @@ async function registerRoutes(app2) {
       const uploadURL = await objectStorageService.getObjectEntityUploadURL();
       res.json({ uploadURL });
     } catch (error) {
-      console.error("Error generating upload URL:", error);
+      logger.error("Error generating upload URL:", error);
       res.status(500).json({ error: "Failed to generate upload URL. Make sure object storage is configured." });
     }
   });
@@ -5046,7 +5314,7 @@ async function registerRoutes(app2) {
         message: "Token generated. Use this in your local print service configuration."
       });
     } catch (error) {
-      console.error("Error generating token:", error);
+      logger.error("Error generating token:", error);
       res.status(500).json({ success: false, message: "Failed to generate token" });
     }
   });
@@ -5063,7 +5331,7 @@ async function registerRoutes(app2) {
         createdAt: savedToken?.createdAt
       });
     } catch (error) {
-      console.error("Error validating token:", error);
+      logger.error("Error validating token:", error);
       res.json({ valid: false });
     }
   });
@@ -5096,7 +5364,7 @@ async function registerRoutes(app2) {
       }
       res.json(settings);
     } catch (error) {
-      console.error("Error getting print settings:", error);
+      logger.error("Error getting print settings:", error);
       res.status(500).json({ message: "Failed to get print settings" });
     }
   });
@@ -5105,7 +5373,7 @@ async function registerRoutes(app2) {
       const settings = await storage.upsertPrintSettings(req.companyId, req.body);
       res.json(settings);
     } catch (error) {
-      console.error("Error saving print settings:", error);
+      logger.error("Error saving print settings:", error);
       res.status(500).json({ message: "Failed to save print settings" });
     }
   });
@@ -5122,7 +5390,7 @@ async function registerRoutes(app2) {
         message: isConnected ? "Local print service connected" : companyToken ? "Token exists but service not connected. Run the Python script on your Windows PC." : "No token generated. Generate a token first."
       });
     } catch (error) {
-      console.error("Error checking status:", error);
+      logger.error("Error checking status:", error);
       res.json({
         connected: false,
         hasToken: false,
@@ -5153,7 +5421,7 @@ async function registerRoutes(app2) {
       client.send(JSON.stringify(printData));
       res.json({ success: true, message: "Print command sent" });
     } catch (error) {
-      console.error("Error sending print command:", error);
+      logger.error("Error sending print command:", error);
       res.status(500).json({ success: false, message: "Failed to send print command" });
     }
   });
@@ -5163,19 +5431,31 @@ async function registerRoutes(app2) {
     const url = new URL(req.url || "", `http://${req.headers.host}`);
     const token = url.searchParams.get("token") || "";
     if (!token) {
-      console.log("Print client rejected: missing token");
+      logger.info("Print client rejected: missing token");
       ws.close(4001, "Invalid or missing authentication token");
       return;
     }
     let companyId = null;
     try {
-      companyId = null;
+      const printToken = await storage.getPrintTokenByValue(token);
+      if (!printToken) {
+        logger.info("Print client rejected: token not found in database");
+        ws.close(4001, "Invalid or missing authentication token");
+        return;
+      }
+      const TOKEN_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1e3;
+      if (Date.now() - new Date(printToken.createdAt).getTime() > TOKEN_MAX_AGE_MS) {
+        logger.info(`Print client rejected: token expired (created ${printToken.createdAt})`);
+        ws.close(4001, "Token expired \u2014 please regenerate a new token");
+        return;
+      }
+      companyId = printToken.companyId;
     } catch (error) {
-      console.log("Print client rejected: token validation error");
+      logger.error("Print client rejected: token validation error", error);
       ws.close(4001, "Token validation failed");
       return;
     }
-    console.log(`Print client connected with token: ${token.substring(0, 8)}...`);
+    logger.info(`Print client connected with token: ${token.substring(0, 8)}...`);
     const existingClient = printClients.get(token);
     if (existingClient && existingClient.readyState === WebSocket.OPEN) {
       existingClient.close(1e3, "Replaced by new connection");
@@ -5188,27 +5468,27 @@ async function registerRoutes(app2) {
     ws.on("message", (data) => {
       try {
         const message = JSON.parse(data.toString());
-        console.log(`Message from print client:`, message);
+        logger.info(`Message from print client:`, message);
         if (message.type === "ping") {
           ws.send(JSON.stringify({ type: "pong" }));
         } else if (message.type === "print_result") {
-          console.log(`Print result:`, message.success ? "Success" : "Failed");
+          logger.info(`Print result:`, message.success ? "Success" : "Failed");
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        logger.error("Error parsing WebSocket message:", error);
       }
     });
     ws.on("close", () => {
-      console.log(`Print client disconnected`);
+      logger.info(`Print client disconnected`);
       printClients.delete(token);
     });
     ws.on("error", (error) => {
-      console.error(`WebSocket error:`, error);
+      logger.error(`WebSocket error:`, error);
       printClients.delete(token);
     });
   });
-  console.log("WebSocket print server initialized on /ws/print");
-  app2.get("/api/download/benesys_print_service.py", (req, res) => {
+  logger.info("WebSocket print server initialized on /ws/print");
+  app2.get("/api/download/benesys_print_service.py", isAuthenticated, (req, res) => {
     try {
       const filePath = join(process.cwd(), "attached_assets", "benesys_print_service.py");
       const fileContent = readFileSync(filePath, "utf-8");
@@ -5216,11 +5496,11 @@ async function registerRoutes(app2) {
       res.setHeader("Content-Disposition", 'attachment; filename="benesys_print_service.py"');
       res.send(fileContent);
     } catch (error) {
-      console.error("Error downloading print service:", error);
+      logger.error("Error downloading print service:", error);
       res.status(404).json({ message: "File not found" });
     }
   });
-  app2.get("/api/download/install_dependencies.bat", (req, res) => {
+  app2.get("/api/download/install_dependencies.bat", isAuthenticated, (req, res) => {
     try {
       const filePath = join(process.cwd(), "attached_assets", "install_dependencies.bat");
       const fileContent = readFileSync(filePath, "utf-8");
@@ -5228,11 +5508,11 @@ async function registerRoutes(app2) {
       res.setHeader("Content-Disposition", 'attachment; filename="install_dependencies.bat"');
       res.send(fileContent);
     } catch (error) {
-      console.error("Error downloading installer:", error);
+      logger.error("Error downloading installer:", error);
       res.status(404).json({ message: "File not found" });
     }
   });
-  app2.get("/api/download/benesys-setup-complete.zip", (req, res) => {
+  app2.get("/api/download/benesys-setup-complete.zip", isAuthenticated, (req, res) => {
     try {
       const assetsDir = join(process.cwd(), "attached_assets");
       const files = [
@@ -5243,7 +5523,7 @@ async function registerRoutes(app2) {
       ];
       for (const file of files) {
         if (!existsSync(join(assetsDir, file))) {
-          console.warn(`Warning: ${file} not found, will skip in ZIP`);
+          logger.warn({ file }, "File not found, skipping in ZIP");
         }
       }
       res.setHeader("Content-Type", "application/zip");
@@ -5258,7 +5538,7 @@ async function registerRoutes(app2) {
       });
       archive.finalize();
     } catch (error) {
-      console.error("Error creating ZIP:", error);
+      logger.error("Error creating ZIP:", error);
       res.status(500).json({ message: "Failed to create ZIP file" });
     }
   });
@@ -5267,7 +5547,7 @@ async function registerRoutes(app2) {
       const commissions = await storage.getAgentCommissionReport(req.companyId);
       res.json(commissions);
     } catch (error) {
-      console.error("Error fetching agent commission report:", error);
+      logger.error("Error fetching agent commission report:", error);
       res.status(500).json({ message: "Failed to fetch agent commission report" });
     }
   });
@@ -5323,14 +5603,53 @@ async function registerRoutes(app2) {
       res.setHeader("Content-Disposition", `attachment; filename="LABELS_${Date.now()}.PRN"`);
       res.send(prnContent);
     } catch (error) {
-      console.error("Error generating PRN file:", error);
+      logger.error("Error generating PRN file:", error);
       res.status(500).json({ message: "Failed to generate PRN file" });
+    }
+  });
+  app2.get("/api/audit-logs", isAuthenticated, validateCompanyAccess, async (req, res) => {
+    try {
+      const { entityType, entityId, limit } = req.query;
+      const logs = await storage.getAuditLogs(req.companyId, {
+        entityType: entityType ? String(entityType) : void 0,
+        entityId: entityId ? parseInt(String(entityId)) : void 0,
+        limit: limit ? Math.min(500, parseInt(String(limit))) : 100
+      });
+      res.json(logs);
+    } catch (error) {
+      logger.error("Error fetching audit logs:", error);
+      res.status(500).json({ message: "Failed to fetch audit logs" });
     }
   });
   return httpServer;
 }
 
 // server/app.ts
+function csrfProtection(req, res, next) {
+  if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return next();
+  const publicPaths = ["/api/login", "/api/logout", "/api/health", "/api/check-setup", "/api/setup"];
+  if (publicPaths.some((p) => req.path === p || req.path.startsWith("/api/setup"))) return next();
+  const host = req.headers.host;
+  if (!host) return next();
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  let reqHost = null;
+  if (origin) {
+    try {
+      reqHost = new URL(origin).host;
+    } catch {
+    }
+  } else if (referer) {
+    try {
+      reqHost = new URL(referer).host;
+    } catch {
+    }
+  }
+  if (reqHost && reqHost !== host) {
+    return res.status(403).json({ message: "Invalid request origin" });
+  }
+  next();
+}
 function log(message, source = "express") {
   const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -5341,12 +5660,44 @@ function log(message, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 var app = express();
+var isProd = process.env.NODE_ENV === "production";
+var isHttps = process.env.SECURE_COOKIES === "true";
+if (isProd && !process.env.SESSION_SECRET) {
+  process.stderr.write("FATAL: SESSION_SECRET env var is not set in production. Exiting.\n");
+  process.exit(1);
+}
+app.use(helmet({
+  contentSecurityPolicy: isProd ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "ws:", "wss:"],
+      workerSrc: ["'self'", "blob:"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"],
+      // upgrade-insecure-requests: enabled on HTTPS web, disabled on HTTP local
+      ...isHttps ? {} : { upgradeInsecureRequests: null }
+    }
+  } : false,
+  // dev: CSP off for Vite HMR
+  // HSTS: enabled on HTTPS web (1 year), disabled on HTTP local
+  strictTransportSecurity: isHttps ? { maxAge: 31536e3, includeSubDomains: true } : false,
+  crossOriginOpenerPolicy: false
+  // disable COOP — causes browser warnings over plain HTTP
+}));
+app.use(compression());
 app.use(express.json({
+  limit: "1mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+app.use(csrfProtection);
 app.use((req, res, next) => {
   const start = Date.now();
   const path2 = req.path;
@@ -5384,6 +5735,23 @@ async function runApp(setup) {
   server.listen(port, "0.0.0.0", () => {
     log(`serving on http://0.0.0.0:${port}`);
   });
+  server.keepAliveTimeout = 65e3;
+  server.headersTimeout = 66e3;
+  const shutdown = () => {
+    log("Received shutdown signal \u2014 closing server gracefully");
+    server.close(async () => {
+      const { pool: pool2 } = await Promise.resolve().then(() => (init_db(), db_exports));
+      await pool2.end();
+      log("Server closed \u2014 exiting");
+      process.exit(0);
+    });
+    setTimeout(() => {
+      log("Graceful shutdown timeout \u2014 forcing exit");
+      process.exit(1);
+    }, 1e4).unref();
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 // server/index-prod.ts

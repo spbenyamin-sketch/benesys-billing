@@ -142,6 +142,7 @@ export interface IStorage {
 
   // Print token operations (for Direct Print Service)
   getPrintToken(companyId: number): Promise<PrintToken | undefined>;
+  getPrintTokenByValue(token: string): Promise<PrintToken | undefined>;
   createOrUpdatePrintToken(companyId: number, token: string): Promise<PrintToken>;
   deletePrintToken(companyId: number): Promise<void>;
 
@@ -3335,6 +3336,14 @@ export class DatabaseStorage implements IStorage {
       .from(printTokens)
       .where(eq(printTokens.companyId, companyId));
     return token;
+  }
+
+  async getPrintTokenByValue(token: string): Promise<PrintToken | undefined> {
+    const [result] = await db
+      .select()
+      .from(printTokens)
+      .where(eq(printTokens.token, token));
+    return result;
   }
 
   async createOrUpdatePrintToken(companyId: number, token: string): Promise<PrintToken> {

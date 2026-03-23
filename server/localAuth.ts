@@ -61,8 +61,10 @@ export function getSession() {
     tableName: "sessions",
     ssl: (!isLocalDb && process.env.NODE_ENV === 'production') ? { rejectUnauthorized: false } : false,
   });
-  // Enable secure cookies only in production with non-localhost (requires HTTPS)
-  const shouldUseSecureCookies = process.env.NODE_ENV === 'production' && !isLocalDb;
+  // Enable secure cookies: explicit env var takes precedence, otherwise infer from DB location
+  // Set SECURE_COOKIES=true in production when behind an HTTPS proxy (even with local DB)
+  const shouldUseSecureCookies = process.env.SECURE_COOKIES === 'true'
+    || (process.env.NODE_ENV === 'production' && !isLocalDb);
   
   logger.info({ env: process.env.NODE_ENV, secureCookies: shouldUseSecureCookies }, "Session initialized");
   
