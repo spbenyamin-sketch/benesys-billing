@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { appCache, TTL } from "./cache";
 
 // ── Password policy ───────────────────────────────────────────────────────────
 // Min 10 chars, at least one uppercase, one lowercase, one digit.
@@ -944,6 +945,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const userId = req.user.id;
       const sale = await storage.createSale(saleData, saleItems, userId, req.companyId);
+      appCache.delPrefix(`dashboard:${req.companyId}`);
+      appCache.delPrefix(`outstanding:${req.companyId}`);
       storage.createAuditLog({
         userId,
         companyId: req.companyId,
@@ -1026,6 +1029,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const saleId = parseInt(req.params.id);
       const existingSale = await storage.getSale(saleId, req.companyId);
       const sale = await storage.updateSale(saleId, saleData, saleItems, req.companyId);
+      appCache.delPrefix(`dashboard:${req.companyId}`);
+      appCache.delPrefix(`outstanding:${req.companyId}`);
       storage.createAuditLog({
         userId: req.user?.id,
         companyId: req.companyId,
@@ -1090,6 +1095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.id;
       
       const newPurchase = await storage.createPurchase(validatedPurchase, items, userId, req.companyId);
+      appCache.delPrefix(`dashboard:${req.companyId}`);
       res.json(newPurchase);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1116,6 +1122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validated = insertPaymentSchema.parse(req.body);
       const userId = req.user.id;
       const payment = await storage.createPayment(validated, userId, req.companyId);
+      appCache.delPrefix(`outstanding:${req.companyId}`);
       res.json(payment);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1211,7 +1218,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== REPORT ROUTES ====================
   app.get("/api/dashboard/metrics", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
+      const cacheKey = `dashboard:${req.companyId}`;
+      const cached = appCache.get<any>(cacheKey);
+      if (cached) return res.json(cached);
       const metrics = await storage.getDashboardMetrics(req.companyId);
+      appCache.set(cacheKey, metrics, TTL.DASHBOARD);
       res.json(metrics);
     } catch (error) {
       console.error("Error fetching dashboard metrics:", error);
@@ -1221,7 +1232,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/reports/outstanding", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
+      const cacheKey = `outstanding:${req.companyId}`;
+      const cached = appCache.get<any[]>(cacheKey);
+      if (cached) return res.json(cached);
       const outstanding = await storage.getOutstanding(req.companyId);
+      appCache.set(cacheKey, outstanding, TTL.OUTSTANDING);
       res.json(outstanding);
     } catch (error) {
       console.error("Error fetching outstanding:", error);

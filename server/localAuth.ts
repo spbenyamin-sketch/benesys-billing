@@ -6,6 +6,7 @@ import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
 import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
+import { logger } from "./logger";
 
 // Max 10 login attempts per 15 minutes per IP
 const loginRateLimit = rateLimit({
@@ -30,9 +31,9 @@ export async function ensureSessionsTable() {
       
       CREATE INDEX IF NOT EXISTS "IDX_sessions_expire" on "sessions" ("expire");
     `);
-    console.log("✅ Sessions table ready");
+    logger.info("Sessions table ready");
   } catch (error) {
-    console.error("⚠️  Warning: Could not ensure sessions table:", error);
+    logger.warn({ error }, "Could not ensure sessions table");
     // Don't fail startup - sessions might still work
   }
 }
@@ -43,12 +44,10 @@ export function getSession() {
   
   if (!sessionSecret) {
     if (process.env.NODE_ENV === "production") {
-      console.error("FATAL: SESSION_SECRET environment variable is required in production");
+      logger.fatal("SESSION_SECRET env var is not set in production — exiting");
       process.exit(1);
     }
-    // Development fallback with warning
-    console.warn("⚠️  WARNING: SESSION_SECRET not set. Using insecure fallback for development only.");
-    console.warn("⚠️  Set SESSION_SECRET environment variable for production deployment.");
+    logger.warn("SESSION_SECRET not set — using insecure dev fallback. Set it for production.");
   }
   
   const secret = sessionSecret || "dev-insecure-secret-change-in-production";
@@ -65,10 +64,7 @@ export function getSession() {
   // Enable secure cookies only in production with non-localhost (requires HTTPS)
   const shouldUseSecureCookies = process.env.NODE_ENV === 'production' && !isLocalDb;
   
-  console.log("[SESSION] ✅ Session initialized");
-  console.log("[SESSION] Node environment:", process.env.NODE_ENV);
-  console.log("[SESSION] Using secure cookies:", shouldUseSecureCookies);
-  console.log("[SESSION] Session path: /");
+  logger.info({ env: process.env.NODE_ENV, secureCookies: shouldUseSecureCookies }, "Session initialized");
   
   return session({
     secret,
@@ -135,30 +131,20 @@ export async function setupAuth(app: Express) {
 
   // Login route
   app.post("/api/login", loginRateLimit, (req, res, next) => {
-    console.log("[AUTH] ========== LOGIN REQUEST RECEIVED ==========");
-    console.log("[AUTH] Body:", JSON.stringify(req.body));
-    console.log("[AUTH] Username:", req.body?.username);
-    
     if (!req.body?.username || !req.body?.password) {
-      console.log("[AUTH] Missing username or password");
       return res.status(400).json({ message: "Username and password required" });
     }
-    
+
     passport.authenticate("local", async (err: any, user: any, info: any) => {
-      console.log("[AUTH] Passport authenticate callback");
-      console.log("[AUTH] Error:", err);
-      console.log("[AUTH] User found:", !!user);
-      console.log("[AUTH] Info:", info);
-      
       if (err) {
-        console.error("[AUTH] Authentication error:", err);
+        logger.error({ err }, "Authentication error");
         return res.status(500).json({ message: "Login error" });
       }
       if (!user) {
-        console.log("[AUTH] No user found - invalid credentials");
+        logger.debug({ username: req.body?.username }, "Login failed — invalid credentials");
         return res.status(401).json({ message: info?.message || "Invalid credentials" });
       }
-      
+
       // Check company expiry for non-superadmin users
       if (user.role !== 'superadmin') {
         try {
@@ -168,24 +154,23 @@ export async function setupAuth(app: Express) {
             const expiryDate = new Date(uc.company.expiryDate);
             return expiryDate > now;
           });
-          
+
           if (!hasValidCompany) {
-            console.log("[AUTH] Non-superadmin user login denied - all companies expired");
+            logger.info({ username: user.username }, "Login denied — company license expired");
             return res.status(403).json({ message: "Company license has expired. Please recharge to login." });
           }
         } catch (error) {
-          console.error("[AUTH] Error checking company expiry:", error);
+          logger.error({ error }, "Error checking company expiry during login");
           return res.status(500).json({ message: "Error checking company status" });
         }
       }
-      
-      console.log("[AUTH] User authenticated, creating session...");
+
       req.login(user, (err) => {
         if (err) {
-          console.error("[AUTH] Session creation error:", err);
+          logger.error({ err }, "Session creation error");
           return res.status(500).json({ message: "Login error" });
         }
-        console.log("[AUTH] ✅ LOGIN SUCCESSFUL! User:", user.username);
+        logger.info({ username: user.username }, "Login successful");
         return res.json({ user });
       });
     })(req, res, next);
@@ -206,7 +191,6 @@ export async function setupAuth(app: Express) {
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const isAuth = req.isAuthenticated();
   if (!isAuth) {
-    console.log("[AUTH] Unauthorized request to:", req.path, "Session:", !!req.session, "User:", !!req.user);
     return res.status(401).json({ message: "Unauthorized" });
   }
   
@@ -222,10 +206,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
       });
       
       if (!hasValidCompany) {
-        console.log("[AUTH] Session expiry check: Company expired for user", user.username);
+        logger.info({ username: user.username }, "Session rejected — company license expired");
         req.logout((err) => {
           if (err) {
-            console.error("[AUTH] Error logging out expired user:", err);
+            logger.error({ err }, "Error logging out expired user");
           }
           return res.status(403).json({ 
             message: "Company license has expired. Please recharge to login.",
@@ -235,7 +219,7 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
         return;
       }
     } catch (error) {
-      console.error("[AUTH] Error checking company expiry:", error);
+      logger.error({ error }, "Error checking company expiry in session middleware");
       // Allow access even if check fails - don't block legitimate users
       return next();
     }
