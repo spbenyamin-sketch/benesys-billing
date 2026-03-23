@@ -213,6 +213,10 @@ export const parties = pgTable("parties", {
   createdBy: varchar("created_by").references(() => users.id),
 });
 
+// GSTIN regex: 2-digit state code + 5 PAN letters + 4 PAN digits + 1 letter +
+// 1 entity number + 'Z' + 1 checksum char (all uppercase)
+const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/;
+
 export const insertPartySchema = createInsertSchema(parties).omit({
   id: true,
   companyId: true,
@@ -220,6 +224,14 @@ export const insertPartySchema = createInsertSchema(parties).omit({
   createdAt: true,
   updatedAt: true,
   createdBy: true,
+}).extend({
+  // Optional field — but if provided and non-empty, must be a valid 15-char GSTIN
+  gstNo: z.string()
+    .refine(val => !val || GSTIN_REGEX.test(val), {
+      message: "Invalid GSTIN — must be 15 characters, e.g. 29AAAAA0000A1Z5",
+    })
+    .optional()
+    .nullable(),
 });
 
 export type InsertParty = z.infer<typeof insertPartySchema>;

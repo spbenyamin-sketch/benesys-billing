@@ -426,3 +426,131 @@ describe("Error response shape", () => {
     expect([404, 200]).toContain(res.status);
   });
 });
+
+// ── 14. GSTIN validation ─────────────────────────────────────────────────────
+
+describe("GSTIN validation on party creation", () => {
+  it("rejects invalid GSTIN — wrong length", async () => {
+    const loggedIn = await tryLogin();
+    if (!loggedIn) return;
+
+    const res = await agent
+      .post("/api/parties")
+      .set("X-Company-Id", "1")
+      .send({ name: "Test Party", city: "Chennai", pincode: "600001", gstNo: "INVALID" });
+
+    expect([400, 422]).toContain(res.status);
+  });
+
+  it("rejects invalid GSTIN — lowercase letters", async () => {
+    const loggedIn = await tryLogin();
+    if (!loggedIn) return;
+
+    const res = await agent
+      .post("/api/parties")
+      .set("X-Company-Id", "1")
+      .send({ name: "Test Party", city: "Chennai", pincode: "600001", gstNo: "29aaaaa0000a1z5" });
+
+    expect([400, 422]).toContain(res.status);
+  });
+
+  it("rejects invalid GSTIN — missing Z checkdigit", async () => {
+    const loggedIn = await tryLogin();
+    if (!loggedIn) return;
+
+    const res = await agent
+      .post("/api/parties")
+      .set("X-Company-Id", "1")
+      .send({ name: "Test Party", city: "Chennai", pincode: "600001", gstNo: "29AAAAA0000A1X5" });
+
+    expect([400, 422]).toContain(res.status);
+  });
+
+  it("accepts a valid GSTIN format", async () => {
+    const loggedIn = await tryLogin();
+    if (!loggedIn) return;
+
+    const res = await agent
+      .post("/api/parties")
+      .set("X-Company-Id", "1")
+      .send({ name: "GST Test Party " + Date.now(), city: "Chennai", pincode: "600001", gstNo: "29AAAAA0000A1Z5" });
+
+    // Either created (201/200) or validation passed but failed for other reason (not 400/422)
+    expect([400, 422]).not.toContain(res.status === 400 && res.body?.message?.includes("GSTIN") ? res.status : 200);
+  });
+
+  it("accepts empty GSTIN (B2C customer without GST)", async () => {
+    const loggedIn = await tryLogin();
+    if (!loggedIn) return;
+
+    const res = await agent
+      .post("/api/parties")
+      .set("X-Company-Id", "1")
+      .send({ name: "Cash Customer " + Date.now(), city: "Chennai", pincode: "600001", gstNo: "" });
+
+    // Should not fail GSTIN validation for empty string
+    if (res.status === 400) {
+      expect(res.body?.message).not.toContain("GSTIN");
+    }
+  });
+});
+
+// ── 15. Request body size limit ──────────────────────────────────────────────
+
+describe("Request body size limit", () => {
+  it("rejects payload larger than 1MB", async () => {
+    // Generate a string just over 1MB
+    const bigPayload = { data: "x".repeat(1024 * 1024 + 100) };
+
+    const res = await request(app)
+      .post("/api/login")
+      .set("Content-Type", "application/json")
+      .send(JSON.stringify(bigPayload));
+
+    // Express returns 413 Payload Too Large
+    expect(res.status).toBe(413);
+  });
+
+  it("accepts payload under 1MB", async () => {
+    const smallPayload = { username: "test", password: "test" };
+    const res = await request(app)
+      .post("/api/login")
+      .send(smallPayload);
+
+    // Should reach the handler (401 bad creds), not 413
+    expect(res.status).not.toBe(413);
+  });
+});
+
+// ── 16. Concurrent bill number uniqueness ────────────────────────────────────
+
+describe("Bill number uniqueness under concurrency", () => {
+  it("does not issue duplicate invoice numbers under concurrent requests", async () => {
+    const loggedIn = await tryLogin();
+    if (!loggedIn) return;
+
+    // Fire 5 simultaneous sale creation attempts — each needs a unique invoice no
+    const salePayload = {
+      date: new Date().toISOString().split("T")[0],
+      billType: "GST",
+      saleType: "B2C",
+      paymentMode: "CASH",
+      grandTotal: 100,
+      items: [{ itemName: "Concurrent Test Item", quantity: 1, rate: 100, amount: 100, tax: 0, cgst: 0, sgst: 0, taxValue: 0, saleValue: 100 }],
+    };
+
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () =>
+        agent.post("/api/sales").set("X-Company-Id", "1").send(salePayload)
+      )
+    );
+
+    const successful = results.filter(r => r.status === 200 || r.status === 201);
+    if (successful.length > 1) {
+      const invoiceNos = successful.map(r => r.body?.invoiceNo);
+      const unique = new Set(invoiceNos);
+      // Every successful sale must have a distinct invoice number
+      expect(unique.size).toBe(successful.length);
+    }
+  });
+});

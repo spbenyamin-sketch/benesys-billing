@@ -89,11 +89,12 @@ app.use(helmet({
 }));
 app.use(compression());
 app.use(express.json({
+  limit: "1mb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "1mb" }));
 app.use(csrfProtection);
 
 app.use((req, res, next) => {
@@ -158,4 +159,26 @@ export default async function runApp(
   // Keep HTTP connections alive to avoid reconnect overhead on every request
   server.keepAliveTimeout = 65000;
   server.headersTimeout = 66000;
+
+  // Graceful shutdown — drain in-flight requests before exiting.
+  // Railway sends SIGTERM before restarting; without this, active DB writes
+  // get killed mid-transaction and users see errors on legitimate saves.
+  const shutdown = () => {
+    log("Received shutdown signal — closing server gracefully");
+    server.close(async () => {
+      const { pool } = await import("./db");
+      await pool.end();
+      log("Server closed — exiting");
+      process.exit(0);
+    });
+
+    // Force-exit after 10 s if requests are stuck
+    setTimeout(() => {
+      log("Graceful shutdown timeout — forcing exit");
+      process.exit(1);
+    }, 10_000).unref();
+  };
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
