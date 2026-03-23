@@ -3718,7 +3718,7 @@ async function registerRoutes(app2) {
       req.logIn(user, async (err) => {
         if (err) {
           logger.error("[SETUP] Error logging in user:", err);
-          return res.status(500).json({ message: "User created but login failed: " + err.message });
+          return res.status(500).json({ message: "User created but session initialization failed" });
         }
         try {
           await storage.assignUserToDefaultCompany(user.id);
@@ -5294,9 +5294,9 @@ async function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to generate upload URL. Make sure object storage is configured." });
     }
   });
-  app2.post("/api/print/generate-token", isAuthenticated, async (req, res) => {
+  app2.post("/api/print/generate-token", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
-      const companyId = parseInt(req.headers["x-company-id"]) || req.user?.companyId;
+      const companyId = req.companyId;
       if (!companyId) {
         return res.status(400).json({ success: false, message: "Company ID required" });
       }
@@ -5318,10 +5318,10 @@ async function registerRoutes(app2) {
       res.status(500).json({ success: false, message: "Failed to generate token" });
     }
   });
-  app2.get("/api/print/validate-token", isAuthenticated, async (req, res) => {
+  app2.get("/api/print/validate-token", isAuthenticated, validateCompanyAccess, async (req, res) => {
     try {
       const token = req.query.token;
-      const companyId = parseInt(req.headers["x-company-id"]) || req.user?.companyId;
+      const companyId = req.companyId;
       if (!token) {
         return res.json({ valid: false });
       }

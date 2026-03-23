@@ -144,7 +144,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.logIn(user, async (err: any) => {
         if (err) {
           logger.error("[SETUP] Error logging in user:", err);
-          return res.status(500).json({ message: "User created but login failed: " + err.message });
+          return res.status(500).json({ message: "User created but session initialization failed" });
         }
 
         try {
@@ -1926,9 +1926,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ==================== DIRECT PRINT WEBSOCKET ROUTES ====================
   
   // Generate a unique print token for a company
-  app.post("/api/print/generate-token", isAuthenticated, async (req: any, res) => {
+  app.post("/api/print/generate-token", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
-      const companyId = parseInt(req.headers['x-company-id'] as string) || req.user?.companyId;
+      const companyId = req.companyId;
       if (!companyId) {
         return res.status(400).json({ success: false, message: "Company ID required" });
       }
@@ -1961,10 +1961,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Validate a print token
-  app.get("/api/print/validate-token", isAuthenticated, async (req: any, res) => {
+  app.get("/api/print/validate-token", isAuthenticated, validateCompanyAccess, async (req: any, res) => {
     try {
       const token = req.query.token as string;
-      const companyId = parseInt(req.headers['x-company-id'] as string) || req.user?.companyId;
+      const companyId = req.companyId;
       
       if (!token) {
         return res.json({ valid: false });
