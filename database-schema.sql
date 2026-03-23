@@ -503,9 +503,22 @@ CREATE INDEX IF NOT EXISTS idx_items_company_id ON items(company_id);
 CREATE INDEX IF NOT EXISTS idx_stock_company_id ON stock(company_id);
 CREATE INDEX IF NOT EXISTS idx_sales_company_id ON sales(company_id);
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
+CREATE INDEX IF NOT EXISTS idx_sales_party_id ON sales(party_id);
+CREATE INDEX IF NOT EXISTS idx_sales_company_date ON sales(company_id, date);
 CREATE INDEX IF NOT EXISTS idx_purchases_company_id ON purchases(company_id);
 CREATE INDEX IF NOT EXISTS idx_purchases_date ON purchases(date);
+CREATE INDEX IF NOT EXISTS idx_purchases_party_id ON purchases(party_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_company_date ON purchases(company_id, date);
 CREATE INDEX IF NOT EXISTS idx_payments_company_id ON payments(company_id);
+CREATE INDEX IF NOT EXISTS idx_payments_party_id ON payments(party_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_items_purchase_id ON purchase_items(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_sale_id ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_item_id ON sale_items(item_id);
+CREATE INDEX IF NOT EXISTS idx_stock_inward_company_status ON stock_inward_items(company_id, status);
+CREATE INDEX IF NOT EXISTS idx_stock_inward_purchase_id ON stock_inward_items(purchase_id);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_user_companies_user_id ON user_companies(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_companies_company_id ON user_companies(company_id);
 
 -- ============================================================================
 -- MIGRATION SCRIPTS FOR EXISTING INSTALLATIONS

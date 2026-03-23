@@ -1,5 +1,6 @@
 import { type Server } from "node:http";
 
+import compression from "compression";
 import express, {
   type Express,
   type Request,
@@ -27,6 +28,7 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+app.use(compression());
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
@@ -92,4 +94,8 @@ export default async function runApp(
   server.listen(port, '0.0.0.0', () => {
     log(`serving on http://0.0.0.0:${port}`);
   });
+
+  // Keep HTTP connections alive to avoid reconnect overhead on every request
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
 }

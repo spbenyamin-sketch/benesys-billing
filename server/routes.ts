@@ -46,6 +46,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Replit Auth
   await setupAuth(app);
 
+  // ==================== HEALTH CHECK ====================
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'ok' });
+  });
+
   // ==================== SETUP ROUTES (No Auth Required) ====================
   app.get('/api/check-setup', async (req: any, res) => {
     try {

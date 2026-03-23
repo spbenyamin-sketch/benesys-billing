@@ -12,8 +12,9 @@ if (!process.env.DATABASE_URL) {
 
 const { Pool } = pg;
 
-export const pool = new Pool({ 
+export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  max: 10,                      // max concurrent connections
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
   ssl: (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL?.includes('localhost') && !process.env.DATABASE_URL?.includes('127.0.0.1')) ? { rejectUnauthorized: false } : false,
