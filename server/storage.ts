@@ -57,7 +57,7 @@ import {
   type InsertBillSequence,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne } from "drizzle-orm";
+import { eq, and, desc, gte, lte, lt, sql, or, isNotNull, ne, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -645,44 +645,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getNextBillNumber(companyId: number, financialYearId: number, billType: string): Promise<{ number: number; code: string }> {
-    // Get or create bill sequence for this FY and type
-    let [sequence] = await db
-      .select()
-      .from(billSequences)
-      .where(and(
-        eq(billSequences.companyId, companyId),
-        eq(billSequences.financialYearId, financialYearId),
-        eq(billSequences.billType, billType)
-      ));
+    // Atomic upsert: create row on first use, then increment atomically.
+    // Eliminates race condition where two concurrent requests read the same number.
+    const result = await db.execute(sql`
+      INSERT INTO bill_sequences (company_id, financial_year_id, bill_type, next_number, created_at, updated_at)
+      VALUES (${companyId}, ${financialYearId}, ${billType}, 2, NOW(), NOW())
+      ON CONFLICT (company_id, financial_year_id, bill_type)
+      DO UPDATE SET next_number = bill_sequences.next_number + 1, updated_at = NOW()
+      RETURNING next_number - 1 AS current_number
+    `);
 
-    if (!sequence) {
-      // Create sequence if doesn't exist
-      [sequence] = await db
-        .insert(billSequences)
-        .values({
-          companyId,
-          financialYearId,
-          billType,
-          nextNumber: 1,
-        })
-        .returning();
-    }
-
-    const currentNumber = sequence.nextNumber;
-
-    // Increment the sequence
-    await db
-      .update(billSequences)
-      .set({ nextNumber: currentNumber + 1, updatedAt: new Date() })
-      .where(eq(billSequences.id, sequence.id));
+    const currentNumber = parseInt(String((result as any).rows?.[0]?.current_number ?? 1));
 
     // Get financial year label for the code
     const fy = await this.getFinancialYear(financialYearId, companyId);
     const fyLabel = fy?.label || '';
 
     // Format: TYPE-YYYY-YY-NNNN (e.g., B2B-2024-25-0001)
-    const prefix = sequence.prefix || billType;
-    const code = `${prefix}-${fyLabel}-${String(currentNumber).padStart(4, '0')}`;
+    const code = `${billType}-${fyLabel}-${String(currentNumber).padStart(4, '0')}`;
 
     return { number: currentNumber, code };
   }
@@ -846,17 +826,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSaleItems(saleId: number, companyId: number): Promise<SaleItem[]> {
-    // First verify the sale belongs to the company
-    const sale = await this.getSale(saleId, companyId);
-    if (!sale) {
-      return [];
-    }
-    
+    // Validate company ownership via JOIN in a single query (no extra round-trip)
     const items = await db
-      .select()
+      .select({ item: saleItems })
       .from(saleItems)
+      .innerJoin(sales, and(eq(saleItems.saleId, sales.id), eq(sales.companyId, companyId)))
       .where(eq(saleItems.saleId, saleId));
-    return items as SaleItem[];
+    return items.map(r => r.item) as SaleItem[];
   }
 
   async getNextInvoiceNumber(saleType: string, companyId: number): Promise<number> {
@@ -891,63 +867,62 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Insert sale
-    const [newSale] = await db
-      .insert(sales)
-      .values({
-        ...saleData,
-        invoiceNo,
-        invoiceCode,
-        financialYearId: activeFY.id,
-        time: new Date().toTimeString().substring(0, 8),
-        createdBy: userId,
-        companyId,
-      })
-      .returning();
+    // All writes in a single transaction — rolls back automatically if anything fails
+    return await db.transaction(async (trx) => {
+      const [newSale] = await trx
+        .insert(sales)
+        .values({
+          ...saleData,
+          invoiceNo,
+          invoiceCode,
+          financialYearId: activeFY.id,
+          time: new Date().toTimeString().substring(0, 8),
+          createdBy: userId,
+          companyId,
+        })
+        .returning();
 
-    // Insert sale items and mark barcodes as sold
-    for (const item of saleItemsData) {
-      const saleItem = await db.insert(saleItems).values({
-        ...item,
-        saleId: newSale.id,
-      }).returning();
+      // Insert sale items and mark barcodes as sold
+      for (const item of saleItemsData) {
+        await trx.insert(saleItems).values({ ...item, saleId: newSale.id });
 
-      // Mark barcode as sold if this item came from stock inward
-      if (item.stockInwardId) {
-        // Get current barcode qty
-        const [barcode] = await db
-          .select()
-          .from(stockInwardItems)
-          .where(eq(stockInwardItems.id, item.stockInwardId));
-        
-        if (barcode) {
-          const currentQty = parseFloat(barcode.qty?.toString() || "1");
-          const soldQty = parseFloat(item.quantity.toString());
-          const remainingQty = currentQty - soldQty;
-          
-          if (remainingQty > 0) {
-            // Bulk barcode: reduce qty but keep as available
-            await db
-              .update(stockInwardItems)
-              .set({ qty: remainingQty.toString(), saleId: newSale.id, soldAt: new Date() })
-              .where(eq(stockInwardItems.id, item.stockInwardId));
-          } else {
-            // Last unit sold: mark as sold
-            await db
-              .update(stockInwardItems)
-              .set({ status: "sold", qty: "0", saleId: newSale.id, soldAt: new Date() })
-              .where(eq(stockInwardItems.id, item.stockInwardId));
+        // Mark barcode as sold if this item came from stock inward
+        if (item.stockInwardId) {
+          const [barcode] = await trx
+            .select()
+            .from(stockInwardItems)
+            .where(eq(stockInwardItems.id, item.stockInwardId));
+
+          if (barcode) {
+            const currentQty = parseFloat(barcode.qty?.toString() || "1");
+            const soldQty = parseFloat(item.quantity.toString());
+            const remainingQty = currentQty - soldQty;
+
+            if (remainingQty > 0) {
+              await trx
+                .update(stockInwardItems)
+                .set({ qty: remainingQty.toString(), saleId: newSale.id, soldAt: new Date() })
+                .where(eq(stockInwardItems.id, item.stockInwardId));
+            } else {
+              await trx
+                .update(stockInwardItems)
+                .set({ status: "sold", qty: "0", saleId: newSale.id, soldAt: new Date() })
+                .where(eq(stockInwardItems.id, item.stockInwardId));
+            }
           }
+        }
+
+        // Update stock (decrease)
+        if (item.itemId) {
+          await trx
+            .update(stock)
+            .set({ quantity: sql`${stock.quantity} + ${-parseFloat(item.quantity.toString())}`, lastUpdated: new Date() })
+            .where(and(eq(stock.itemId, item.itemId as number), eq(stock.companyId, companyId)));
         }
       }
 
-      // Update stock (decrease)
-      if (item.itemId) {
-        await this.updateStock(item.itemId, -parseFloat(item.quantity.toString()), companyId);
-      }
-    }
-
-    return newSale;
+      return newSale;
+    });
   }
 
   async updateSale(id: number, saleData: Partial<InsertSale>, saleItemsData: InsertSaleItem[], companyId: number): Promise<Sale> {
@@ -1112,13 +1087,23 @@ export class DatabaseStorage implements IStorage {
       .where(eq(purchases.companyId, companyId))
       .orderBy(desc(purchases.date), desc(purchases.id));
 
+    if (allPurchases.length === 0) return [];
+
+    // Batch fetch all items in ONE query instead of one per purchase (eliminates N+1)
+    const allItems = await db
+      .select()
+      .from(purchaseItems)
+      .where(inArray(purchaseItems.purchaseId, allPurchases.map(p => p.id)));
+
+    const itemsByPurchaseId = new Map<number, typeof allItems>();
+    for (const item of allItems) {
+      if (!itemsByPurchaseId.has(item.purchaseId)) itemsByPurchaseId.set(item.purchaseId, []);
+      itemsByPurchaseId.get(item.purchaseId)!.push(item);
+    }
+
     // Add isTallied field by checking if totalQty and amount match
-    const purchasesWithTallyStatus = await Promise.all(
-      allPurchases.map(async (purchase) => {
-        const items = await db
-          .select()
-          .from(purchaseItems)
-          .where(eq(purchaseItems.purchaseId, purchase.id));
+    const purchasesWithTallyStatus = allPurchases.map((purchase) => {
+        const items = itemsByPurchaseId.get(purchase.id) || [];
 
         const itemTotalQty = items.reduce((sum, item) => sum + parseFloat(item.qty.toString()), 0);
         const itemTotalAmount = items.reduce((sum, item) => {
@@ -1185,8 +1170,7 @@ export class DatabaseStorage implements IStorage {
           updatedAt: purchase.updatedAt,
           isTallied
         };
-      })
-    );
+      });
 
     return purchasesWithTallyStatus;
   }
@@ -1264,52 +1248,57 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Insert purchase
-    const [newPurchase] = await db
-      .insert(purchases)
-      .values({
-        ...purchaseData,
-        purchaseNo,
-        totalQty: totalQty.toString(),
-        amount: totalAmount.toString(),
-        val0: taxBreakdown.val0.toString(),
-        val5: taxBreakdown.val5.toString(),
-        val12: taxBreakdown.val12.toString(),
-        val18: taxBreakdown.val18.toString(),
-        val28: taxBreakdown.val28.toString(),
-        ctax0: taxBreakdown.ctax0.toString(),
-        ctax5: taxBreakdown.ctax5.toString(),
-        ctax12: taxBreakdown.ctax12.toString(),
-        ctax18: taxBreakdown.ctax18.toString(),
-        ctax28: taxBreakdown.ctax28.toString(),
-        stax0: taxBreakdown.stax0.toString(),
-        stax5: taxBreakdown.stax5.toString(),
-        stax12: taxBreakdown.stax12.toString(),
-        stax18: taxBreakdown.stax18.toString(),
-        stax28: taxBreakdown.stax28.toString(),
-        createdBy: userId,
-        companyId,
-      })
-      .returning();
+    // All writes in a single transaction — rolls back automatically if anything fails
+    return await db.transaction(async (trx) => {
+      const [newPurchase] = await trx
+        .insert(purchases)
+        .values({
+          ...purchaseData,
+          purchaseNo,
+          totalQty: totalQty.toString(),
+          amount: totalAmount.toString(),
+          val0: taxBreakdown.val0.toString(),
+          val5: taxBreakdown.val5.toString(),
+          val12: taxBreakdown.val12.toString(),
+          val18: taxBreakdown.val18.toString(),
+          val28: taxBreakdown.val28.toString(),
+          ctax0: taxBreakdown.ctax0.toString(),
+          ctax5: taxBreakdown.ctax5.toString(),
+          ctax12: taxBreakdown.ctax12.toString(),
+          ctax18: taxBreakdown.ctax18.toString(),
+          ctax28: taxBreakdown.ctax28.toString(),
+          stax0: taxBreakdown.stax0.toString(),
+          stax5: taxBreakdown.stax5.toString(),
+          stax12: taxBreakdown.stax12.toString(),
+          stax18: taxBreakdown.stax18.toString(),
+          stax28: taxBreakdown.stax28.toString(),
+          createdBy: userId,
+          companyId,
+        })
+        .returning();
 
-    // Insert purchase items and update stock
-    for (const item of itemsData) {
-      const qty = parseFloat(item.qty.toString());
-      const stockQty = qty - parseFloat((item.dqty || 0).toString());
-      
-      await db.insert(purchaseItems).values({
-        ...item,
-        purchaseId: newPurchase.id,
-        stockqty: stockQty.toString(),
-      });
+      // Insert purchase items and update stock
+      for (const item of itemsData) {
+        const qty = parseFloat(item.qty.toString());
+        const stockQty = qty - parseFloat((item.dqty || 0).toString());
 
-      // Update stock (increase) if item is linked to an item master
-      if (item.itemId) {
-        await this.updateStock(item.itemId, qty, companyId);
+        await trx.insert(purchaseItems).values({
+          ...item,
+          purchaseId: newPurchase.id,
+          stockqty: stockQty.toString(),
+        });
+
+        // Update stock (increase) if item is linked to an item master
+        if (item.itemId) {
+          await trx
+            .update(stock)
+            .set({ quantity: sql`${stock.quantity} + ${qty}`, lastUpdated: new Date() })
+            .where(and(eq(stock.itemId, item.itemId), eq(stock.companyId, companyId)));
+        }
       }
-    }
 
-    return newPurchase;
+      return newPurchase;
+    });
   }
 
   // ==================== PAYMENT OPERATIONS ====================
@@ -3345,10 +3334,10 @@ export class DatabaseStorage implements IStorage {
 
   async getAgentCommissionReport(companyId: number): Promise<any[]> {
     try {
-      const agentsData = await db.select().from(agentsTable).where(eq(agentsTable.companyId, companyId));
-      const salesData = await db.select().from(salesTable).where(eq(salesTable.companyId, companyId));
-      const paymentsData = await db.select().from(paymentsTable).where(eq(paymentsTable.companyId, companyId));
-      const partiesData = await db.select().from(partiesTable).where(eq(partiesTable.companyId, companyId));
+      const agentsData = await db.select().from(agentsTable).where(eq(agentsTable.companyId, companyId)).limit(1000);
+      const salesData = await db.select().from(salesTable).where(eq(salesTable.companyId, companyId)).limit(5000);
+      const paymentsData = await db.select().from(paymentsTable).where(eq(paymentsTable.companyId, companyId)).limit(5000);
+      const partiesData = await db.select().from(partiesTable).where(eq(partiesTable.companyId, companyId)).limit(1000);
 
       return agentsData.map(agent => {
         const agentParties = partiesData.filter(p => p.agentId === agent.id);

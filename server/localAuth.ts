@@ -4,7 +4,17 @@ import session from "express-session";
 import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcryptjs";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
+
+// Max 10 login attempts per 15 minutes per IP
+const loginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { message: "Too many login attempts. Please try again after 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export async function ensureSessionsTable() {
   try {
@@ -124,7 +134,7 @@ export async function setupAuth(app: Express) {
   });
 
   // Login route
-  app.post("/api/login", (req, res, next) => {
+  app.post("/api/login", loginRateLimit, (req, res, next) => {
     console.log("[AUTH] ========== LOGIN REQUEST RECEIVED ==========");
     console.log("[AUTH] Body:", JSON.stringify(req.body));
     console.log("[AUTH] Username:", req.body?.username);

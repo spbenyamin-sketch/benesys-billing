@@ -1,6 +1,7 @@
 import { type Server } from "node:http";
 
 import compression from "compression";
+import helmet from "helmet";
 import express, {
   type Express,
   type Request,
@@ -28,6 +29,7 @@ declare module 'http' {
     rawBody: unknown
   }
 }
+app.use(helmet({ contentSecurityPolicy: false })); // CSP off — frontend uses inline scripts
 app.use(compression());
 app.use(express.json({
   verify: (req, _res, buf) => {
