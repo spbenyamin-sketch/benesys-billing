@@ -29,7 +29,31 @@ declare module 'http' {
     rawBody: unknown
   }
 }
-app.use(helmet({ contentSecurityPolicy: false })); // CSP off — frontend uses inline scripts
+const isProd = process.env.NODE_ENV === "production";
+
+if (isProd && !process.env.SESSION_SECRET) {
+  console.error("FATAL: SESSION_SECRET env var is not set in production. Exiting.");
+  process.exit(1);
+}
+
+app.use(helmet({
+  contentSecurityPolicy: isProd
+    ? {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+          fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+          imgSrc: ["'self'", "data:", "blob:"],
+          connectSrc: ["'self'", "ws:", "wss:"],
+          workerSrc: ["'self'", "blob:"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      }
+    : false, // dev: CSP off for Vite HMR
+}));
 app.use(compression());
 app.use(express.json({
   verify: (req, _res, buf) => {

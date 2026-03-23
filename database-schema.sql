@@ -553,6 +553,19 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE INDEX IF NOT EXISTS idx_audit_logs_company ON audit_logs(company_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON audit_logs(company_id, entity_type, entity_id);
 
+-- Audit logs are append-only for GST compliance — no row may be modified or deleted
+CREATE OR REPLACE FUNCTION prevent_audit_log_modification()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'audit_logs are immutable: modification and deletion are not permitted';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS audit_logs_immutable ON audit_logs;
+CREATE TRIGGER audit_logs_immutable
+  BEFORE UPDATE OR DELETE ON audit_logs
+  FOR EACH ROW EXECUTE FUNCTION prevent_audit_log_modification();
+
 -- ============================================================================
 -- MIGRATION SCRIPTS FOR EXISTING INSTALLATIONS
 -- Run these to update schema if upgrading from an older version

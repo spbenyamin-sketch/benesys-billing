@@ -1646,31 +1646,30 @@ export class DatabaseStorage implements IStorage {
       .from(parties)
       .where(eq(parties.companyId, companyId));
 
-    // Last 7 days sales trend
-    const last7Days = [];
+    // Last 7 days sales trend — single GROUP BY query instead of 7 round-trips
+    const last7Days: string[] = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(todayDate);
       date.setDate(date.getDate() - i);
       last7Days.push(date.toISOString().split('T')[0]);
     }
+    const trendStart = last7Days[0];
+    const trendEnd = last7Days[6];
 
-    const salesTrend = await Promise.all(
-      last7Days.map(async (date) => {
-        const [result] = await db
-          .select({ total: sql<number>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` })
-          .from(sales)
-          .where(and(
-            eq(sales.date, date), 
-            eq(sales.companyId, companyId),
-            ne(sales.saleType, "PROFORMA")
-          ));
-        return {
-          date,
-          day: new Date(date).toLocaleDateString('en-US', { weekday: 'short' }),
-          amount: parseFloat(result?.total?.toString() || "0"),
-        };
-      })
+    const trendRows = await db.execute(sql`
+      SELECT date::text, COALESCE(SUM(CASE WHEN sale_type = 'CREDIT_NOTE' THEN -grand_total::numeric ELSE grand_total::numeric END), 0) AS total
+      FROM sales
+      WHERE company_id = ${companyId} AND date >= ${trendStart} AND date <= ${trendEnd} AND sale_type != 'PROFORMA'
+      GROUP BY date
+    `);
+    const trendByDate = new Map<string, number>(
+      (trendRows as any).rows.map((r: any) => [r.date, parseFloat(r.total)])
     );
+    const salesTrend = last7Days.map(date => ({
+      date,
+      day: new Date(date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short" }),
+      amount: trendByDate.get(date) ?? 0,
+    }));
 
     // Sales by type (B2B, B2C, Estimate) - CREDIT_NOTE amounts should be negative
     const salesByType = await db
@@ -1776,54 +1775,61 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getOutstanding(companyId: number): Promise<any[]> {
-    const allParties = await db
-      .select({
-        partyId: parties.id,
-        partyCode: parties.code,
-        partyName: parties.name,
-        partyCity: parties.city,
-        openingDebit: parties.openingDebit,
-        openingCredit: parties.openingCredit,
-      })
-      .from(parties)
-      .where(eq(parties.companyId, companyId));
+    // Single query with correlated subqueries — avoids N×3 round-trips
+    const rows = await db.execute(sql`
+      SELECT
+        p.id               AS party_id,
+        p.code             AS party_code,
+        p.name             AS party_name,
+        p.city             AS party_city,
+        p.opening_debit    AS opening_debit,
+        p.opening_credit   AS opening_credit,
+        COALESCE((
+          SELECT SUM(CASE WHEN s.sale_type = 'CREDIT_NOTE' THEN -s.grand_total::numeric ELSE s.grand_total::numeric END)
+          FROM sales s
+          WHERE s.party_id = p.id AND s.company_id = ${companyId} AND s.sale_type != 'PROFORMA'
+        ), 0) AS total_sales,
+        COALESCE((
+          SELECT SUM(pur.amount::numeric)
+          FROM purchases pur
+          WHERE pur.party_id = p.id AND pur.company_id = ${companyId}
+        ), 0) AS total_purchases,
+        COALESCE((
+          SELECT SUM(pay.credit::numeric)
+          FROM payments pay
+          WHERE pay.party_id = p.id AND pay.company_id = ${companyId}
+        ), 0) AS total_payments_credit,
+        COALESCE((
+          SELECT SUM(pay.debit::numeric)
+          FROM payments pay
+          WHERE pay.party_id = p.id AND pay.company_id = ${companyId}
+        ), 0) AS total_payments_debit
+      FROM parties p
+      WHERE p.company_id = ${companyId}
+    `);
 
-    // Use subqueries to avoid cartesian product
-    const result = await Promise.all(allParties.map(async (party) => {
-      const [salesResult] = await db
-        .select({ total: sql<string>`COALESCE(SUM(CASE WHEN ${sales.saleType} = 'CREDIT_NOTE' THEN -${sales.grandTotal} ELSE ${sales.grandTotal} END), 0)` })
-        .from(sales)
-        .where(and(eq(sales.partyId, party.partyId), eq(sales.companyId, companyId), ne(sales.saleType, "PROFORMA")));
-
-      const [purchasesResult] = await db
-        .select({ total: sql<string>`COALESCE(SUM(${purchases.amount}), 0)` })
-        .from(purchases)
-        .where(and(eq(purchases.partyId, party.partyId), eq(purchases.companyId, companyId)));
-
-      const [paymentsResult] = await db
-        .select({
-          totalCredit: sql<string>`COALESCE(SUM(${payments.credit}), 0)`,
-          totalDebit: sql<string>`COALESCE(SUM(${payments.debit}), 0)`,
-        })
-        .from(payments)
-        .where(and(eq(payments.partyId, party.partyId), eq(payments.companyId, companyId)));
-
-      const openingBal = parseFloat(party.openingDebit) - parseFloat(party.openingCredit);
-      const salesAmt = parseFloat(salesResult?.total || "0");
-      const purchasesAmt = parseFloat(purchasesResult?.total || "0");
-      const paymentsCredit = parseFloat(paymentsResult?.totalCredit || "0");
-      const paymentsDebit = parseFloat(paymentsResult?.totalDebit || "0");
+    const result = (rows as any).rows.map((party: any) => {
+      const openingBal = parseFloat(party.opening_debit) - parseFloat(party.opening_credit);
+      const salesAmt = parseFloat(party.total_sales);
+      const purchasesAmt = parseFloat(party.total_purchases);
+      const paymentsCredit = parseFloat(party.total_payments_credit);
+      const paymentsDebit = parseFloat(party.total_payments_debit);
       const balance = openingBal + salesAmt - purchasesAmt - paymentsCredit + paymentsDebit;
 
       return {
-        ...party,
+        partyId: party.party_id,
+        partyCode: party.party_code,
+        partyName: party.party_name,
+        partyCity: party.party_city,
+        openingDebit: party.opening_debit,
+        openingCredit: party.opening_credit,
         totalSales: salesAmt,
         totalPurchases: purchasesAmt,
         totalPaymentsCredit: paymentsCredit,
         totalPaymentsDebit: paymentsDebit,
         balance,
       };
-    }));
+    });
 
     return result;
   }
